@@ -188,11 +188,14 @@ def compute(deals, area_of, last_ym):
     SQa = collections.defaultdict(lambda: collections.defaultdict(list))
     tot12, map12, tot5, map5 = collections.Counter(), collections.Counter(), collections.Counter(), collections.Counter()
     n_all = dropped = 0
+    GA = collections.defaultdict(set)   # (city, area label) -> blocks with deals there, so the app can list the deals behind each row
     for city, gs in deals.items():
         for g, s in gs.items():
             a = area_of.get(g)
             if a and a[0] != city:
                 a = (city, a[1])
+            if a:
+                GA[a].add(g)
             for d in s.split(";"):
                 f = d.split("|")
                 ym, pr, yb, rm, ar, t = int(f[0]), float(f[1] or 0), f[2], f[3], f[4], f[5]
@@ -263,7 +266,7 @@ def compute(deals, area_of, last_ym):
     px_a = collections.defaultdict(list)
     for (c, lbl), d in PXa.items():
         if len(d.get((5, 0), [])) >= 5:
-            px_a[c].append([lbl, pack(d)])
+            px_a[c].append([lbl, pack(d), ",".join(sorted(GA[(c, lbl)], key=lambda x: int(x) if x.isdigit() else 0))])
     for c in px_a:
         px_a[c].sort(key=lambda r: (-((r[1][0][0] or [0, 0, 0])[2]), -(r[1][0][2][2])))
     px_cov = {c: round(map5[c] / tot5[c] * 100) for c in px_a if tot5[c]}
@@ -353,7 +356,7 @@ def main():
     px, areas, cities, st = compute(deals, area_of, last_ym)
     rep["stats"] = st
     nat = dict(old["NAT"])
-    nat.update({"generated": today.strftime("%-d.%-m.%Y"), "through": f"{HEB_MONTHS[m - 1]} {y}", "deals": n_total, "cities": cities})
+    nat.update({"generated": today.strftime("%-d.%-m.%Y"), "through": f"{HEB_MONTHS[m - 1]} {y}", "thruYM": f"{y}-{m:02d}", "deals": n_total, "cities": cities})
 
     # ---- sanity checks against the previous version
     def chk(cond, msg):
