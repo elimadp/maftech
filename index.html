@@ -181,6 +181,7 @@ tr[data-deals]:active { background: var(--accent-soft); }
 .deals { display: flex; flex-direction: column; max-height: 58vh; overflow-y: auto; margin: 0 -4px; }
 .deal { padding: 9px 4px; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
 .deal:last-child { border-bottom: none; }
+.pa a { color: var(--accent); }
 table { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
 th, td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th { color: var(--muted); font-weight: 600; font-size: .78rem; }
@@ -1401,9 +1402,35 @@ function drawDeals() {
       const t = NATURE_T[d.deal_nature], rm = parseFloat(d.room_num), yb = parseInt(d.year_built, 10);
       const bits = [rm ? `${+rm.toFixed(1)} חד׳` : "", d.ar ? `${nf.format(d.ar)} מ"ר` : "", d.ar > 20 ? `${ils(d.pr / d.ar)} למ"ר` : "", yb > 1900 && yb < 2035 ? (yb > Number(d.iso.slice(0, 4)) ? `על הנייר, סיום ${yb}` : `נבנה ${yb}`) : ""].filter(Boolean);
       return `<div class="deal"><div class="spread"><b class="num">${ils(d.pr)}</b><span class="small muted">${fmtDate(d.iso)}</span></div>
-        <div class="small">${bits.join(" · ")}</div><div class="small muted">${esc(d.deal_nature)}${t === "M" ? "" : ""} · גוש ${esc(d.gush)} חלקה ${esc(d.chelka)}</div></div>`; }).join("")}
+        <div class="small">${bits.join(" · ")}</div><div class="small pa" data-pa="${esc(d.gush)}-${esc(d.chelka)}">${addrHtml(d.gush, d.chelka)}</div><div class="small muted">${esc(d.deal_nature)} · גוש ${esc(d.gush)} חלקה ${esc(d.chelka)}</div></div>`; }).join("")}
       ${L.length > v.limit ? `<button class="link" data-dmore="1">עוד ${nf.format(Math.min(60, L.length - v.limit))} עסקאות</button>` : ""}</div>
-    <p class="src">מקור: רשות המסים, דרך <a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>. אין כתובת וקומה בנתונים. גוש וחלקה מאפשרים לאתר את הבניין ב-<a href="https://www.govmap.gov.il/" target="_blank" rel="noopener">GovMap</a>.</p>`;
+    <p class="src">מקור: רשות המסים, דרך <a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>. רשות המסים לא מפרסמת כתובת וקומה; הכתובת מחושבת לפי הגוש והחלקה (over.org.il), ולכן היא של הבניין או המגרש, לא בהכרח של הדירה עצמה. קומה לא ידועה.</p>`;
+  fillAddrs(L.slice(0, v.limit));
+}
+const addrCache = new Map();
+function addrHtml(g, h) {
+  const a = addrCache.get(g + "-" + h);
+  if (a === undefined) return `<span class="muted">מאתר כתובת...</span>`;
+  if (!a || !a.text) return `<span class="muted">אין כתובת רשומה למגרש (לרוב בנייה חדשה)</span>`;
+  const map = a.lat ? `https://www.google.com/maps/search/?api=1&query=${a.lat},${a.lon}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.text + " " + (dealsView ? dealsView.city : ""))}`;
+  return `📍 <a href="${map}" target="_blank" rel="noopener">${esc(a.text)}</a>${a.approx ? ' <span class="muted">(רחוב בלבד)</span>' : ""}`;
+}
+async function fillAddrs(list) {
+  const todo = [...new Set(list.map(d => d.gush + "-" + d.chelka))].filter(k => !addrCache.has(k));
+  const put = k => document.querySelectorAll(`[data-pa="${k}"]`).forEach(el => { const [g, h] = k.split("-"); el.innerHTML = addrHtml(g, h); });
+  const one = async k => {
+    const [g, h] = k.split("-"); let res = null;
+    try {
+      const j = await (await fetch(`https://www.over.org.il/api/nadlan/lookup?gush=${encodeURIComponent(g)}&helka=${encodeURIComponent(h)}&fields=addresses,identity`)).json();
+      const d = (j.data || [])[0] || {}, idn = d.identity || {}, adds = idn.addresses || d.addresses || [], streets = idn.streets || d.streets || [], pt = idn.point || d.point || {};
+      if (adds.length) {
+        const names = [...new Set(adds.map(a => `${a.street}${a.house ? " " + a.house + (a.suffix || "") : ""}`))];
+        res = { text: names.slice(0, 2).join(" / ") + (names.length > 2 ? ` ועוד ${names.length - 2}` : ""), lat: adds[0].lat, lon: adds[0].lon };
+      } else if (streets.length) res = { text: streets.slice(0, 2).join(" / "), lat: pt.lat, lon: pt.lon, approx: true };
+    } catch (e) { res = null; }
+    addrCache.set(k, res); put(k);
+  };
+  for (let i = 0; i < todo.length; i += 6) await Promise.all(todo.slice(i, i + 6).map(one));
 }
 document.addEventListener("click", e => {
   const tr = e.target.closest("tr[data-deals]"); if (tr) { openDeals(currentPxCity(), tr.dataset.deals); return; }
