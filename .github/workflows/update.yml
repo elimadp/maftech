@@ -7,7 +7,7 @@ on:
   workflow_dispatch: {}        # "Run workflow" button for a manual run
   push:                        # also run when the update scripts themselves change
     branches: [main]
-    paths: [".github/workflows/update.yml", "pipeline/*.py"]
+    paths: ["pipeline/*.py"]
 permissions:
   contents: write
 jobs:
@@ -26,12 +26,25 @@ jobs:
       - name: Update market numbers (Bank of Israel, CBS)
         run: python pipeline/market_update.py pipeline/market.json
         continue-on-error: true
+      - name: Decide whether to publish today
+        id: gate
+        run: |
+          # Netlify's free plan counts every publish, so the app is republished only when it matters:
+          # once a week (Sunday) with fresh deals, or any day the market numbers changed, or on a manual/script-change run.
+          if [ "$(date -u +%u)" = "7" ] || [ "${{ github.event_name }}" != "schedule" ] || ! git diff --quiet pipeline/market.json; then
+            echo "go=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=0" >> "$GITHUB_OUTPUT"; echo "nothing to publish today"
+          fi
       - name: Update data
+        if: steps.gate.outputs.go == '1'
         run: |
           python pipeline/update.py --app index.html --data pipeline/data --out index.new.html --market pipeline/market.json --report report.json
       - name: Test the app
+        if: steps.gate.outputs.go == '1'
         run: python pipeline/test_app.py index.new.html
       - name: Publish
+        if: steps.gate.outputs.go == '1'
         run: |
           mv index.new.html index.html
           git config user.name "maftech-bot"
