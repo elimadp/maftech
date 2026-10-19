@@ -36,7 +36,7 @@ with sync_playwright() as p:
             if pg.input_value("[data-wzf='price']") != "1,567,000": fails.append("price field has no thousands commas")
             if pg.locator("[data-wzf='size']").count():
                 pg.fill("[data-wzf='size']", "100"); pg.fill("[data-wzf='balc']", "10"); pg.fill("[data-wzf='stor']", "5"); pg.fill("[data-wzf='park']", "1"); pg.wait_for_timeout(100)
-                exp = pg.evaluate("()=>Math.round(Math.round(107*wiz.d.ppsqm)*(1+VAT))")
+                exp = pg.evaluate("()=>{const g=Math.round(Math.round(107*wiz.d.ppsqm)*(1+VAT));return g-Math.min(Math.round(g*.2),300000)}")
                 if "107" not in pg.inner_text("#wzcalc"): fails.append("weighted size wrong (expected 107)")
                 pg.click("#wzcalc [data-wz^='price:']"); pg.wait_for_timeout(100)
                 if pg.input_value("[data-wzf='price']") != f"{exp:,}": fails.append("calculated price not applied")

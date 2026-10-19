@@ -189,6 +189,7 @@ svg text { font-family: var(--body); }
 button.small { padding: 6px 12px; min-height: 36px; font-size: .85rem; }
 .banner h2 { font-size: 1rem; }
 details summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 8px 0; }
+.calcbox .num{white-space:nowrap}
 .calcbox{display:grid;gap:4px;padding:10px;border-radius:10px;background:var(--bg,#0000);margin-top:6px}
 </style>
 
@@ -1294,7 +1295,7 @@ function calcNext() {
 
 /* ---------- onboarding wizard ---------- */
 let wiz = null;
-function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", size: "", balc: "", stor: "", park: "", ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
+function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", size: "", balc: "", stor: "", park: "", disc: true, ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
 function wizSteps() { return ["type", ...(wiz.d.type && wiz.d.type !== "ml" ? ["buyer"] : []), "city", "price", "dates", "money"]; }
 function screenWizard() {
   const d = wiz.d, steps = wizSteps(), k = steps[Math.min(wiz.i, steps.length - 1)], n = steps.length, i = steps.indexOf(k);
@@ -1327,8 +1328,9 @@ function screenWizard() {
 function wizCalc() {
   const d = wiz.d, n = v => Math.max(0, Number(String(v || "").replace(/[^\d.]/g, "")) || 0);
   const size = n(d.size), balc = n(d.balc), stor = n(d.stor), park = Math.round(n(d.park));
-  const w = Math.round((size + .3 * balc + .4 * stor + 2 * park) * 100) / 100, pre = Math.round(w * d.ppsqm), total = Math.round(pre * (1 + VAT));
-  return { size, balc, stor, park, w, pre, total };
+  const w = Math.round((size + .3 * balc + .4 * stor + 2 * park) * 100) / 100, pre = Math.round(w * d.ppsqm), gross = Math.round(pre * (1 + VAT));
+  const disc = d.disc === false ? 0 : Math.min(Math.round(gross * .2), 300000);
+  return { size, balc, stor, park, w, pre, gross, disc, total: gross - disc };
 }
 function wizCalcHtml() {
   const c = wizCalc(), f = x => nf2.format(x);
@@ -1336,9 +1338,11 @@ function wizCalcHtml() {
   const parts = [`דירה ${f(c.size)}`, c.balc ? `מרפסת ${f(Math.round(.3 * c.balc * 100) / 100)}` : "", c.stor ? `מחסן ${f(Math.round(.4 * c.stor * 100) / 100)}` : "", c.park ? `${c.park === 1 ? "חניה" : `${c.park} חניות`} ${f(2 * c.park)}` : ""].filter(Boolean);
   return `<div class="calcbox small"><div class="spread"><span>שטח משוקלל</span><b class="num">${f(c.w)} מ"ר</b></div><div class="muted">${parts.join(" + ")}</div><div class="muted">מרפסת נספרת <bdi>30%</bdi>, מחסן <bdi>40%</bdi>, וכל חניה 2 מ"ר</div>
     <div class="spread"><span>× ${nf.format(wiz.d.ppsqm)} ₪ למ"ר, לפני מע"מ</span><span class="num">${ils(c.pre)}</span></div>
-    <div class="spread"><span>+ מע"מ ${Math.round(VAT * 100)}%</span><span class="num">${ils(c.total - c.pre)}</span></div>
+    <div class="spread"><span>+ מע"מ ${Math.round(VAT * 100)}%</span><span class="num">${ils(c.gross - c.pre)}</span></div>
+    ${c.disc ? `<div class="spread"><span>− הנחה: <bdi>20%</bdi> עד 300 אלף</span><span class="num">−${ils(c.disc)}</span></div>` : ""}
     <div class="spread"><b>מחיר הדירה</b><b class="num">${ils(c.total)}</b></div></div>
-    <button class="ghost small" data-wz="price:${c.total}" style="margin-top:8px">להשתמש ב-${ils(c.total)}</button><p class="small muted">כולל מע"מ, לפני הצמדה למדד.</p>`;
+    <button class="ghost small" data-wz="price:${c.total}" style="margin-top:8px">להשתמש ב-${ils(c.total)}</button><p class="small muted">כולל מע"מ, לפני הצמדה למדד.</p>
+    <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><input type="checkbox" data-wzdisc ${wiz.d.disc === false ? "" : "checked"} style="width:auto;flex:none;margin-top:3px"><span>להוריד את הנחת המשתכן: <bdi>20%</bdi> מהמחיר, עד 300 אלף ₪. בטלו את הסימון רק אם המחיר למ"ר בחוזה שלכם כבר אחרי הנחה.</span></label>`;
 }
 function liveComma(t) {
   const raw = t.value, pos = t.selectionStart == null ? raw.length : t.selectionStart, digitsBefore = raw.slice(0, pos).replace(/\D/g, "").length, digits = raw.replace(/\D/g, "");
@@ -1577,6 +1581,7 @@ document.addEventListener("toggle", e => { const d = e.target.dataset; if (d && 
 document.addEventListener("input", e => {
   const t = e.target, d = t.dataset;
   if (t.id === "qpcts") { const p = parsePcts(t.value), s = p.reduce((a, b) => a + b, 0), el = document.getElementById("qsum"); if (el) { el.textContent = `${p.length} תשלומים, סה"כ ${nf.format(s)}%`; el.style.color = Math.abs(s - 100) < .01 ? "var(--ok)" : "var(--warn)"; } return; }
+  if ("wzdisc" in d && wiz) { wiz.d.disc = t.checked; const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); return; }
   if (t.inputMode === "numeric" && !(d.pf || "").endsWith(":voucher")) liveComma(t);
   if (d.wzf) { wiz.d[d.wzf] = t.value; if (d.wzf === "city") wizSuggest(t.value); if (["size", "balc", "stor", "park"].includes(d.wzf)) { const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); } return; }
   if (t.id === "areasearch") { applyAreaFilter(t.value); areaSuggest(t.value); return; }
