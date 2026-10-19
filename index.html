@@ -411,7 +411,8 @@ function scheduleFromPcts(pcts, sign, delivery) {
   return pcts.map((pct, i) => {
     const date = i === 0 ? sign : i === n - 1 ? end : i === 1 ? d45 : addDays(d45, Math.round(span * (i - 1) / (n - 2)));
     const name = i === 0 ? "חתימה" : i === n - 1 ? "לפני מסירה" : i === 1 ? "תוך 45 יום" : "תשלום " + (i + 1);
-    return { id: uid(), name, date, pct, linked: n > 2 ? i >= 2 : i >= 1, paid: false };
+    const before = pcts.slice(0, i).reduce((a, b) => a + b, 0);
+    return { id: uid(), name, date, pct, linked: before >= 20 - 1e-9, paid: false };   /* Sale Law: the first 20% of the price are not linked */
   });
 }
 const parsePcts = s => String(s).split(/[,\s]+/).map(Number).filter(x => x > 0 && x <= 100);
@@ -428,7 +429,7 @@ function paymentTemplate(type, sign, delivery) {
 }
 function defaultCosts(type, price) {
   const lawyer = type === "ml" ? 5000 : Math.round(price * 0.005 * (1 + VAT));
-  return { lawyer, advisor: 6000, broker: type === "resale" ? Math.round(price * 0.02 * (1 + VAT)) : 0, appraiser: type === "resale" ? 2000 : 0, moving: 5000, renovation: type === "resale" ? 30000 : 15000, other: 0 };
+  return { lawyer, advisor: 6000, broker: type === "resale" ? Math.round(price * 0.02 * (1 + VAT)) : 0, appraiser: 2000, bankfees: 1500, moving: 5000, renovation: type === "resale" ? 30000 : 60000, other: 0 };
 }
 function newState(profile, example) {
   const type = profile.type;
@@ -447,7 +448,7 @@ function newState(profile, example) {
   };
 }
 function exampleState() {
-  const s = newState({ type: "ml", buyer: "first", city: "ראש העין", price: 1650000, sign: "2026-11-01", delivery: "2029-06-01", linkedShare: 40, lottery: "2025-06-01", form4: "", stage: "before" }, true);
+  const s = newState({ type: "ml", buyer: "first", city: "ראש העין", price: 1650000, sign: "2026-11-01", delivery: "2029-06-01", linkedShare: 50, lottery: "2025-06-01", form4: "", stage: "before" }, true);
   s.tasks.forEach(t => { if (t.stage === "before") t.done = true; });
   s.profile.stage = "sign";
   return s;
@@ -941,7 +942,10 @@ const yrs = () => Math.min(RULES.maxYears, Math.max(1, S.mix.years || 1));
 function firstRate() { const m = S.mix, s = m.pPrime + m.pFixed + m.pLinked + (m.pVar || 0) || 1; return (m.pPrime * m.rPrime + m.pFixed * m.rFixed + m.pLinked * m.rLinked + (m.pVar || 0) * (m.rVar || 0)) / s; }
 /* ML: the bank lends against market value. Without an appraisal, estimate it conservatively as price / 0.8
    (the program price is usually 20% or more below market) */
-const mlAppraisal = () => S.fin.appraisal > 0 ? S.fin.appraisal : Math.round(S.profile.price / 0.8);
+/* ML price = market value minus a discount of 20%, capped at ML_DISC_CAP; so without an appraisal the market value is the lower of price/0.8 and price + cap */
+const ML_DISC_CAP = 300000;
+const mlAppraisal = () => S.fin.appraisal > 0 ? S.fin.appraisal : Math.round(Math.min(S.profile.price / 0.8, S.profile.price + ML_DISC_CAP));
+const mlApprWhy = () => S.profile.price / 0.8 > S.profile.price + ML_DISC_CAP ? "המחיר ועוד ההנחה המקסימלית, 300 אלף ₪" : "המחיר ועוד ההנחה של 20% משווי השוק";
 /* extra funding sources (study fund, special loans, family help): S.fin.sources = [{id,name,kind:"asset"|"loan",amount,date,monthly,bank,inc}] */
 const srcList = () => (S.fin.sources || []);
 const srcUsable = x => x.inc && (x.amount > 0 || x.now > 0) && (!x.date || !S.profile.delivery || x.date <= S.profile.delivery || x.now > 0);
@@ -983,12 +987,12 @@ function limitsCard() {
     </tbody></table></div>
     ${f.savings || ex ? (avail >= need ? `<p class="small" style="color:var(--ok)">${ex ? `כולל ${ils(ex)} ממקורות נוספים, ` : ""}אחרי העלויות הנלוות נשארים לכם ${ils(avail)}, מספיק להון העצמי המינימלי.</p>` : `<p class="small" style="color:var(--warn)">אחרי העלויות הנלוות נשארים ${ils(Math.max(0, avail))}. חסרים ${ils(need - avail)} להון העצמי המינימלי.</p>`) : ""}
     ${(() => { if (!T().contractor || !p.sign) return ""; const lim = addDays(p.sign, 60), early = S.payments.filter(x => x.date && x.date <= lim).reduce((s, x) => s + payAmount(x), 0), availEarly = (f.savings || 0) + extraFunds(lim) - costsEarly(); return early > need + 1 ? `<p class="small muted">שימו לב לתזמון: בחתימה ובחודשיים הראשונים משלמים לקבלן ${ils(early)}. בדרך כלל הבנק מתחיל להעביר את המשכנתא רק אחרי התשלומים האלה, אז צריך את הסכום הזה זמין${availEarly < early ? `, ואצלכם חסרים ${ils(early - Math.max(0, availEarly))}. אפשר לשאול את הבנק על משיכה מוקדמת של המשכנתא או על הלוואת גישור` : ""}.</p>` : ""; })()}
-    ${p.type === "ml" && !(f.appraisal > 0) ? `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי השוק של הדירה, לא לפי המחיר שאתם משלמים. עוד לא הזנתם שמאות, אז השווי מוערך ב-${ils(mlAppraisal())}, כלומר המחיר ועוד 25%, כי המחיר בתוכנית נמוך בדרך כלל ב-20% ויותר משווי השוק. כשתהיה שמאות, הזינו אותה למטה בשדה "שמאות הדירה".</p>` : ""}
+    ${p.type === "ml" && !(f.appraisal > 0) ? `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי השוק של הדירה, לא לפי המחיר שאתם משלמים. עוד לא הזנתם שמאות, אז השווי מוערך ב-${ils(mlAppraisal())}: ${mlApprWhy()}. זו הערכה, והשמאי של הבנק יכול לקבוע שווי נמוך יותר. כשתהיה שמאות, הזינו אותה למטה בשדה "שמאות הדירה".</p>` : ""}
     ${equityClamped() ? `<p class="small" style="color:var(--warn)">ההון העצמי שבחרת (${ils(f.equity)}) נמוך מהמינימום החדש, אז החישוב משתמש במינימום.</p>` : ""}
     <p class="src">החישוב לפי ${yrs()} שנה ותמהיל הריביות שלכם. בנק יכול לאשר פחות מזה. <a href="${RULES.src}" target="_blank" rel="noopener">הוראת בנק ישראל</a></p></div>`;
 }
 /* costs paid around signing; moving, renovation and "other" come at delivery */
-function costsEarly() { const c = S.costs; return purchaseTax(S.profile.price, S.profile.buyer) + ["lawyer", "advisor", "broker", "appraiser"].reduce((a, k) => a + (Number(c[k]) || 0), 0); }
+function costsEarly() { const c = S.costs; return purchaseTax(S.profile.price, S.profile.buyer) + ["lawyer", "advisor", "broker", "appraiser", "bankfees"].reduce((a, k) => a + (Number(c[k]) || 0), 0); }
 const linkTotal = () => S.payments.reduce((s, x) => s + linkageCost(x), 0);
 function costsTotal() { const c = S.costs; return purchaseTax(S.profile.price, S.profile.buyer) + Object.values(c).reduce((a, b) => a + (Number(b) || 0), 0) + linkTotal(); }
 /* cash needed in the first two months: contractor payments due before the bank usually starts paying */
@@ -1090,7 +1094,7 @@ function screenSetup() {
         <label class="f" id="l_deliv">${p.type === "resale" ? "קבלת מפתח" : "מסירה צפויה"}<input id="f_delivery" data-key="f_delivery" type="date" value="${esc(p.delivery)}"></label>
       </div>
       <div class="contractor-only" ${p.type === "resale" ? "hidden" : ""}>
-        <label class="f">חלק המחיר שצמוד למדד תשומות הבנייה (%)<input id="f_linked" data-key="f_linked" inputmode="decimal" value="${esc(p.linkedShare)}"></label>
+        <label class="f">כמה מכל תשלום צמוד למדד תשומות הבנייה (%, לפי החוק עד 50)<input id="f_linked" data-key="f_linked" inputmode="decimal" value="${esc(p.linkedShare)}"></label>
         <p class="small muted">נמצא בחוזה, בסעיף ההצמדה.</p>
       </div>
       <div class="ml-only grid2" ${p.type === "ml" ? "" : "hidden"}>
@@ -1328,9 +1332,9 @@ function inCosts() {
     ${numIn("fin.savings", "חסכונות נזילים (₪)")}
     <p class="small muted">הערכות התחלתיות, כולל מע"מ. עדכנו לפי ההצעות שקיבלתם.</p>
     <h3>בחתימה</h3>
-    <div class="grid2">${numIn("costs.lawyer", "עורך דין")}${numIn("costs.advisor", "יועץ משכנתאות")}${numIn("costs.broker", "תיווך")}${numIn("costs.appraiser", "שמאי")}</div>
+    <div class="grid2">${numIn("costs.lawyer", "עורך דין")}${numIn("costs.advisor", "יועץ משכנתאות")}${numIn("costs.broker", "תיווך")}${numIn("costs.appraiser", "שמאי (הבנק דורש)")}${numIn("costs.bankfees", "עמלות בנק ורישום משכון")}</div>
     <h3 style="margin-top:10px">בכניסה לדירה</h3>
-    <div class="grid2">${numIn("costs.renovation", "שיפוץ וריהוט")}${numIn("costs.moving", "הובלה")}${numIn("costs.other", "אחר")}</div>`, !sum || editOpen.costs);
+    <div class="grid2">${numIn("costs.renovation", "מיזוג, מטבח, ריהוט ושיפוץ")}${numIn("costs.moving", "הובלה")}${numIn("costs.other", "אחר")}</div>`, !sum || editOpen.costs);
 }
 /* how a given equity is funded: liquid savings first (keeping the safety reserve), then the extra sources in list order */
 function fundEquity(eq) {
@@ -1384,7 +1388,7 @@ function outEquity() {
     ${line(`יש לכם, אחרי עלויות נלוות של ${ils(costs)}${ex ? ` (כולל ${ils(ex)} ממקורות נוספים)` : ""}`, ils(avail), `color:${avail >= need ? "var(--ok)" : "var(--warn)"}`)}
     <p class="small" style="margin-top:8px;color:${avail >= need ? "var(--ok)" : "var(--warn)"}">${avail >= need ? "✓ יש לכם מספיק." : `חסרים ${ils(need - avail)}. אפשר להקטין את תקציב השיפוץ והריהוט, להוסיף מקור כסף (למשל עזרה מהמשפחה או קרן השתלמות), או לבדוק שוב את העלויות.`}</p>
     ${early > need + 1 && availEarly < early ? `<p class="small" style="color:var(--warn)">שימו לב: בחודשיים הראשונים משלמים לקבלן ${ils(early)}, לפני שהבנק מתחיל להעביר כסף. עד אז יהיו זמינים לכם ${ils(Math.max(0, availEarly))} (חסכונות ומקורות שכבר זמינים, פחות עו"ד, יועץ ומס רכישה), אז חסרים ${ils(early - Math.max(0, availEarly))} בהתחלה. שאלו את הבנק על משיכה מוקדמת של המשכנתא או על הלוואת גישור.</p>` : early > need + 1 ? `<p class="small muted">בחודשיים הראשונים משלמים לקבלן ${ils(early)} מהכיס, לפני שהבנק מתחיל להעביר כסף. יש לכם מספיק לזה.</p>` : ""}
-    ${p.type === "ml" && !(f.appraisal > 0) ? `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי השוק. בלי שמאות, השווי מוערך ב-${ils(mlAppraisal())} (המחיר ועוד 25%). אפשר להזין שמאות בהנחות למטה.</p>` : ""}
+    ${p.type === "ml" && !(f.appraisal > 0) ? `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי השוק. בלי שמאות, השווי מוערך ב-${ils(mlAppraisal())} (${mlApprWhy()}). אפשר להזין שמאות בהנחות למטה.</p>` : ""}
   </div>`;
   if (avail < need) return summary;
   const { res } = equityScenarios(), cur = chosenEquity(), rate = mortgageRate();
@@ -1402,10 +1406,11 @@ function outEquity() {
   const chosen = res.find(r => Math.abs(cur - r.eq) < 1) || res[0], isBest = chosen === best, warnEarly = early > need + 1 && availEarly < early, ce = cashEarly();
   let apprNote = "";
   if (p.type === "ml" && !(f.appraisal > 0)) { const keep = f.appraisal; f.appraisal = p.price; const needLow = minEquity(); f.appraisal = keep;
-    if (needLow > need + 1) apprNote = `<p class="small muted" style="margin:6px 0 0">החישוב מניח ששמאי הבנק יעריך את הדירה ב-${ils(mlAppraisal())} (המחיר ועוד 25%). אם השמאות תצא נמוכה, למשל כמו המחיר, תצטרכו מהכיס לפחות ${ils(needLow)}. <button class="link small" data-act="setappr">הזנת שמאות</button></p>`; }
+    if (needLow > need + 1) apprNote = `<p class="small muted" style="margin:6px 0 0">החישוב מניח ששמאי הבנק יעריך את הדירה ב-${ils(mlAppraisal())} (${mlApprWhy()}). אם השמאות תצא נמוכה, למשל כמו המחיר, תצטרכו מהכיס לפחות ${ils(needLow)}. <button class="link small" data-act="setappr">הזנת שמאות</button></p>`; }
   const answer = `<div class="card hero"><span class="small muted">${isBest ? "ההמלצה לפי הנתונים שלכם" : "האפשרות שבחרתם"}</span>
     <h2>לשים <span class="num">${ils(chosen.eq)}</span> מהכיס</h2>
-    <p style="margin:4px 0">החזר חודשי <b class="num">${ils(chosen.pay)}</b> · יישאר לכם בצד <b class="num">${ils(chosen.liquid)}</b></p>
+    <p style="margin:4px 0">החזר חודשי <b class="num">${ils(chosen.pay)}</b> · יישאר לכם בצד <b class="num">${ils(chosen.liquid)}</b>${ce.early > chosen.eq + 1 ? ` <span class="small muted">(אם הבנק מממן כבר את התשלום של יום 45)</span>` : ""}</p>
+    ${ce.early > chosen.eq + 1 ? `<p class="small" style="margin:0 0 4px">אם הבנק לא יספיק לממן את התשלום השני: תשלמו לקבלן מהכיס ${ils(ce.early)}, המשכנתא תקטן לכ-${ils(Math.max(0, S.profile.price - ce.early))}, ויישארו לכם ${ils(Math.max(0, ce.left))} עד המסירה. כדאי לסגור אישור עקרוני ושמאות לפני החתימה, ולוודא שהבנק יעביר את התשלום של יום 45 ישירות לחשבון הליווי.</p>` : ""}
     ${ce.gap > 0 ? `<p class="small" style="margin:0;color:var(--warn)">⚠ ההון העצמי מספיק, אבל בחודשיים הראשונים משלמים לקבלן ${ils(ce.early)} לפני שהבנק מתחיל לממן. יש לכם עד אז ${ils(Math.max(0, ce.avail))}, אז חסרים ${ils(ce.gap)}. בררו עם הבנק אם הוא יממן כבר את התשלום השני.</p>`
       : ce.early > need + 1 ? `<p class="small" style="margin:0;color:${ce.left < 2 * (f.expenses || 10000) ? "var(--gold)" : "var(--ok)"}">${ce.left < 2 * (f.expenses || 10000) ? "⚠ מספיק, אבל בקושי:" : "✓ יש לכם מספיק,"} גם לתשלומים של החודשיים הראשונים (${ils(ce.early)}). אחריהם יישארו לכם כ-${ils(Math.max(0, ce.left))} עד שהבנק מתחיל לממן.</p>`
       : `<p class="small" style="margin:0;color:var(--ok)">✓ יש לכם מספיק: צריך מהכיס לפחות ${ils(need)}, ויש לכם ${ils(avail)} אחרי העלויות הנלוות.</p>`}
@@ -1470,7 +1475,9 @@ function outMortgage() {
       <div class="stat"><span class="v">${ils(m.total)}</span><span class="l">סך הכול לאורך ${yrs()} שנה</span></div></div>
       <div class="tbl"><table><thead><tr><th>מסלול</th><th>קרן</th><th>החזר ראשון</th><th>סך הכול</th></tr></thead><tbody>
       ${m.rows.map(r => `<tr><td style="white-space:normal">${r.name}</td><td>${ilsK(r.P)}</td><td>${ils(r.pay)}</td><td>${ilsK(r.tot)}</td></tr>`).join("")}</tbody></table></div>
-      <p class="small muted">חישוב בשיטת שפיצר. הפריים מחושב לפי הריבית של היום, וההחזר בפועל ישתנה עם ריבית בנק ישראל.</p></div>
+      <p class="small muted">חישוב בשיטת שפיצר. הפריים מחושב לפי הריבית של היום, וההחזר בפועל ישתנה עם ריבית בנק ישראל.${mix.pVar ? " במסלול המשתנה הריבית מתעדכנת כל 5 שנים, אז ההחזר אחרי 5 שנים לא ידוע מראש." : ""}</p>
+      <p class="small muted">לא כלול בהחזר: ביטוח חיים וביטוח מבנה, שהבנק דורש כתנאי למשכנתא. בדרך כלל עוד כמה מאות ₪ בחודש. כדאי להשוות הצעה של חברת ביטוח מול הביטוח של הבנק.</p>
+      ${yrs() < 30 ? `<p class="small muted">ב-30 שנה ההחזר הראשון יהיה ${ils((() => { const y = S.mix.years; S.mix.years = 30; const f = mortgageCalc().first; S.mix.years = y; return f; })())}. אפשר לקחת תקופה ארוכה ולפרוע מוקדם את הפריים, בלי קנס.</p>` : ""}</div>
     <div class="card"><div class="spread"><h2>יחס החזר מההכנסה</h2>${ptiChip(r)}</div>${ptiNote(r)}</div>
     <div class="card"><div class="spread"><span>המשכנתא הגבוהה ביותר שבנק יכול לאשר</span><b class="num">${ils(maxLoan())}</b></div><p class="small muted">${loanAmount() > maxLoan() + 1 ? `<span style="color:var(--warn)">המשכנתא כאן גבוהה מהמקסימום.</span> ` : ""}פירוט ובחירת ההון העצמי: <button class="link small" data-go="calc" data-sub="equity">הון עצמי</button></p></div>`;
 }
@@ -1992,7 +1999,7 @@ function screenWizard() {
   if (k === "money") body = `<h2>כמה כסף יש לכם?</h2><p class="small muted">כדי לחשב כמה משכנתא אפשר לקבל וכמה הון עצמי צריך. אפשר לדלג ולהשלים אחר כך.</p>
     ${inp("savings", "חסכונות נזילים (₪)", 'inputmode="numeric"')}${inp("income", "הכנסה חודשית נטו של הבית (₪)", 'inputmode="numeric"')}
     <div class="grid2">${inp("expenses", "הוצאות חודשיות, בלי שכר דירה (₪)", 'inputmode="numeric" placeholder="לא חובה"')}${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
-    ${d.type === "ml" ? inp("appraisal", "שמאות הדירה, אם כבר יש (₪)", 'inputmode="numeric" placeholder="לא חובה"') + `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי הדירה בשוק. בלי שמאות נעריך אותו כמחיר ועוד 25%.</p>` : ""}`;
+    ${d.type === "ml" ? inp("appraisal", "שמאות הדירה, אם כבר יש (₪)", 'inputmode="numeric" placeholder="לא חובה"') + `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי הדירה בשוק. בלי שמאות נעריך אותו כמחיר ועוד ההנחה (20% משווי השוק, עד 300 אלף ₪).</p>` : ""}`;
   const last = i === n - 1, canNext = k !== "type" && k !== "buyer";
   return `<div class="screen wizard"><div class="wzhead"><span class="small muted">שאלה ${i + 1}${d.type ? ` מתוך ${n}` : ""}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
     <div class="card">${body}${wiz.err ? `<p class="small" style="color:var(--warn)">${wiz.err}</p>` : ""}</div>
@@ -2002,7 +2009,7 @@ function wizCalc() {
   const d = wiz.d, n = v => Math.max(0, Number(String(v || "").replace(/[^\d.]/g, "")) || 0);
   const size = n(d.size), balc = n(d.balc), stor = n(d.stor), park = Math.round(n(d.park));
   const w = Math.round((size + .3 * balc + .4 * stor + 2 * park) * 100) / 100, pre = Math.round(w * d.ppsqm), gross = Math.round(pre * (1 + VAT));
-  const disc = d.disc === false ? 0 : Math.min(Math.round(gross * .2), 300000);
+  const disc = d.disc === false ? 0 : Math.min(Math.round(gross * .2), ML_DISC_CAP);
   return { size, balc, stor, park, w, pre, gross, disc, total: gross - disc };
 }
 function wizCalcHtml() {
@@ -2032,7 +2039,7 @@ function wizValidate(k) {
 }
 function wizFinish() {
   const d = wiz.d, num = v => Number(String(v).replace(/[^\d.]/g, "")) || 0;
-  const prof = { type: d.type, buyer: d.type === "ml" ? "first" : d.buyer, city: matchCity(d.city) || d.city.trim(), price: num(d.price), sign: d.sign, delivery: d.delivery, linkedShare: d.type === "resale" ? 0 : d.type === "ml" ? 50 : 40, lottery: d.lottery, form4: "", stage: "before" };
+  const prof = { type: d.type, buyer: d.type === "ml" ? "first" : d.buyer, city: matchCity(d.city) || d.city.trim(), price: num(d.price), sign: d.sign, delivery: d.delivery, linkedShare: d.type === "resale" ? 0 : 50, lottery: d.lottery, form4: "", stage: "before" };
   S = newState(prof, false); S.fin.savings = num(d.savings); S.fin.income = num(d.income); S.flow = {};
   if (num(d.expenses)) { S.fin.expenses = num(d.expenses); S.fin.expTouched = true; } if (num(d.age)) S.fin.age = num(d.age); if (num(d.appraisal)) S.fin.appraisal = num(d.appraisal);
   wiz = null; tab = "home"; persist(); render(); window.scrollTo(0, 0); toast("מוכן! למעלה מחכה הצעד הבא שלכם");
