@@ -19,6 +19,7 @@ export default async (req) => {
   const store = getStore("households");
   if (req.method === "GET") {
     const v = await store.get(code, { type: "json" });
+    if (v && v.deleted) return json({ error: "deleted" }, 410);
     return v ? json(v) : json({ error: "not found" }, 404);
   }
   if (req.method === "PUT") {
@@ -28,15 +29,14 @@ export default async (req) => {
     // the app encrypts the purchase with the share code before sending ("enc1:..."); older versions sent plain JSON
     if (!body.state.startsWith("enc1:")) { try { JSON.parse(body.state); } catch { return json({ error: "bad state" }, 400); } }
     // refuse a save made on top of an older version; the phone then re-reads, merges and saves again
-    if (body.ifMatch !== undefined) {
-      const cur = await store.get(code, { type: "json" });
-      if (cur && body.ifMatch !== cur.updatedAt) return json({ error: "conflict", updatedAt: cur.updatedAt }, 409);
-    }
+    const cur = await store.get(code, { type: "json" });
+    if (cur && cur.deleted) return json({ error: "deleted" }, 410);   // the purchase was deleted from the server: never bring it back
+    if (body.ifMatch !== undefined && cur && body.ifMatch !== cur.updatedAt) return json({ error: "conflict", updatedAt: cur.updatedAt }, 409);
     const v = { state: body.state, updatedAt: new Date().toISOString() };
     await store.setJSON(code, v);
     return json(v);
   }
-  if (req.method === "DELETE") { await store.delete(code); return json({ ok: true }); }
+  if (req.method === "DELETE") { await store.setJSON(code, { deleted: true, at: new Date().toISOString() }); return json({ ok: true }); }   // keep a marker so the other phone cannot recreate it
   return json({ error: "method not allowed" }, 405);
 };
 

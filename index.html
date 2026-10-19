@@ -464,7 +464,7 @@ function migrate(x) {
 let S = exampleState();
 const openStages = new Set();
 let payEdit = false, listEdit = false, advOpen = false;
-let tab = "home", setupOpen = false, joinOpen = false, confirmReset = false;
+let tab = "home", setupOpen = false, joinOpen = false, confirmReset = false, invite = null;
 const sub = { buy: "tasks", calc: "costs", waves: "prices" };
 const LS = "maftech.state.v1";
 let store = { kind: "local", priv: null, shared: null, code: null, unsub: null, db: null, assets: null, downloads: null };
@@ -516,7 +516,8 @@ async function pushDisable() {
   pushOn = false; try { localStorage.removeItem(PUSH_KEY); } catch (e) {} render(); toast("התזכורות כובו");
 }
 function pushCard() {
-  if (!pushOK()) return "";
+  if (!pushOK()) return store.remote || !window.claude ? `<div class="card"><h2>תזכורות בטלפון</h2><p class="small muted">כדי לקבל תזכורות לפני כל תשלום, צריך להתקין את האפליקציה במסך הבית:</p>
+    <p class="small">אנדרואיד: בכרום, תפריט ⋮ ← "הוספה למסך הבית" או "התקנת אפליקציה".<br>אייפון: בספארי, כפתור השיתוף ← "הוספה למסך הבית". אחר כך פתחו את "מפתח" מהאייקון.</p></div>` : "";
   const n = pushEvents().length;
   return `<div class="card"><h2>תזכורות בטלפון</h2><p class="small muted">התראה 3 ימים לפני כל תשלום לקבלן ובבוקר התשלום, יום לפני החלטת ריבית, לפני החתימה ולפני המסירה. מגיעה גם כשהאפליקציה סגורה.</p>
     ${pushOn ? `<p>✓ התזכורות פעילות${n ? ` · ${n} תזכורות מתוכננות` : ""}</p><div class="row"><button class="ghost" data-pk="test">שליחת התראת בדיקה</button><button class="link" data-pk="off">כיבוי</button></div>` : `<button data-pk="on">הפעלת תזכורות</button>`}</div>`;
@@ -569,7 +570,7 @@ async function flush() {
     }
     else await store.priv.set({ state: body, savedAt: new Date().toISOString() });
     setSync(store.shared ? "משותף ונשמר" : store.remote ? "נשמר בטלפון" : "נשמר בחשבון");
-  } catch (e) { if (e && e.conflict) dirty = true; else setSync(store.shared ? "לא מחובר. נשמר במכשיר" : "נשמר במכשיר בלבד"); }
+  } catch (e) { if (e && e.gone) { saving = false; leaveShare(true); return; } if (e && e.conflict) dirty = true; else setSync(store.shared ? "לא מחובר. נשמר במכשיר" : "נשמר במכשיר בלבד"); }
   saving = false; if (dirty) flush();
 }
 function setSync(t) { document.getElementById("sync").textContent = t; }
@@ -577,6 +578,7 @@ function attachShared(code) {
   if (store.unsub) store.unsub();
   store.code = code; store.shared = store.db.doc("households/" + code);
   store.unsub = store.shared.onSnapshot(snap => {
+    if (snap.gone) { leaveShare(true); return; }
     if (!snap.exists || snap.metadata.hasPendingWrites || dirty || saving) return;
     const body = snap.data().state; if (!body || body === lastSent || body === JSON.stringify(S)) return;
     try { S = migrate(JSON.parse(body)); base = clone(S); saveLocal(); render(); toast("עודכן מהמכשיר השני"); } catch (e) {}
@@ -602,14 +604,15 @@ async function decText(code, s) { if (!s || !String(s).startsWith("enc1:")) retu
 function remoteDoc(path) {
   const code = path.split("/")[1], url = "/api/household?code=" + encodeURIComponent(code);
   let seen = null;   /* updatedAt of the version this phone last read; the server refuses a save made on an older one */
-  const get = async () => { const r = await fetch(url, { cache: "no-store" }); if (r.status === 404) return { exists: false, data: () => null }; if (!r.ok) throw new Error("http " + r.status); const v = await r.json(); seen = v.updatedAt; v.state = await decText(code, v.state); return { exists: true, data: () => v, metadata: { hasPendingWrites: false } }; };
+  const get = async () => { const r = await fetch(url, { cache: "no-store" }); if (r.status === 404 || r.status === 410) return { exists: false, gone: r.status === 410, data: () => null }; if (!r.ok) throw new Error("http " + r.status); const v = await r.json(); seen = v.updatedAt; v.state = await decText(code, v.state); return { exists: true, data: () => v, metadata: { hasPendingWrites: false } }; };
   return {
     get,
     set: async v => { const r = await fetch(url, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ state: await encText(code, v.state), ifMatch: seen }) });
-      if (r.status === 409) { const e = new Error("conflict"); e.conflict = true; throw e; } if (!r.ok) throw new Error("http " + r.status); seen = (await r.json()).updatedAt; },
+      if (r.status === 409) { const e = new Error("conflict"); e.conflict = true; throw e; }
+      if (r.status === 410) { const e = new Error("gone"); e.gone = true; throw e; } if (!r.ok) throw new Error("http " + r.status); seen = (await r.json()).updatedAt; },
     onSnapshot(cb, err) {   /* poll while the app is open; check right away when it comes back to the screen */
       let last = null, stop = false;
-      const tick = async () => { if (stop || document.hidden) return; try { const s = await get(); const u = s.exists ? s.data().updatedAt : null; if (u && u !== last) { last = u; cb(s); } } catch (e) { if (err) err(e); } };
+      const tick = async () => { if (stop || document.hidden) return; try { const s = await get(); if (s.gone) { cb(s); return; } const u = s.exists ? s.data().updatedAt : null; if (u && u !== last) { last = u; cb(s); } } catch (e) { if (err) err(e); } };
       const vis = () => { if (!document.hidden) tick(); };
       const t = setInterval(tick, 8000); document.addEventListener("visibilitychange", vis); tick();
       return () => { stop = true; clearInterval(t); document.removeEventListener("visibilitychange", vis); };
@@ -627,8 +630,8 @@ async function initRemote() {
   }
   setSync("נשמר בטלפון");
   const jc = new URLSearchParams(location.search).get("join");
-  if (jc && /^[a-z0-9]{6,20}$/i.test(jc)) { history.replaceState(history.state, "", location.pathname); setupOpen = true; joinOpen = true; render();
-    setTimeout(() => { const i = document.getElementById("joincode"); if (i) { i.value = jc.toLowerCase(); i.scrollIntoView({ block: "center" }); } toast("קיבלתם קוד שיתוף. לחצו \"הצטרפות\""); }, 100); }
+  if (jc && /^[a-z0-9]{6,20}$/i.test(jc)) { history.replaceState(history.state, "", location.pathname); invite = { code: jc.toLowerCase() }; render();
+    try { const h = await store.db.doc("households/" + invite.code).get(); if (h.exists) { const st = JSON.parse(h.data().state); invite.city = st.profile && st.profile.city; invite.type = st.profile && TYPES[st.profile.type] ? TYPES[st.profile.type].name : ""; } else invite.missing = true; } catch (e) { invite.missing = true; } render(); }
 }
 async function initStore() {
   setTimeout(pushSync, 3000);
@@ -670,14 +673,14 @@ async function joinShare(code) {
     const h = await store.db.doc("households/" + code).get();
     if (!h.exists) { toast("לא נמצאה רכישה עם הקוד הזה"); return; }
     await store.priv.set({ household: code });
-    S = migrate(JSON.parse(h.data().state)); base = clone(S); saveLocal(); attachShared(code); joinOpen = false; setupOpen = false; tab = "home"; render(); toast("הצטרפת לרכישה המשותפת");
+    S = migrate(JSON.parse(h.data().state)); base = clone(S); saveLocal(); attachShared(code); joinOpen = false; setupOpen = false; tab = "home"; render(); window.scrollTo(0, 0); toast("הצטרפתם לרכישה המשותפת");
   } catch (e) { toast("ההצטרפות לא הצליחה. נסה שוב."); }
 }
-async function leaveShare() {
+async function leaveShare(byOther) {
   if (store.unsub) store.unsub();
   store.unsub = null; store.shared = null; store.code = null;
   try { await store.priv.set({ state: JSON.stringify(S), savedAt: new Date().toISOString() }); } catch (e) {}
-  setSync(store.remote ? "נשמר בטלפון" : "נשמר בחשבון"); render(); toast("השיתוף הופסק במכשיר הזה");
+  setSync(store.remote ? "נשמר בטלפון" : "נשמר בחשבון"); render(); toast(byOther ? "השיתוף הופסק מהטלפון השני. הנתונים נשארו אצלכם" : "השיתוף הופסק בטלפון הזה");
 }
 
 /* ---------- documents in the installed app: stored in parts through /api/file, kept on the phone after the first open ---------- */
@@ -853,17 +856,23 @@ const ilsK = v => Math.abs(v) >= 1e6 ? "₪" + (v / 1e6).toFixed(2) + " מ׳" : 
 const fmtDate = s => s ? dt(s).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" }) : "";
 const daysTo = s => Math.round((dt(s) - today()) / 864e5);
 const yearsBetween = (a, b) => (dt(b) - dt(a)) / (365.25 * 864e5);
+function commitUndo() { const f = toastUndo.pending; toastUndo.pending = null; if (f) f(); }
+addEventListener("pagehide", commitUndo); document.addEventListener("visibilitychange", () => { if (document.hidden) commitUndo(); });
 function toastUndo(t, undo, after) {
+  commitUndo();
   const el = document.getElementById("toast"); el.innerHTML = `<span>${esc(t)}</span> <button class="link small" id="undobtn" style="color:inherit;text-decoration:underline;min-height:0;padding:0 6px">ביטול</button>`; el.hidden = false; clearTimeout(toast.t);
-  let done = false; const fin = () => { if (done) return; done = true; el.hidden = true; if (after) after(); };
-  document.getElementById("undobtn").onclick = () => { if (done) return; done = true; el.hidden = true; undo(); };
+  let done = false; const fin = () => { if (done) return; done = true; if (toastUndo.pending === fin) toastUndo.pending = null; if (document.getElementById("undobtn")) el.hidden = true; if (after) after(); };
+  toastUndo.pending = fin;
+  document.getElementById("undobtn").onclick = () => { if (done) return; done = true; toastUndo.pending = null; el.hidden = true; undo(); };
   toast.t = setTimeout(fin, 6000);
 }
-function undoable(msg, change, after) {
-  const snap = JSON.stringify(S); change(); persist(); render();
-  toastUndo(msg, () => { S = migrate(JSON.parse(snap)); persist(); render(); toast("שוחזר"); }, after);
+/* removes one item from a list and offers to put back just that item (other changes made meanwhile are kept) */
+function undoRemove(msg, getList, setList, id, after) {
+  const list = getList(), i = list.findIndex(x => x.id === id); if (i < 0) return; const item = list[i];
+  setList(list.filter(x => x.id !== id)); persist(); render();
+  toastUndo(msg, () => { const cur = getList(); if (!cur.some(x => x.id === id)) { const c = cur.slice(); c.splice(Math.min(i, c.length), 0, item); setList(c); } persist(); render(); toast("שוחזר"); }, after);
 }
-function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
+function toast(t) { commitUndo(); const el = document.getElementById("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
 const T = () => TYPES[S.profile.type];
 const stagesOf = () => STAGES[S.profile.type];
 function payAmount(p) { return S.payMode === "vouchers" ? (Number(p.amount) || 0) : S.profile.price * (Number(p.pct) || 0) / 100; }
@@ -1009,6 +1018,14 @@ function exampleBanner() {
   return `<div class="banner"><p><b>זו רכישה לדוגמה.</b> המספרים כאן להמחשה. הגדירו את הרכישה שלכם כדי להתחיל.</p>
     <div><button data-act="setup">הגדרת הרכישה שלי</button></div></div>`;
 }
+function screenInvite() {
+  const i = invite;
+  return `<div class="screen"><div class="card hero" style="margin-top:12px"><span class="small muted">הזמנה</span><h2>הוזמנתם לרכישה משותפת</h2>
+    ${i.missing ? `<p style="color:var(--warn)">לא מצאנו רכישה עם הקוד הזה. אולי השיתוף הופסק. בקשו קישור חדש.</p>` : `<p>${i.city ? `${esc(i.type || "")} · ${esc(i.city)}` : "טוען את פרטי הרכישה..."}</p>
+    <p class="small muted">שניכם תראו ותעדכנו את אותה רכישה, כל אחד מהטלפון שלו: תשלומים, משימות, מסמכים ומחשבונים.</p>
+    ${!S.example ? `<p class="small" style="color:var(--warn)">בטלפון הזה כבר יש רכישה. ההצטרפות תחליף אותה ברכישה המשותפת.</p>` : ""}`}
+    <div class="row">${i.missing ? "" : `<button data-act="invjoin">הצטרפות</button>`}<button class="ghost" data-act="invno">לא עכשיו</button></div></div></div>`;
+}
 function screenSetup() {
   const p = S.example ? { type: "ml", buyer: "first", city: "", price: "", sign: "", delivery: "", linkedShare: 40, lottery: "", form4: "" } : S.profile;
   const sharing = store.kind !== "db" ? `<p class="small muted">${window.claude ? "שיתוף יהיה זמין כשתפתחו את האפליקציה מחוברים לחשבון." : "באפליקציה המותקנת הנתונים נשמרים בטלפון. כדי להעביר אותם לטלפון אחר: שמירת גיבוי כאן, ושחזור מגיבוי בטלפון השני."}</p>`
@@ -1017,12 +1034,13 @@ function screenSetup() {
         <p class="small muted">בטלפון השני פותחים את הקישור שנשלח, או מקלידים את הקוד ב"יש לי קוד".</p>
         <div class="row"><button class="link small" data-act="leave">הפסקת השיתוף בטלפון הזה</button><button class="link small" data-act="leavedel" style="color:var(--warn)">הפסקה ומחיקה מהשרת</button></div>`
     : joinOpen ? `<label class="f">הקוד שקיבלת<input id="joincode" data-key="joincode" placeholder="למשל: k7m2p9x3a" autocomplete="off"></label>
-        <p class="small muted">הנתונים שהזנת עד עכשיו במכשיר הזה יוחלפו ברכישה המשותפת.</p>
+        ${S.example ? "" : `<p class="small muted">הרכישה שכבר יש בטלפון הזה תוחלף ברכישה המשותפת.</p>`}
         <div class="row"><button data-act="join">הצטרפות</button><button class="ghost" data-act="joincancel">ביטול</button></div>`
     : `<div class="row"><button data-act="share">יצירת קוד שיתוף</button><button class="ghost" data-act="joinopen">יש לי קוד</button></div>`;
   return `<div class="screen">
     <h1>${S.example ? "הגדרת הרכישה" : "הגדרות"}</h1>
-    <div class="card">
+    ${S.example ? "" : `<h2 style="margin:4px 0 0">הטלפון שלי</h2>${pushCard()}${lockCard()}${textCard()}<h2 style="margin:8px 0 0">הרכישה המשותפת</h2>`}
+    ${S.example ? `<div class="card">` : `<details class="card"><summary><b>פרטי הרכישה</b> <span class="small muted">· עיר, מחיר, תאריכים. משותף לשניכם</span></summary><div style="margin-top:10px">`}
       <label class="f">סוג הרכישה<select id="f_type" data-key="f_type">
         ${Object.entries(TYPES).map(([k, t]) => `<option value="${k}" ${p.type === k ? "selected" : ""}>${t.name}</option>`).join("")}</select></label>
       <label class="f">הקונה<select id="f_buyer" data-key="f_buyer">
@@ -1045,11 +1063,8 @@ function screenSetup() {
       </div>
       ${!S.example ? `<p class="small muted">שינוי סוג הרכישה יחליף את רשימת המשימות, לוח התשלומים והמסמכים בברירת המחדל של הסוג החדש.</p>` : ""}
       <div class="row"><button data-act="saveSetup">שמירה</button>${S.example ? "" : `<button class="ghost" data-act="cancelSetup">ביטול</button>`}</div>
-    </div>
-    ${pushCard()}
-    ${lockCard()}
+    ${S.example ? "</div>" + lockCard() + textCard() : "</div></details>"}
     ${privacyCard()}
-    ${textCard()}
     ${S.example ? "" : `<div class="card"><h2>גיבוי</h2>
       <p class="small muted">שמרו עותק של כל הנתונים בקובץ. אפשר לשחזר ממנו בכל מכשיר, וגם במעבר לגרסה הבאה של האפליקציה.</p>
       <div class="row"><button class="ghost" data-act="backup">שמירת גיבוי</button><button class="ghost" data-act="restore">שחזור מגיבוי</button></div>
@@ -1127,7 +1142,7 @@ function screenHome() {
     ${heroCard()}
     ${timelineCard()}
     ${S.example ? `<p class="small muted" style="text-align:center">רוצים להסתכל קודם? למטה ובכל המסכים יש רכישה לדוגמה.<br>כבר יש לכם קובץ גיבוי? <button class="link small" data-act="restore">שחזור מגיבוי</button><br>בן או בת הזוג כבר התחילו? <button class="link small" data-act="joinwelcome">יש לי קוד שיתוף</button></p>` : ""}
-    ${S.example || !p.sign ? `    <div class="card">
+    ${S.example || !p.sign ? `    <div class="card">${S.example ? '<span class="chip mute" style="float:left">דוגמה</span>' : ""}
       <div class="grid2">
         <div class="stat"><span class="v">${ils(p.price)}</span><span class="l">מחיר הדירה</span></div>
         <div class="stat"><span class="v">${deliv === null ? "—" : deliv > 0 ? nf.format(deliv) + " ימים" : t.contractor ? "נמסרה" : "התקבל"}</span><span class="l">${t.contractor ? "עד המסירה" : "עד קבלת המפתח"}</span></div>
@@ -1137,10 +1152,14 @@ function screenHome() {
       ${next && daysTo(next.date) > 21 ? `<p class="small muted">התשלום הבא: ${esc(next.name)}, ${fmtDate(next.date)}, ${ils(payAmount(next) + linkageCost(next))}</p>` : ""}
     </div>` : ""}
     <div class="card"><div class="spread"><h2>הכסף</h2><button class="link" data-go="calc" data-sub="costs">פירוט</button></div>
-      <div class="grid2"><div class="stat"><span class="v">${ils(cashNeed)}</span><span class="l">הון עצמי ועלויות נלוות</span></div>
+      <div class="grid2"><div class="stat"><span class="v">${ils(cashNeed)}</span><span class="l">הון עצמי ועלויות נלוות ${q("equity")}</span></div>
       <div class="stat"><span class="v" style="color:${S.fin.savings ? (gap >= 0 ? "var(--ok)" : "var(--warn)") : "var(--muted)"}">${S.fin.savings ? (gap >= 0 ? "נשאר " : "חסר ") + ils(Math.abs(gap)) : "—"}</span><span class="l">${S.fin.savings ? "אחרי הכניסה לדירה" : "עוד לא הוזנו חסכונות"}</span></div></div>
       ${S.fin.income ? `<div class="spread small"><span>החזר חודשי משוער ${ils(m.first)}</span>${ptiChip(pti(m.first))}</div>` : ""}
-      ${cashEarly().gap > 0 ? `<p class="small" style="color:var(--warn);margin:6px 0 0">⚠ בחודשיים הראשונים משלמים לקבלן ${ils(cashEarly().early)}, וחסרים ${ils(cashEarly().gap)} עד שהבנק מתחיל לממן. <button class="link small" data-go="calc" data-sub="equity">פרטים</button></p>` : ""}</div>
+      ${S.fin.income && S.fin.expenses && S.fin.expTouched ? `<div class="spread small"><span>נשאר בחודש אחרי ההחזר וההוצאות</span><b class="num" style="color:${S.fin.income - m.first - S.fin.expenses < 1000 ? "var(--warn)" : "inherit"}">${ils(S.fin.income - m.first - S.fin.expenses)}</b></div>` : ""}
+      ${(() => { const ce = cashEarly(); if (!S.fin.savings || !ce.early || ce.early <= minEquity() + 1) return "";
+        const tight = ce.left < 2 * (S.fin.expenses || 10000);
+        return `<div class="small" style="margin-top:6px;display:grid;gap:2px">
+          <div class="spread"><span>עד שהבנק מתחיל לממן ${q("gap")}</span><b class="num" style="color:${ce.gap > 0 ? "var(--warn)" : tight ? "var(--gold)" : "var(--ok)"}">${ce.gap > 0 ? "חסרים " + ils(ce.gap) : "נשארים " + ils(ce.left)}</b></div></div>`; })()}</div>
     ${sale && S.example ? `<div class="card"><div class="spread"><h2>מתי מותר למכור</h2><b>${fmtDate(sale)}</b></div><p class="small muted">5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם.</p></div>` : ""}
     <div class="card"><h2>עוד בשבילכם</h2><div class="list">${more.map(([txt, tb, sb]) => `<button class="laterrow" data-go="${tb}" ${sb ? `data-sub="${sb}"` : ""}><span class="small">${txt}</span><span aria-hidden="true">‹</span></button>`).join("")}</div></div>
   </div>`;
@@ -1155,7 +1174,7 @@ function screenBuy() {
     body = `<p class="small muted">המשימות מחולקות לפי שלבי הרכישה. השלב הנוכחי פתוח; אפשר לפתוח כל שלב אחר.</p>` + stagesOf().map(([k, l]) => {
       const ts = S.tasks.filter(x => x.stage === k), dn = ts.filter(x => x.done).length, isCur = cur === k, open = isCur || openStages.has(k);
       return `<details class="card stagebox" data-stagebox="${k}" ${open ? "open" : ""}><summary class="spread"><span><b>${l}</b>${isCur ? ' <span class="chip ok">עכשיו</span>' : ""}</span><span class="small ${dn === ts.length && ts.length ? "" : "muted"}" style="${dn === ts.length && ts.length ? "color:var(--ok)" : ""}">${dn === ts.length && ts.length ? "✓ " : ""}${dn}/${ts.length}</span></summary>
-        <div class="list" style="margin-top:8px">${ts.map(x => `<div class="item ${x.done ? "done" : ""}"><input type="checkbox" data-task="${x.id}" ${x.done ? "checked" : ""} aria-label="${esc(x.text)}"><span class="grow t">${esc(x.text)}</span><button class="x ed" data-deltask="${x.id}" aria-label="מחיקת המשימה">×</button></div>`).join("")}</div>
+        <div class="list" style="margin-top:8px">${ts.map(x => `<div class="item ${x.done ? "done" : ""}"><input type="checkbox" id="tk_${x.id}" data-task="${x.id}" ${x.done ? "checked" : ""}><label class="grow t" for="tk_${x.id}">${esc(x.text)}</label><button class="x ed" data-deltask="${x.id}" aria-label="מחיקת המשימה">×</button></div>`).join("")}</div>
         <div class="row"><input id="nt_${k}" data-key="nt_${k}" placeholder="משימה חדשה" aria-label="משימה חדשה ב${l}" style="flex:1"><button class="ghost" data-addtask="${k}">הוספה</button></div>
         ${k === S.profile.stage || listEdit ? `<div style="text-align:left"><button class="link small" data-act="listedit">${listEdit ? "סיום מחיקה" : "מחיקת משימות"}</button></div>` : ""}
         ${isCur ? "" : `<button class="link small" data-stage="${k}" style="margin-top:6px">זה השלב שאני נמצא בו עכשיו</button>`}</details>`;
@@ -1216,8 +1235,8 @@ function screenBuy() {
     const can = !!store.assets, nFiles = S.docs.filter(x => x.url).length;
     body = `<div class="card"><div class="spread"><h2>מסמכים</h2>${can ? `<button data-attach="new">+ העלאת מסמך</button>` : ""}</div>
       <p class="small muted">${can ? `כל המסמכים של הרכישה במקום אחד. בחרו קובץ PDF, או צלמו דף מהחוזה.${store.shared ? " המסמכים משותפים גם לבן או בת הזוג." : ""}` : "סמנו מה כבר אצלכם."}${nFiles ? ` <b>${nFiles === 1 ? "קובץ אחד שמור" : nFiles + " קבצים שמורים"}.</b>` : ""}</p>
-      <div class="list">${S.docs.map(x => `<div class="item"><input type="checkbox" data-doc="${x.id}" ${x.have ? "checked" : ""} aria-label="${esc(x.name)}">
-        <div class="grow"><div class="t">${esc(x.name)}</div>${x.url ? `<div class="small muted">${x.fname ? esc(x.fname) : x.ftype && x.ftype.startsWith("image/") ? "תמונה" : "קובץ"}${x.size ? " · " + fmtSize(x.size) : ""}</div>` : ""}</div>
+      <div class="list">${[...S.docs].sort((a, b) => (b.url ? 1 : 0) - (a.url ? 1 : 0)).map(x => `<div class="item"><input type="checkbox" data-doc="${x.id}" ${x.have ? "checked" : ""} aria-label="${esc(x.name)}">
+        <div class="grow"><div class="t">${x.url ? `<button class="link" data-opendoc="${x.id}" style="padding:0;min-height:0;text-align:start">${esc(x.name)}</button>` : esc(x.name)}</div>${x.url ? `<div class="small muted">${x.fname ? `<bdi>${esc(x.fname)}</bdi>` : x.ftype && x.ftype.startsWith("image/") ? "תמונה" : "קובץ"}${x.size ? " · " + fmtSize(x.size) : ""}</div>` : ""}</div>
         ${x.url ? `<button class="ghost small" data-opendoc="${x.id}">פתיחה</button>` : can ? `<button class="link small" data-attach="${x.id}">צירוף</button>` : ""}
         <button class="x ed" data-deldoc="${x.id}" aria-label="מחיקת המסמך">×</button></div>`).join("")}</div>
       <div class="row"><input id="ndoc" data-key="ndoc" placeholder="שם של מסמך נוסף לרשימה" aria-label="שם המסמך" style="flex:1"><button class="ghost" data-act="adddoc">הוספה</button></div>
@@ -1242,7 +1261,7 @@ function outCosts() {
   const money = v => `<b style="color:${v >= 0 ? "var(--ok)" : "var(--warn)"}">${v >= 0 ? "" : "−"}${ils(Math.abs(v))}</b>`;
   const earlyRows = [["מס רכישה", tax], ["עורך דין", c.lawyer], ["יועץ משכנתאות", c.advisor], ["תיווך", c.broker], ["שמאי", c.appraiser]].filter(x => Number(x[1]) > 0);
   const lateRows = [["שיפוץ וריהוט", c.renovation], ["הובלה", c.moving], ["אחר", c.other]].filter(x => Number(x[1]) > 0);
-  return `<div class="card"><div class="grid2"><div class="stat"><span class="v">${ils(eq + costsTotal())}</span><span class="l">כל מה שתוציא מהכיס: הון עצמי ועלויות</span></div>
+  return `<div class="card"><div class="grid2"><div class="stat"><span class="v">${ils(eq + costsTotal())}</span><span class="l">כל מה שתוציאו מהכיס: הון עצמי ועלויות</span></div>
       <div class="stat"><span class="v" style="color:${sav ? (left2 >= 0 ? "var(--ok)" : "var(--warn)") : "var(--muted)"}">${sav ? (left2 >= 0 ? "נשאר " : "חסר ") + ils(Math.abs(left2)) : "—"}</span><span class="l">אחרי הכניסה לדירה</span></div></div>
     <h3 style="margin-top:12px">1. מהחתימה ועד המסירה</h3>
     <div class="tbl"><table><tbody>
@@ -1294,7 +1313,7 @@ function equityScenarios() {
   const opts = [["מינימום הון עצמי", minEq], ["באמצע", (minEq + maxEq) / 2], ["כמה שאפשר", maxEq]];
   const cur = chosenEquity();
   if (f.equity != null && f.eqCustom && !opts.some(o => Math.abs(o[1] - cur) < 1)) opts.push(["הסכום שבחרת", cur]);
-  const unit1 = mortgageCalc(1).first;   /* first monthly payment per shekel of the user's mix, so every screen shows the same number */
+  const mc1 = mortgageCalc(1), unit1 = mc1.first * 100 / (mc1.sumP || 100);   /* first monthly payment per shekel of the user's mix, so every screen shows the same number */
   const g = Math.pow(1 + f.ret / 100, f.horizon), rm = f.ret / 1200, nM = f.horizon * 12, fv = x => rm === 0 ? x * nM : x * (Math.pow(1 + rm, nM) - 1) / rm;
   const res = opts.map(([name, eq]) => {
     const loan = Math.max(0, p.price - grantOf() - eq), a = amort(loan, mortgageRate(), yrs() * 12, f.horizon * 12), fd = fundEquity(eq);
@@ -1324,7 +1343,7 @@ function outEquity() {
     </div>
     ${line(`<b>צריך מהכיס לפחות</b> ${q("equity")}`, ils(need), "font-size:1.1rem")}
     ${line(`יש לכם, אחרי עלויות נלוות של ${ils(costs)}${ex ? ` (כולל ${ils(ex)} ממקורות נוספים)` : ""}`, ils(avail), `color:${avail >= need ? "var(--ok)" : "var(--warn)"}`)}
-    <p class="small" style="margin-top:8px;color:${avail >= need ? "var(--ok)" : "var(--warn)"}">${avail >= need ? "✓ יש לכם מספיק." : `חסרים ${ils(need - avail)}. אפשר להגדיל הכנסה, להוסיף מקור כסף, או לבדוק את העלויות.`}</p>
+    <p class="small" style="margin-top:8px;color:${avail >= need ? "var(--ok)" : "var(--warn)"}">${avail >= need ? "✓ יש לכם מספיק." : `חסרים ${ils(need - avail)}. אפשר להקטין את תקציב השיפוץ והריהוט, להוסיף מקור כסף (למשל עזרה מהמשפחה או קרן השתלמות), או לבדוק שוב את העלויות.`}</p>
     ${early > need + 1 && availEarly < early ? `<p class="small" style="color:var(--warn)">שימו לב: בחודשיים הראשונים משלמים לקבלן ${ils(early)}, לפני שהבנק מתחיל להעביר כסף. עד אז יהיו זמינים לכם ${ils(Math.max(0, availEarly))} (חסכונות ומקורות שכבר זמינים, פחות עו"ד, יועץ ומס רכישה), אז חסרים ${ils(early - Math.max(0, availEarly))} בהתחלה. שאלו את הבנק על משיכה מוקדמת של המשכנתא או על הלוואת גישור.</p>` : early > need + 1 ? `<p class="small muted">בחודשיים הראשונים משלמים לקבלן ${ils(early)} מהכיס, לפני שהבנק מתחיל להעביר כסף. יש לכם מספיק לזה.</p>` : ""}
     ${p.type === "ml" && !(f.appraisal > 0) ? `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי השוק. בלי שמאות, השווי מוערך ב-${ils(mlAppraisal())} (המחיר ועוד 25%). אפשר להזין שמאות בהנחות למטה.</p>` : ""}
   </div>`;
@@ -1395,7 +1414,7 @@ function inEquity() {
     <div class="row" style="flex-wrap:wrap;gap:6px"><button class="ghost small" data-addsrc="study">+ קרן השתלמות</button><button class="ghost small" data-addsrc="loan">+ הלוואה</button><button class="ghost small" data-addsrc="other">+ מקור אחר</button>${p.buyer === "upgrade" && !srcList().some(x => x.sale) ? `<button class="ghost small" data-addsrc="sale">+ מכירת הדירה הנוכחית</button>` : ""}</div>
     ${p.buyer === "upgrade" ? `<p class="small muted">משפרי דיור: הוסיפו את מה שיישאר לכם ממכירת הדירה הנוכחית, אחרי סילוק המשכנתא שעליה, ומתי הכסף צפוי להגיע. אם המכירה אחרי המסירה, בררו עם הבנק על הלוואת גישור.</p>` : ""}`, !moneySum || editOpen.eqmoney)
   + foldCard("eqinc", "הכנסה והוצאות", incSum, `
-    <div class="grid2">${numIn("fin.income", "הכנסה חודשית נטו (₪)")}${numIn("fin.expenses", "הוצאות חודשיות (₪)")}${numIn("fin.otherLoans", "החזרי הלוואות אחרות בחודש (₪)")}</div>`, !incSum || editOpen.eqinc);
+    <div class="grid2">${numIn("fin.income", "הכנסה חודשית נטו (₪)")}${numIn("fin.expenses", "הוצאות חודשיות, בלי שכר דירה (₪)")}${numIn("fin.otherLoans", "החזרי הלוואות אחרות בחודש (₪)")}</div>`, !incSum || editOpen.eqinc);
 }
 function outMortgage() {
   const m = mortgageCalc(), mix = S.mix;
@@ -1420,8 +1439,8 @@ function inMortgage() {
   const mix = S.mix;
   return `<div class="card"><div class="spread"><h2>משכנתא</h2><button class="link small" data-go="calc" data-sub="equity">שינוי הון עצמי</button></div>
     <div class="stat"><span class="v" id="loanv">${ils(loanAmount())}</span><span class="l">סכום המשכנתא: מחיר הדירה פחות ההון העצמי שבחרת${grantOf() ? " והמענק" : ""}</span></div>
-    <div class="grid2">${numIn("mix.years", "שנים (עד 30)")}${numIn("fin.age", "גיל הלווה המבוגר", 'placeholder="למשל 35"')}</div>
-    <p class="small muted" style="margin:0">תמהיל = איך מחלקים את המשכנתא בין סוגי ריבית. כל שורה היא חלק מהמשכנתא.</p>
+    <div class="grid2">${numIn("mix.years", "שנים (עד 30)", 'title="יותר שנים = החזר חודשי נמוך יותר, אבל יותר ריבית בסך הכול"')}${numIn("fin.age", "גיל הלווה המבוגר", 'placeholder="למשל 35"')}</div>
+    <p class="small muted" style="margin:0">יותר שנים = החזר חודשי נמוך יותר, אבל יותר ריבית בסך הכול. תמהיל = איך מחלקים את המשכנתא בין סוגי ריבית. כל שורה היא חלק מהמשכנתא.</p>
     <div class="tbl"><table><thead><tr><th>מסלול ${q("mix")}</th><th>חלק (%)</th><th>ריבית (%)</th></tr></thead><tbody>
       ${[["פריים", "pPrime", "rPrime", "prime", "משתנה עם ריבית בנק ישראל"], ["קבועה לא צמודה", "pFixed", "rFixed", "fixed", "ההחזר לא משתנה לאורך כל התקופה"], ["קבועה צמודה", "pLinked", "rLinked", "linked", "ריבית קבועה, החוב עולה עם האינפלציה"], ["משתנה צמודה", "pVar", "rVar", "var", "הריבית מתעדכנת כל 5 שנים, החוב עולה עם האינפלציה"]].map(([n, a, b, g, why]) =>
         `<tr><td style="white-space:normal">${n} ${q(g)}<div class="small muted">${why}</div></td><td><input data-key="mix.${a}" data-c="mix.${a}" inputmode="decimal" value="${mix[a]}" style="width:72px" aria-label="חלק ${n}"></td><td><input data-key="mix.${b}" data-c="mix.${b}" inputmode="decimal" value="${mix[b]}" style="width:72px" aria-label="ריבית ${n}"></td></tr>`).join("")}
@@ -1500,7 +1519,7 @@ function screenMarket() {
   return `<div class="screen"><h1>שוק</h1><p class="small muted">עודכן ב-${MARKET.updated}</p>
     ${stale.length ? `<div class="card" style="border-color:var(--warn)">${stale.map(x => `<p class="small" style="color:var(--warn)">${x}</p>`).join("")}<p class="small muted">בגרסה שתרוץ ב-Netlify הנתונים יתעדכנו אוטומטית.</p></div>` : ""}
     <div class="banner"><h2>מה זה אומר עליכם</h2>
-      ${primeP > 0 ? `<p>ריבית: כל שינוי של 0.25% בריבית בנק ישראל משנה את ההחזר החודשי שלכם בכ-<b>${ils(d25)}</b>, דרך מסלול הפריים (${ils(primeP)}).</p>` : ""}
+      ${primeP > 0 ? `<p>ריבית: כל שינוי של 0.25% בריבית בנק ישראל משנה את ההחזר החודשי שלכם בכ-<b>${ils(d25)}</b>, דרך מסלול הפריים (${ils(primeP)}${flow().mortgage ? "" : ", בתמהיל לדוגמה של שליש פריים"}). <button class="link small" data-go="calc" data-sub="mortgage">לתמהיל</button></p>` : ""}
       ${linkedLeft ? `<p>מדד תשומות הבנייה: כל אחוז נוסף בקצב השנתי מוסיף כ-<b>${ils(per1)}</b> לתשלומים שנותרו לקבלן.</p>` : ""}
       ${linkedLoan > 0 ? `<p>אינפלציה: במסלול הצמוד (${ils(linkedLoan)}), אינפלציה של ${MARKET.cpi.yoy}% מוסיפה כ-${ils(linkedLoan * MARKET.cpi.yoy / 100)} לקרן בשנה.</p>` : ""}
     </div>
@@ -1766,6 +1785,7 @@ function pxCard(city) {
     <label class="f">גודל הדירה<select id="pxrooms" data-key="pxrooms">${PX_ROOMS.map(([l], i) => `<option value="${i}" ${pxRooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <div class="segs" role="group" aria-label="תקופה">${["שנה אחרונה", "שנתיים", "5 שנים"].map((l, i) => `<button data-pxper="${i}" aria-pressed="${pxPer === i}">${l}</button>`).join("")}</div>
     <p class="small muted">${desc}. נתונים עד ${NAT.through}.</p>
+    ${!S.example && S.profile.price > 0 && sameCity(S.profile.city, city) && cc ? `<p class="small" style="margin:0 0 6px">הדירה שלכם: <b>${ils(S.profile.price)}</b> · חציון בעיר לפי הסינון: <b>${kils(cc[0])}</b>${Math.abs(S.profile.price / 1000 / cc[0] - 1) >= .03 ? ` (${S.profile.price / 1000 < cc[0] ? "נמוך" : "גבוה"} ב-${Math.round(Math.abs(S.profile.price / 1000 / cc[0] - 1) * 100)}%)` : ""}. השוו לשכונה ולגודל הדומים לדירה שלכם.</p>` : ""}
     ${cc ? `<div class="kpis"><div><span class="small muted">חציון בעיר</span><b class="num">${kils(cc[0])}</b></div><div><span class="small muted">ממוצע בעיר</span><b class="num">${kils(cc[1])}</b></div><div><span class="small muted">עסקאות</span><b class="num">${nf.format(cc[2])}</b></div></div>
       <div class="row" style="justify-content:space-between"><span class="small muted">${rows.some(r => r[2]) ? "הקישו על שכונה כדי לראות את העסקאות עצמן." : ""}</span><button class="link small" data-dealscity="1">כל העסקאות בעיר ←</button></div>
       <label class="f">עסקאות ברחוב מסוים<span class="row" style="flex-wrap:nowrap"><input id="streetq" data-key="streetq" placeholder="שם הרחוב, למשל: העצמאות" enterkeyhint="search" style="flex:1;min-width:0"><button class="ghost" data-streetgo="1">חיפוש</button></span></label>` : `<p class="muted">פחות מ-5 עסקאות כאלה בעיר בתקופה הזו. נסו תקופה ארוכה יותר או פחות סינון.</p>`}
@@ -1871,16 +1891,17 @@ function doStep(a) {
   const [k, x, y] = a.split(":");
   if (k === "go") return go(x, y);
   if (k === "act") { if (x === "setup") startWizard(); if (x === "push") pushEnable(); if (x === "share") { setupOpen = true; render(); window.scrollTo(0, document.body.scrollHeight); } return; }
-  if (k === "seen") { flow()[x] = true; persist(); render(); toast("סומן ✓"); return; }
-  if (k === "task") { const t = S.tasks.find(z => z.id === x); if (t) { t.done = true; maybeAdvance(); persist(); render(); toast("סומן ✓"); } return; }
+  if (k === "seen") { flow()[x] = true; persist(); render(); closeSheetQuiet(); toastUndo("סומן ✓", () => { flow()[x] = false; persist(); render(); }); return; }
+  if (k === "task") { const t = S.tasks.find(z => z.id === x); if (t) { const st = S.profile.stage; t.done = true; maybeAdvance(); persist(); render(); closeSheetQuiet(); toastUndo("סומן ✓", () => { t.done = false; S.profile.stage = st; persist(); render(); }); } return; }
   if (k === "stage") { S.profile.stage = x; persist(); render(); toast("עברתם לשלב הבא"); }
 }
+function closeSheetQuiet() { const el = document.getElementById("sheet"); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ""; } }
 function heroCard() {
   const steps = nextSteps(); if (!steps.length) return `<div class="card hero"><h2>הכול מעודכן ✓</h2><p class="small muted">אין משהו דחוף. נעדכן אתכם כשיהיה.</p></div>`;
   const [h, ...rest] = steps;
   return `<div class="card hero ${h.tone}"><span class="small muted">הצעד הבא</span><h2>${h.title}</h2><p>${h.text}</p>
     <div><button data-step="${h.act}">${h.btn} ←</button></div>
-    ${rest.length ? `<div class="later"><span class="small muted">ואחר כך</span>${rest.slice(0, 3).map(s => `<button class="laterrow" data-step="${s.act}"><span>${s.title}</span><span aria-hidden="true">‹</span></button>`).join("")}</div>` : ""}</div>`;
+    ${rest.length ? `<div class="later"><span class="small muted">ואחר כך</span>${rest.slice(0, 3).map(s => `<button class="laterrow" data-${/^(task|seen):/.test(s.act) ? "stepinfo" : "step"}="${/^(task|seen):/.test(s.act) ? s.id : s.act}"><span>${s.title}</span><span aria-hidden="true">‹</span></button>`).join("")}</div>` : ""}</div>`;
 }
 function stageStrip() {
   const st = stagesOf(), i = Math.max(0, st.findIndex(s => s[0] === S.profile.stage));
@@ -1924,7 +1945,7 @@ function screenWizard() {
     <p class="small muted">מהתאריכים נבנים לוח התשלומים והתזכורות${d.type === "ml" ? ", וגם המועד שבו מותר למכור" : ""}.</p>`;
   if (k === "money") body = `<h2>כמה כסף יש לכם?</h2><p class="small muted">כדי לחשב כמה משכנתא אפשר לקבל וכמה הון עצמי צריך. אפשר לדלג ולהשלים אחר כך.</p>
     ${inp("savings", "חסכונות נזילים (₪)", 'inputmode="numeric"')}${inp("income", "הכנסה חודשית נטו של הבית (₪)", 'inputmode="numeric"')}
-    <div class="grid2">${inp("expenses", "הוצאות חודשיות של הבית (₪)", 'inputmode="numeric" placeholder="לא חובה"')}${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
+    <div class="grid2">${inp("expenses", "הוצאות חודשיות, בלי שכר דירה (₪)", 'inputmode="numeric" placeholder="לא חובה"')}${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
     ${d.type === "ml" ? inp("appraisal", "שמאות הדירה, אם כבר יש (₪)", 'inputmode="numeric" placeholder="לא חובה"') + `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי הדירה בשוק. בלי שמאות נעריך אותו כמחיר ועוד 25%.</p>` : ""}`;
   const last = i === n - 1, canNext = k !== "type" && k !== "buyer";
   return `<div class="screen wizard"><div class="wzhead"><span class="small muted">שאלה ${i + 1}${d.type ? ` מתוך ${n}` : ""}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
@@ -1967,7 +1988,7 @@ function wizFinish() {
   const d = wiz.d, num = v => Number(String(v).replace(/[^\d.]/g, "")) || 0;
   const prof = { type: d.type, buyer: d.type === "ml" ? "first" : d.buyer, city: matchCity(d.city) || d.city.trim(), price: num(d.price), sign: d.sign, delivery: d.delivery, linkedShare: d.type === "resale" ? 0 : d.type === "ml" ? 50 : 40, lottery: d.lottery, form4: "", stage: "before" };
   S = newState(prof, false); S.fin.savings = num(d.savings); S.fin.income = num(d.income); S.flow = {};
-  if (num(d.expenses)) S.fin.expenses = num(d.expenses); if (num(d.age)) S.fin.age = num(d.age); if (num(d.appraisal)) S.fin.appraisal = num(d.appraisal);
+  if (num(d.expenses)) { S.fin.expenses = num(d.expenses); S.fin.expTouched = true; } if (num(d.age)) S.fin.age = num(d.age); if (num(d.appraisal)) S.fin.appraisal = num(d.appraisal);
   wiz = null; tab = "home"; persist(); render(); window.scrollTo(0, 0); toast("מוכן! למעלה מחכה הצעד הבא שלכם");
 }
 function wizSuggest(q) {
@@ -1996,6 +2017,7 @@ function areaSuggest(raw) {
 
 /* ---------- plain-language glossary, opened from small "?" buttons ---------- */
 const GLOSS = {
+  gap: ["פער בתזרים", "בדירה מקבלן משלמים את התשלומים הראשונים (למשל 7% בחתימה ו-13% אחרי 45 יום) לפני שהבנק מתחיל להעביר את המשכנתא. אם הסכום הזה גדול מההון העצמי, צריך להחזיק אותו בצד זמנית, או לבקש מהבנק לממן כבר את התשלום השני. כאן רואים כמה כסף יישאר לכם בנקודה הכי צפופה."],
   equity: ["הון עצמי", "הכסף שאתם משלמים על הדירה מהכיס, בלי המשכנתא. ככל שהוא גדול יותר, המשכנתא וההחזר החודשי קטנים יותר."],
   prime: ["מסלול פריים", "ריבית משתנה: ריבית בנק ישראל ועוד 1.5%, פלוס או מינוס לפי הבנק. כשבנק ישראל משנה ריבית, ההחזר משתנה כבר בחודש הבא. אפשר לפרוע בלי קנס."],
   fixed: ["קבועה לא צמודה", "הריבית וההחזר קבועים לכל התקופה, בלי הצמדה למדד. יציב וצפוי, אבל הריבית בדרך כלל גבוהה יותר, ויש קנס על פירעון מוקדם."],
@@ -2017,6 +2039,7 @@ function openSheet(k) {
 /* ---------- live result bar on the money screens ---------- */
 function liveBar() {
   const s = sub.calc, m = mortgageCalc(), r = pti(m.first), ml = moneyLeft();
+  if ((s === "mortgage" || s === "equity") && Math.abs(m.sumP - 100) > .01) return `<div><span>התמהיל</span><b class="num" style="color:var(--warn)">${nf.format(m.sumP)}% במקום 100%</b></div>`;
   const it = (l, v, st = "") => `<div><span>${l}</span><b class="num" style="${st}">${v}</b></div>`;
   if (s === "costs") return it("מהכיס בסך הכול", ils(chosenEquity() + costsTotal())) + it("נשאר לכם בסוף", ils(ml.left2), `color:${ml.left2 >= 0 ? "var(--ok)" : "var(--warn)"}`);
   if (s === "equity") return it("הון עצמי", ils(chosenEquity())) + it("משכנתא", ils(loanAmount())) + it("החזר", ils(m.first));
@@ -2045,24 +2068,30 @@ function render() {
   renderNav();
   const sk = wiz ? "wiz" + wiz.i : setupOpen ? "setup" : tab + ":" + (sub[tab] || ""), v = document.getElementById("view");
   if (tab === "market") { tab = "waves"; sub.waves = "market"; }
-  v.innerHTML = wiz ? screenWizard() : setupOpen ? screenSetup() : ({ home: screenHome, buy: screenBuy, calc: screenCalc, waves: screenWaves })[tab]();
+  v.innerHTML = invite ? screenInvite() : wiz ? screenWizard() : setupOpen ? screenSetup() : ({ home: screenHome, buy: screenBuy, calc: screenCalc, waves: screenWaves })[tab]();
   if (sk !== render.last) { const f = v.firstElementChild; if (f) f.classList.add("anim"); render.last = sk; }
   navPush();
   if (key) { const el = document.querySelector(`[data-key="${CSS.escape(key)}"]`); if (el) { el.focus(); try { if (pos != null && el.type !== "date") el.setSelectionRange(pos, pos); } catch (e) {} } }
 }
 let navPop = false;
 function navPush() {
-  if (navPop || wiz) return;
+  if (wiz) { if (!(history.state && history.state.wiz === wiz.i)) history.pushState({ wiz: wiz.i }, ""); return; }
+  if (navPop) return;
   const st = { nav: { tab, sub: Object.assign({}, sub), setupOpen } }, k = JSON.stringify(st.nav);
   if (k === navPush.last) return;
   if (navPush.last == null) history.replaceState(st, ""); else history.pushState(st, "");
   navPush.last = k;
 }
-new MutationObserver(() => { const el = document.getElementById("sheet"); if (el && !el.hidden && !(history.state && history.state.sheet)) history.pushState({ sheet: 1 }, ""); })
+let sheetPopping = false, sheetWasOpen = false;
+new MutationObserver(() => { const el = document.getElementById("sheet"); if (!el) return;
+  if (!el.hidden && !sheetWasOpen) { sheetWasOpen = true; if (!(history.state && history.state.sheet)) history.pushState({ sheet: 1 }, ""); }
+  else if (el.hidden && sheetWasOpen) { sheetWasOpen = false; if (!sheetPopping && history.state && history.state.sheet) history.back(); } })
   .observe(document.getElementById("sheet"), { attributes: true, attributeFilter: ["hidden"] });
 addEventListener("popstate", e => {
   const el = document.getElementById("sheet");
-  if (el && !el.hidden) { el.hidden = true; el.innerHTML = ""; if (!(e.state && e.state.nav)) return; }
+  if (el && !el.hidden) { sheetPopping = true; el.hidden = true; el.innerHTML = ""; setTimeout(() => { sheetPopping = false; }, 0); if (!(e.state && e.state.nav)) return; }
+  if (e.state && e.state.wiz != null && wiz) { wiz.i = Math.min(wiz.i, e.state.wiz); render(); return; }
+  if (wiz && !(e.state && e.state.wiz != null)) { if (wiz.i > 0) { wiz.i--; history.pushState({ wiz: wiz.i }, ""); render(); } else { wiz = null; render(); } return; }
   const n = e.state && e.state.nav; if (!n || wiz || lockMode) return;
   navPop = true; tab = n.tab; Object.assign(sub, n.sub); setupOpen = n.setupOpen; navPush.last = JSON.stringify(n); render(); window.scrollTo(0, 0); navPop = false;
 });
@@ -2111,6 +2140,7 @@ document.getElementById("docfile").addEventListener("change", async e => {
   try {
     const r = await store.assets.upload(f, p => toast(`מעלה את הקובץ... ${p}%`));
     let d = attachFor === "new" ? null : S.docs.find(x => x.id === attachFor);
+    if (!d) { const words = f.name.replace(/\.[^.]+$/, "").split(/[\s_\-.]+/).filter(w => w.length >= 3); d = S.docs.find(x => !x.url && words.some(w => x.name.includes(w))) || null; }
     if (!d) { d = { id: uid(), name: f.name.replace(/\.[^.]+$/, "").slice(0, 60) || "מסמך", have: true, url: null, assetId: null }; S.docs.push(d); }
     if (d.url && d.url.startsWith("file:") && store.assets.remove) store.assets.remove(d.assetId);
     Object.assign(d, { url: r.url, assetId: r.id, have: true, size: r.size || f.size, ftype: r.type || f.type, fname: f.name.slice(0, 60) }, r.key ? { fkey: r.key } : {});
@@ -2126,7 +2156,10 @@ document.addEventListener("click", e => {
   if (d.go) return go(d.go, d.sub);
   if (d.sub) { sub[tab] = d.sub; render(); return; }
   if (d.pxper) { pxPer = +d.pxper; render(); return; }
-  if (d.step) { doStep(d.step); return; }
+  if (d.step) { if (d.closesheet) closeSheetQuiet(); doStep(d.step); return; }
+  if (d.stepinfo) { const s = nextSteps().find(x => x.id === d.stepinfo), el = document.getElementById("sheet"); if (!s || !el) return;
+    el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="${esc(s.title)}"><div class="spread"><h2>${s.title}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div><p>${s.text}</p>
+      <div class="row"><button data-step="${s.act}" data-closesheet="1">${s.btn}</button><button class="ghost" data-act="sheetclose">אחר כך</button></div></div>`; el.hidden = false; return; }
   if (d.q) { openSheet(d.q); return; }
   if (d.fold) { editOpen[d.fold] = !editOpen[d.fold]; render(); return; }
   if (d.stagego) { openStages.add(d.stagego); go("buy", "tasks"); return; }
@@ -2137,18 +2170,18 @@ document.addEventListener("click", e => {
   if (d.paymode) { setPayMode(d.paymode); return; }
   if (d.stage) { S.profile.stage = d.stage; persist(); render(); return; }
   if (d.addtask) { const i = document.getElementById("nt_" + d.addtask); if (i.value.trim()) { S.tasks.push({ id: uid(), stage: d.addtask, text: i.value.trim(), done: false }); persist(); render(); } return; }
-  if (d.deltask) { undoable("המשימה נמחקה", () => { S.tasks = S.tasks.filter(x => x.id !== d.deltask); }); return; }
-  if (d.delpay) { undoable("התשלום נמחק", () => { S.payments = S.payments.filter(x => x.id !== d.delpay); }); return; }
-  if (d.deldef) { undoable("הליקוי נמחק", () => { S.defects = S.defects.filter(x => x.id !== d.deldef); }); return; }
+  if (d.deltask) { undoRemove("המשימה נמחקה", () => S.tasks, v => S.tasks = v, d.deltask); return; }
+  if (d.delpay) { undoRemove("התשלום נמחק", () => S.payments, v => S.payments = v, d.delpay); return; }
+  if (d.deldef) { undoRemove("הליקוי נמחק", () => S.defects, v => S.defects = v, d.deldef); return; }
   if (d.deldoc) { const x = S.docs.find(k => k.id === d.deldoc); const sh = document.getElementById("sheet"); if (sh && !sh.hidden) { sh.hidden = true; sh.innerHTML = ""; }
     const fileId = x && x.url && x.url.startsWith("file:") ? x.assetId : null;   /* the file itself is deleted only if the user does not undo */
-    undoable(x && x.url ? "המסמך והקובץ נמחקו" : "המסמך נמחק", () => { S.docs = S.docs.filter(k => k.id !== d.deldoc); }, () => { if (fileId && store.assets && store.assets.remove && !S.docs.some(k => k.assetId === fileId)) store.assets.remove(fileId); });
+    undoRemove(x && x.url ? "המסמך והקובץ נמחקו" : "המסמך נמחק", () => S.docs, v => S.docs = v, d.deldoc, () => { if (fileId && store.assets && store.assets.remove && !S.docs.some(k => k.assetId === fileId)) store.assets.remove(fileId); });
     return; }
   if (d.opendoc) { openDoc(d.opendoc); return; }
-  if (d.deloffer) { undoable("ההצעה נמחקה", () => { S.offers = S.offers.filter(x => x.id !== d.deloffer); }); return; }
+  if (d.deloffer) { undoRemove("ההצעה נמחקה", () => S.offers, v => S.offers = v, d.deloffer); return; }
   if (d.attach) { attachFor = d.attach; document.getElementById("docfile").click(); return; }
   if (d.addsrc) { const k = d.addsrc; (S.fin.sources = srcList()).push({ id: uid(), name: k === "study" ? "קרן השתלמות" : k === "loan" ? "הלוואה" : k === "sale" ? "מכירת הדירה הנוכחית (נטו)" : "מקור נוסף", kind: k === "loan" ? "loan" : "asset", amount: 0, date: k === "sale" ? (S.profile.delivery || "") : "", monthly: 0, bank: false, inc: k !== "study", now: 0, sale: k === "sale" }); persist(); render(); return; }
-  if (d.delsrc) { undoable("המקור נמחק", () => { S.fin.sources = srcList().filter(x => x.id !== d.delsrc); }); return; }
+  if (d.delsrc) { undoRemove("המקור נמחק", () => srcList(), v => S.fin.sources = v, d.delsrc); return; }
   if (d.pickeq) { S.fin.equity = Number(d.pickeq); S.fin.eqCustom = false; persist(); refreshOut(); const ei = document.querySelector('[data-c="fin.equity"]'); if (ei) ei.value = ""; toast("ההון העצמי עודכן. המשכנתא חושבה מחדש."); return; }
   switch (d.act) {
     case "setup": if (S.example) { startWizard(); break; }
@@ -2188,7 +2221,11 @@ document.addEventListener("click", e => {
     case "sharesend": { const url = location.origin + "/?join=" + store.code, text = `הצטרפו לרכישה המשותפת שלנו באפליקציית מפתח: ${url}\n(קוד השיתוף: ${store.code})`;
       if (navigator.share) navigator.share({ title: "מפתח", text }).catch(() => {}); else location.href = "https://wa.me/?text=" + encodeURIComponent(text); break; }
     case "leavedel": { const c = store.code; if (!confirm("למחוק את הרכישה המשותפת מהשרת? בטלפון השני היא תפסיק להתעדכן. בטלפון הזה הנתונים יישארו.")) break;
-      fetch("/api/household?code=" + encodeURIComponent(c), { method: "DELETE" }).catch(() => {}); leaveShare(); toast("הרכישה המשותפת נמחקה מהשרת"); break; }
+      fetch("/api/household?code=" + encodeURIComponent(c), { method: "DELETE" }).catch(() => {});
+      if (confirm("למחוק מהשרת גם את קבצי המסמכים? הם יישארו רק אם שמרתם אותם בטלפון.")) { for (const x of S.docs) if (x.url && x.url.startsWith("file:") && store.assets && store.assets.remove) { store.assets.remove(x.assetId); x.url = null; x.assetId = null; x.fkey = null; } persist(); }
+      leaveShare(); toast("הרכישה המשותפת נמחקה מהשרת"); break; }
+    case "invjoin": { const c = invite.code; invite = null; joinShare(c); break; }
+    case "invno": invite = null; render(); break;
     case "joinwelcome": setupOpen = true; joinOpen = true; render(); setTimeout(() => { const i = document.getElementById("joincode"); if (i) { i.scrollIntoView({ block: "center" }); i.focus(); } }, 80); break;
     case "leave": leaveShare(); break;
     case "copycode": { const sel = () => { const el = document.getElementById("sharecode"); const r = document.createRange(); r.selectNodeContents(el); getSelection().removeAllRanges(); getSelection().addRange(r); toast("הקוד מסומן. העתיקו אותו."); };
@@ -2212,7 +2249,7 @@ document.addEventListener("click", e => {
     case "payedit": payEdit = true; render(); break;
     case "payedit2": payEdit = true; go("buy", "payments"); break;
     case "paydone": payEdit = false; flow().pay = true; persist(); render(); window.scrollTo(0, 0); break;
-    case "sheetclose": { const el = document.getElementById("sheet"); el.hidden = true; el.innerHTML = ""; if (history.state && history.state.sheet) history.back(); break; }
+    case "sheetclose": { const el = document.getElementById("sheet"); el.hidden = true; el.innerHTML = ""; break; }
     case "whylimit": { const w = document.getElementById("whylimit"); if (w) { w.hidden = !w.hidden; b.setAttribute("aria-expanded", String(!w.hidden)); b.textContent = w.hidden ? "איך זה נקבע? ▾" : "סגירה ▴"; } break; }
     case "areasall": areaShowAll = !areaShowAll; render(); break;
     case "backup": exportBackup(); break;
@@ -2222,7 +2259,7 @@ document.addEventListener("click", e => {
     case "resetyes": { const keepShare = !!store.shared; S = exampleState(); if (keepShare) S.example = false; confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("הנתונים נמחקו. מתחילים מחדש"); break; }
   }
 });
-document.addEventListener("click", e => { if (e.target.id === "sheet") { e.target.hidden = true; e.target.innerHTML = ""; if (history.state && history.state.sheet) history.back(); } });
+document.addEventListener("click", e => { if (e.target.id === "sheet") { e.target.hidden = true; e.target.innerHTML = ""; } });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { const s = document.getElementById("sheet"); if (s && !s.hidden) { s.hidden = true; s.innerHTML = ""; } } });
 document.addEventListener("toggle", e => { const d = e.target.dataset; if (d && d.stagebox) { if (e.target.open) openStages.add(d.stagebox); else openStages.delete(d.stagebox); } }, true);
 document.addEventListener("input", e => {
@@ -2234,7 +2271,7 @@ document.addEventListener("input", e => {
   if (t.id === "areasearch") { applyAreaFilter(t.value); areaSuggest(t.value); return; }
   if (d.src) { const [id, f] = d.src.split(":"), x = srcList().find(k => k.id === id); if (x) { x[f] = (f === "amount" || f === "monthly" || f === "now") ? Math.max(0, Number(String(t.value).replace(/[^\d.]/g, "")) || 0) : t.value; persist(); refreshOut(); } return; }
   if (d.c === "fin.equity") { const v = String(t.value).trim(); S.fin.equity = v ? Math.max(0, Number(v.replace(/[^\d.]/g, "")) || 0) : null; S.fin.eqCustom = !!v; persist(); refreshOut(); return; }
-  if (d.c) { const v = Number(String(t.value).replace(/[^\d.]/g, "")); setPath(d.c, isNaN(v) ? 0 : Math.max(0, v)); if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
+  if (d.c) { const v = Number(String(t.value).replace(/[^\d.]/g, "")); setPath(d.c, isNaN(v) ? 0 : Math.max(0, v)); if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
   if (d.of) { const [id, f] = d.of.split(":"), x = S.offers.find(k => k.id === id); if (x) { x[f] = f === "bank" ? t.value : Number(String(t.value).replace(/[^\d.]/g, "")) || 0; persist(); refreshOut(); } if (f === "amount" || f === "first" || f === "total") liveComma(t); return; }
   if (d.pf) { const [id, f] = d.pf.split(":"), x = S.payments.find(k => k.id === id); if (x) { if (f === "voucher") x.name = "שובר " + t.value; x[f] = (f === "pct" || f === "amount") ? Math.max(0, Number(String(t.value).replace(/[^\d.]/g, "")) || 0) : t.value;
       if (S.payMode === "vouchers" && f === "pct") { x.amount = Math.round(S.profile.price * x.pct / 100); const m = document.querySelector(`[data-pf="${id}:amount"]`); if (m) m.value = x.amount ? fmtIn(x.amount) : ""; }
