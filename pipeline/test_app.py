@@ -42,6 +42,14 @@ with sync_playwright() as p:
                 if pg.input_value("[data-wzf='price']") != f"{exp:,}": fails.append("calculated price not applied")
         else: fails.append("no official projects for Petah Tikva in wizard")
         pg.evaluate("()=>{ wiz = null; render(); }")
+        # regressions found by the persona testers
+        chk = pg.evaluate("""()=>{ const keep = JSON.stringify(S); S = exampleState(); S.example = false;
+          S.payments = scheduleFromPcts([20, 80], S.profile.sign || "2026-11-01", S.profile.delivery || "2029-11-01"); const link = linkTotal();
+          const pay1 = Math.round(mortgageCalc().first), pay2 = Math.round(equityScenarios().res[0].pay);
+          S.mix.pPrime += 20; const bad = outMortgage().includes("100%"); S.mix.pPrime -= 20; S = migrate(JSON.parse(keep)); render(); return [link, pay1, pay2, bad]; }""")
+        if not chk[0] > 0: fails.append("20/80 schedule lost its linkage")
+        if abs(chk[1] - chk[2]) > 1: fails.append(f"two different monthly payments: {chk[1]} vs {chk[2]}")
+        if not chk[3]: fails.append("mortgage results shown although the mix is not 100%")
         # app lock: set a code, reopen, wrong code stays locked, right code opens
         pg.evaluate("()=>{ setupOpen = true; render(); }"); pg.click("[data-lk='set']")
         for _ in range(2):

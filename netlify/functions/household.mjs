@@ -1,6 +1,7 @@
 // Shared purchase for a household (live sharing between two phones).
 // GET  /api/household?code=XXXX  -> { state, updatedAt }   (404 if the code does not exist)
-// PUT  /api/household?code=XXXX  body { state }            -> { state, updatedAt }
+// PUT  /api/household?code=XXXX  body { state }            -> { state, updatedAt }   (state is encrypted by the phones)
+// DELETE /api/household?code=XXXX                         -> removes the shared purchase from the server
 // GET  /api/household?ping=1     -> { ok: true }           (lets the app know sharing is available)
 // The code is a random 9-character key that only the two of you know; there are no accounts.
 import { getStore } from "@netlify/blobs";
@@ -24,7 +25,8 @@ export default async (req) => {
     let body;
     try { body = await req.json(); } catch { return json({ error: "bad body" }, 400); }
     if (!body || typeof body.state !== "string" || body.state.length > 1_500_000) return json({ error: "bad body" }, 400);
-    try { JSON.parse(body.state); } catch { return json({ error: "bad state" }, 400); }
+    // the app encrypts the purchase with the share code before sending ("enc1:..."); older versions sent plain JSON
+    if (!body.state.startsWith("enc1:")) { try { JSON.parse(body.state); } catch { return json({ error: "bad state" }, 400); } }
     // refuse a save made on top of an older version; the phone then re-reads, merges and saves again
     if (body.ifMatch !== undefined) {
       const cur = await store.get(code, { type: "json" });
@@ -34,6 +36,7 @@ export default async (req) => {
     await store.setJSON(code, v);
     return json(v);
   }
+  if (req.method === "DELETE") { await store.delete(code); return json({ ok: true }); }
   return json({ error: "method not allowed" }, 405);
 };
 
