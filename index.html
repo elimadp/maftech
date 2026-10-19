@@ -1374,7 +1374,7 @@ async function openStreetDeals(city, street) {
     pairs = [...new Map((j.data || []).map(d => d.identity || {}).filter(i => i.gush && i.helka).map(i => [i.gush + "-" + i.helka, [String(i.gush), String(i.helka)]])).values()];
   } catch (e) { const b = document.getElementById("dealsbox"); if (b) b.innerHTML = `<p style="color:var(--warn)">החיפוש לא הצליח. בדקו חיבור לאינטרנט ונסו שוב.</p>`; return; }
   if (!pairs.length) { const b = document.getElementById("dealsbox"); if (b) b.innerHTML = `<p class="muted">לא מצאנו רחוב בשם "${esc(street)}" ב${esc(key)}. נסו בלי "רחוב", בלי מספר בית, או בכתיב אחר.</p>`; return; }
-  openDeals(city, null, { title: "רחוב " + street, pairs });
+  openDeals(city, null, { title: "רחוב " + street, pairs, street });
 }
 async function openDeals(city, label, extra) {
   const el = document.getElementById("sheet"), key = label ? Object.keys(PX.a).find(c => sameCity(c, city)) : Object.keys(PX.c).find(c => sameCity(c, city));
@@ -1401,7 +1401,7 @@ async function openDeals(city, label, extra) {
     const j = await r.json(); if (!r.ok || !j.rows) throw new Error("bad");
     list = j.rows.filter(dealKeep).map(d => { const [dd, mm, yy] = d.deal_date.split("/"); return { ...d, iso: `${yy}-${mm}-${dd}`, pr: Number(d.deal_amount), ar: parseFloat(d.asset_area) || 0 }; });
   } catch (e) { const b = document.getElementById("dealsbox"); if (b) b.innerHTML = `<p style="color:var(--warn)">לא הצלחנו לטעון את העסקאות. בדקו חיבור לאינטרנט ונסו שוב.</p>`; return; }
-  dealsView = { list, sort: "date", limit: 60, city: key };
+  dealsView = { list, sort: "date", limit: 60, city: key, kind: extra && extra.pairs ? "street" : label ? "neighborhood" : "city", street: extra && extra.street, pairs: extra && extra.pairs, start: ymd(start).slice(0, 7), gm: null };
   drawDeals();
 }
 function drawDeals() {
@@ -1410,9 +1410,11 @@ function drawDeals() {
   if (!L.length) { b.innerHTML = `<p class="muted">אין עסקאות כאלה בתקופה הזו.</p>`; return; }
   const ps = L.map(d => d.pr).sort((a, c) => a - c), medv = ps.length % 2 ? ps[(ps.length - 1) / 2] : (ps[ps.length / 2 - 1] + ps[ps.length / 2]) / 2;
   const sortBtn = (k, l) => `<button class="${v.sort === k ? "" : "ghost"} small" data-dsort="${k}" aria-pressed="${v.sort === k}">${l}</button>`;
+  if (v.gm) return drawGm();
   const newest = L.reduce((m, d) => d.iso > m ? d.iso : m, "");
   b.innerHTML = `<p style="margin:0 0 6px"><b>${nf.format(L.length)} עסקאות</b> · חציון <b class="num">${ils(medv)}</b></p>
     <p class="small muted" style="margin:0 0 6px">העסקה האחרונה שדווחה: ${fmtDate(newest)}. עסקאות חדשות יותר עוד לא הגיעו למאגר.</p>
+    ${v.kind !== "city" ? `<button class="ghost small" data-gm="1" style="margin-bottom:8px">עסקאות עדכניות יותר, עם כתובת וקומה (GovMap) ←</button>` : ""}
     <div class="row" style="gap:6px;margin-bottom:6px">${sortBtn("date", "החדשות קודם")}${sortBtn("high", "היקרות קודם")}${sortBtn("low", "הזולות קודם")}</div>
     <div class="deals">${L.slice(0, v.limit).map(d => {
       const t = NATURE_T[d.deal_nature], rm = parseFloat(d.room_num), yb = parseInt(d.year_built, 10);
@@ -1423,6 +1425,74 @@ function drawDeals() {
     <p class="src">מקור: עסקאות רשות המסים, מתוך העותק הפתוח שלהן ב-over.org.il${NAT.scraped ? ` (עודכן לאחרונה ${fmtDate(NAT.scraped)})` : ""}. עסקאות מדווחות באיחור של שבועות עד חודשים, ולכן מהחודשיים-שלושה האחרונים חסרות עסקאות רבות. בעותק הזה אין כתובת וקומה: הכתובת כאן מחושבת לפי גוש וחלקה, ולכן היא של הבניין או המגרש. את העסקאות הכי חדשות, כולל קומה, אפשר לראות באתר הרשמי <a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>.</p>`;
   fillAddrs(L.slice(0, v.limit));
 }
+/* ---------- fresher deals with address and floor: GovMap's public real-estate API (the official map site) ---------- */
+async function gmFetch(path) {
+  try { const r = await fetch("https://www.govmap.gov.il/api/" + path, { headers: { accept: "application/json" } }); if (r.ok) return await r.json(); } catch (e) {}
+  const r = await fetch("/api/govmap?p=" + encodeURIComponent(path)); if (!r.ok) throw new Error("govmap " + r.status); return await r.json();
+}
+const gmPick = (x, ...k) => { for (const n of k) if (x[n] != null && x[n] !== "") return x[n]; return null; };
+async function loadGm() {
+  const v = dealsView; if (!v) return;
+  let poly = null;
+  if (v.kind === "street") {
+    const hit = v.list.map(d => [d.gush, d.chelka]).find(([g, h]) => { const a = addrCache.get(g + "-" + h); return a && a.text && a.text.includes(v.street); });
+    poly = hit || (v.pairs || [])[0];
+  } else poly = v.list.length ? [v.list[0].gush, v.list[0].chelka] : null;
+  if (!poly) { toast("אין מספיק מידע כדי לחפש ב-GovMap"); return; }
+  v.gm = { loading: true, rows: [] }; drawDeals();
+  const kind = v.kind === "street" ? "street" : "neighborhood", rows = new Map(); let ok = false;
+  for (const t of [1, 2, null]) {
+    if (t === null && ok) break;
+    try {
+      const j = await gmFetch(`real-estate/${kind}-deals/${poly[0]}-${poly[1]}?limit=1000${t ? "&dealType=" + t : ""}&startDate=${v.start}`);
+      const arr = Array.isArray(j) ? j : (j && (j.data || j.deals)) || [];
+      for (const x of arr) rows.set(gmPick(x, "dealId", "objectid") || Math.random(), { ...x, _new: t === 1 });
+      ok = true;
+    } catch (e) {}
+  }
+  if (!ok) { v.gm = { error: true }; drawDeals(); return; }
+  const keepNat = n => !n || /דירה|קוטג|בית|מגורים|פנטהאוז|דופלקס/.test(n);
+  const list = [...rows.values()].map(x => {
+    const nat = gmPick(x, "dealNatureDescription", "propertyTypeDescription", "property_type_description") || "";
+    return { iso: String(gmPick(x, "dealDate", "deal_date") || "").slice(0, 10), pr: Number(gmPick(x, "dealAmount", "deal_amount")) || 0, ar: Number(gmPick(x, "assetArea", "asset_area")) || 0,
+      rm: Number(gmPick(x, "assetRoomNum", "rooms")) || 0, floor: gmPick(x, "floorNo", "floor", "floor_number"), street: gmPick(x, "streetNameHeb", "street_name"), house: gmPick(x, "houseNum", "house_number"),
+      nat, nb: gmPick(x, "neighborhood"), isNew: x._new, gush: gmPick(x, "gushNum"), helka: gmPick(x, "parcelNum") };
+  }).filter(d => d.iso && d.pr >= 150000 && keepNat(d.nat) && d.iso >= v.start + "-01")
+    .filter(d => !(pxRooms >= 1 && pxRooms <= 3) || (d.rm && (Math.floor(d.rm + .01) <= 3 ? 1 : Math.floor(d.rm + .01) === 4 ? 2 : 3) === pxRooms))
+    .filter(d => pxRooms !== 4 || /קוטג|בית/.test(d.nat));
+  v.gm = { rows: list, sort: "date", limit: 60 }; drawDeals();
+}
+function drawGm() {
+  const b = document.getElementById("dealsbox"), v = dealsView, g = v.gm; if (!b) return;
+  const back = `<button class="link small" data-gmback="1">← חזרה לרשימה הרגילה</button>`;
+  if (g.loading) { b.innerHTML = `${back}<p class="muted">טוען עסקאות מ-GovMap...</p>`; return; }
+  if (g.error) { b.innerHTML = `${back}<p style="color:var(--warn)">לא הצלחנו להתחבר ל-GovMap כרגע. אפשר לנסות שוב מאוחר יותר, או לחפש ישירות ב<a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>.</p>`; return; }
+  const L = g.rows.slice().sort(g.sort === "date" ? (a, c) => c.iso.localeCompare(a.iso) : g.sort === "high" ? (a, c) => c.pr - a.pr : (a, c) => a.pr - c.pr);
+  if (!L.length) { b.innerHTML = `${back}<p class="muted">GovMap לא החזיר עסקאות מגורים כאלה בתקופה הזו.</p>`; return; }
+  const ps = L.map(d => d.pr).sort((a, c) => a - c), medv = ps.length % 2 ? ps[(ps.length - 1) / 2] : (ps[ps.length / 2 - 1] + ps[ps.length / 2]) / 2;
+  const newest = L.reduce((m, d) => d.iso > m ? d.iso : m, "");
+  const sortBtn = (k, l) => `<button class="${g.sort === k ? "" : "ghost"} small" data-gmsort="${k}" aria-pressed="${g.sort === k}">${l}</button>`;
+  const floorTxt = f => f == null || f === "" ? "" : /^\d+$/.test(String(f)) ? (String(f) === "0" ? "קומת קרקע" : `קומה ${f}`) : `קומה ${f}`;
+  b.innerHTML = `${back}<p style="margin:4px 0 6px"><b>${nf.format(L.length)} עסקאות</b> · חציון <b class="num">${ils(medv)}</b> <span class="chip">GovMap</span></p>
+    <p class="small muted" style="margin:0 0 6px">${v.kind === "street" ? "כל הרחוב" : "כל השכונה"}, מאז ${fmtDate(v.start + "-01")}. העסקה האחרונה: ${fmtDate(newest)}. בלי סינון לפי גיל הבניין (אין שנת בנייה ב-GovMap).</p>
+    <div class="row" style="gap:6px;margin-bottom:6px">${sortBtn("date", "החדשות קודם")}${sortBtn("high", "היקרות קודם")}${sortBtn("low", "הזולות קודם")}</div>
+    <div class="deals">${L.slice(0, g.limit).map(d => {
+      const bits = [d.rm ? `${+d.rm.toFixed(1)} חד׳` : "", d.ar ? `${nf.format(d.ar)} מ"ר` : "", d.ar > 20 ? `${ils(d.pr / d.ar)} למ"ר` : "", floorTxt(d.floor)].filter(Boolean);
+      const addr = d.street ? `${d.street}${d.house ? " " + d.house : ""}` : "";
+      const map = addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr + " " + v.city)}` : "";
+      return `<div class="deal"><div class="spread"><b class="num">${ils(d.pr)}</b><span class="small muted">${fmtDate(d.iso)}</span></div>
+        <div class="small">${bits.join(" · ")}</div>${addr ? `<div class="small pa">📍 <a href="${map}" target="_blank" rel="noopener">${esc(addr)}</a></div>` : ""}
+        <div class="small muted">${esc(d.nat || "")}${d.isNew ? " · מקבלן" : ""}${d.gush ? ` · גוש ${esc(d.gush)} חלקה ${esc(d.helka)}` : ""}</div></div>`; }).join("")}
+      ${L.length > g.limit ? `<button class="link" data-gmmore="1">עוד ${nf.format(Math.min(60, L.length - g.limit))} עסקאות</button>` : ""}</div>
+    <p class="src">מקור: GovMap, המפה הממשלתית, שמציגה את עסקאות רשות המסים עם כתובת וקומה ומתעדכנת מהר יותר. גם כאן עסקאות מהשבועות האחרונים עוד חסרות, כי הן מדווחות באיחור.</p>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-gm],[data-gmback],[data-gmsort],[data-gmmore]"); if (!b || !dealsView) return;
+  if (b.dataset.gm) loadGm();
+  else if (b.dataset.gmback) { dealsView.gm = null; drawDeals(); }
+  else if (b.dataset.gmsort && dealsView.gm) { dealsView.gm.sort = b.dataset.gmsort; dealsView.gm.limit = 60; drawGm(); }
+  else if (b.dataset.gmmore && dealsView.gm) { dealsView.gm.limit += 60; drawGm(); }
+});
 const addrCache = new Map();
 function addrHtml(g, h) {
   const a = addrCache.get(g + "-" + h);
