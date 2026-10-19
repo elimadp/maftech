@@ -199,7 +199,7 @@ def compute(deals, area_of, last_ym):
             for d in s.split(";"):
                 f = d.split("|")
                 ym, pr, yb, rm, ar, t = int(f[0]), float(f[1] or 0), f[2], f[3], f[4], f[5]
-                if ym < c60:
+                if ym < c60 or ym > last_ym:
                     continue
                 n_all += 1
                 yb = int(yb) if yb.isdigit() and 1900 < int(yb) < 2035 else None
@@ -334,16 +334,25 @@ def main():
     last = q(f"SELECT max(to_date(deal_date,'DD/MM/YYYY')) m FROM {DEALS}")[0]["m"]
     last_d = datetime.date.fromisoformat(str(last)[:10])
     last_ym = (last_d.year - 2000) * 100 + last_d.month
-    # a month is "complete" only if the data reaches its last days; otherwise end the windows at the previous month
-    if last_d.day < 25:
-        y, m = (last_d.year, last_d.month - 1) if last_d.month > 1 else (last_d.year - 1, 12)
-        last_ym = (y - 2000) * 100 + m
-    else:
-        y, m = last_d.year, last_d.month
+    # deals reach the Tax Authority weeks or months late, so the newest months are partial. A month counts as
+    # complete only when it has at least 60% of the usual monthly volume (median of the 6 months before it).
+    mc = q(f"SELECT to_char(to_date(deal_date,'DD/MM/YYYY'),'YYYY-MM') m, count(*) n FROM {DEALS} "
+           f"WHERE to_date(deal_date,'DD/MM/YYYY') >= '{(last_d - datetime.timedelta(days=400)).isoformat()}' GROUP BY 1 ORDER BY 1")
+    months = [(r["m"], int(r["n"])) for r in mc]
+    pick = months[-1][0] if months else last_d.strftime("%Y-%m")
+    for i in range(len(months) - 1, 5, -1):
+        base = statistics.median(n for _, n in months[i - 6:i])
+        if months[i][1] >= 0.6 * base:
+            pick = months[i][0]
+            break
+    y, m = int(pick[:4]), int(pick[5:7])
+    last_ym = (y - 2000) * 100 + m
+    rep["months"] = months[-8:]
     since = datetime.date(y - 5, m, 1) + datetime.timedelta(days=32)
     since = since.replace(day=1).isoformat()
     deals = pull_deals(since)
     n_total = q(f"SELECT count(*) n FROM {DEALS}")[0]["n"]
+    scraped = str(q(f"SELECT max(scraped_at) s FROM {DEALS}")[0]["s"])[:10]
 
     log("3/5 new blocks")
     recent_cut = last_ym - 100
@@ -356,7 +365,7 @@ def main():
     px, areas, cities, st = compute(deals, area_of, last_ym)
     rep["stats"] = st
     nat = dict(old["NAT"])
-    nat.update({"generated": today.strftime("%-d.%-m.%Y"), "through": f"{HEB_MONTHS[m - 1]} {y}", "thruYM": f"{y}-{m:02d}", "deals": n_total, "cities": cities})
+    nat.update({"generated": today.strftime("%-d.%-m.%Y"), "through": f"{HEB_MONTHS[m - 1]} {y}", "thruYM": f"{y}-{m:02d}", "scraped": scraped, "deals": n_total, "cities": cities})
 
     # ---- sanity checks against the previous version
     def chk(cond, msg):
