@@ -189,6 +189,7 @@ svg text { font-family: var(--body); }
 button.small { padding: 6px 12px; min-height: 36px; font-size: .85rem; }
 .banner h2 { font-size: 1rem; }
 details summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 8px 0; }
+.calcbox{display:grid;gap:4px;padding:10px;border-radius:10px;background:var(--bg,#0000);margin-top:6px}
 </style>
 
 <div class="app" dir="rtl" lang="he">
@@ -716,7 +717,7 @@ function screenSetup() {
         <option value="upgrade" ${p.buyer === "upgrade" ? "selected" : ""}>משפר דיור (מוכר דירה קיימת)</option>
         <option value="additional" ${p.buyer === "additional" ? "selected" : ""}>דירה נוספת</option></select></label>
       <label class="f">עיר<input id="f_city" data-key="f_city" value="${esc(p.city)}" placeholder="למשל: ראש העין"></label>
-      <label class="f">מחיר הדירה (₪)<input id="f_price" data-key="f_price" inputmode="numeric" value="${esc(p.price)}" placeholder="1,650,000"></label>
+      <label class="f">מחיר הדירה (₪)<input id="f_price" data-key="f_price" inputmode="numeric" value="${esc(p.price ? fmtIn(p.price) : "")}" placeholder="1,650,000"></label>
       <div class="grid2">
         <label class="f">חתימת חוזה<input id="f_sign" data-key="f_sign" type="date" value="${esc(p.sign)}"></label>
         <label class="f" id="l_deliv">${p.type === "resale" ? "קבלת מפתח" : "מסירה צפויה"}<input id="f_delivery" data-key="f_delivery" type="date" value="${esc(p.delivery)}"></label>
@@ -1293,7 +1294,7 @@ function calcNext() {
 
 /* ---------- onboarding wizard ---------- */
 let wiz = null;
-function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", size: "", ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
+function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", size: "", balc: "", stor: "", park: "", ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
 function wizSteps() { return ["type", ...(wiz.d.type && wiz.d.type !== "ml" ? ["buyer"] : []), "city", "price", "dates", "money"]; }
 function screenWizard() {
   const d = wiz.d, steps = wizSteps(), k = steps[Math.min(wiz.i, steps.length - 1)], n = steps.length, i = steps.indexOf(k);
@@ -1309,10 +1310,10 @@ function screenWizard() {
         <p class="small muted">אם תבחרו, נמלא בשבילכם את תאריך ההגרלה ואת המחיר למ"ר מהרשימה הרשמית.</p>` : ""}`;
   }
   if (k === "price") {
-    const calc = d.ppsqm && d.size ? Math.round(d.ppsqm * (1 + VAT) * d.size) : 0;
     body = `<h2>כמה עולה הדירה?</h2>${inp("price", "מחיר הדירה (₪)", 'inputmode="numeric" placeholder="למשל 1,650,000"')}
-      ${d.ppsqm ? `<div class="hint"><p class="small">בפרויקט שבחרתם: ${nf.format(d.ppsqm)} ₪ למ"ר לפני מע"מ. רוצים שנחשב?</p>${inp("size", 'גודל הדירה (מ"ר, כולל מרפסת לפי החוזה)', 'inputmode="decimal"')}
-        ${calc ? `<button class="ghost small" data-wz="price:${calc}">להשתמש ב-${ils(calc)} (כולל מע"מ, לפני הצמדה)</button>` : ""}</div>` : ""}`;
+      ${d.ppsqm ? `<div class="hint"><p class="small">בפרויקט שבחרתם: <b>${nf.format(d.ppsqm)} ₪ למ"ר</b> לפני מע"מ. לא בטוחים במחיר? מלאו את השטחים מהחוזה ונחשב:</p>
+        <div class="grid2">${inp("size", 'דירה נטו (מ"ר)', 'inputmode="decimal" placeholder="למשל 95"')}${inp("balc", 'מרפסת (מ"ר)', 'inputmode="decimal" placeholder="0"')}${inp("stor", 'מחסן (מ"ר)', 'inputmode="decimal" placeholder="0"')}${inp("park", "מספר חניות", 'inputmode="numeric" placeholder="0"')}</div>
+        <div id="wzcalc">${wizCalcHtml()}</div></div>` : ""}`;
   }
   if (k === "dates") body = `<h2>מתי?</h2>${inp("sign", "חתימת החוזה (או מועד משוער)", 'type="date"')}${d.type === "resale" ? "" : inp("delivery", "מסירה צפויה (אפשר להשאיר ריק)", 'type="date"')}${d.type === "ml" ? inp("lottery", "תאריך ההגרלה", 'type="date"') : ""}
     <p class="small muted">מהתאריכים נבנים לוח התשלומים, התזכורות והמועד שבו מותר למכור.</p>`;
@@ -1322,6 +1323,28 @@ function screenWizard() {
   return `<div class="screen wizard"><div class="wzhead"><span class="small muted">שאלה ${i + 1} מתוך ${n}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
     <div class="card">${body}${wiz.err ? `<p class="small" style="color:var(--warn)">${wiz.err}</p>` : ""}</div>
     <div class="row wznav">${canNext ? `<button data-act="wznext">${last ? "סיום ←" : "המשך ←"}</button>` : ""}${k === "money" ? `<button class="ghost" data-act="wzfinish">דלג וסיים</button>` : ""}${i > 0 ? `<button class="link" data-act="wzback">חזרה</button>` : `<button class="link" data-act="wzcancel">ביטול</button>`}</div></div>`;
+}
+function wizCalc() {
+  const d = wiz.d, n = v => Math.max(0, Number(String(v || "").replace(/[^\d.]/g, "")) || 0);
+  const size = n(d.size), balc = n(d.balc), stor = n(d.stor), park = Math.round(n(d.park));
+  const w = Math.round((size + .3 * balc + .4 * stor + 2 * park) * 100) / 100, pre = Math.round(w * d.ppsqm), total = Math.round(pre * (1 + VAT));
+  return { size, balc, stor, park, w, pre, total };
+}
+function wizCalcHtml() {
+  const c = wizCalc(), f = x => nf2.format(x);
+  if (!c.size) return `<p class="small muted">שטח משוקלל = דירה + 30% מהמרפסת + 40% מהמחסן + 2 מ"ר לכל חניה.</p>`;
+  const parts = [`דירה ${f(c.size)}`, c.balc ? `מרפסת ${f(Math.round(.3 * c.balc * 100) / 100)}` : "", c.stor ? `מחסן ${f(Math.round(.4 * c.stor * 100) / 100)}` : "", c.park ? `${c.park === 1 ? "חניה" : `${c.park} חניות`} ${f(2 * c.park)}` : ""].filter(Boolean);
+  return `<div class="calcbox small"><div class="spread"><span>שטח משוקלל</span><b class="num">${f(c.w)} מ"ר</b></div><div class="muted">${parts.join(" + ")}</div><div class="muted">מרפסת נספרת <bdi>30%</bdi>, מחסן <bdi>40%</bdi>, וכל חניה 2 מ"ר</div>
+    <div class="spread"><span>× ${nf.format(wiz.d.ppsqm)} ₪ למ"ר, לפני מע"מ</span><span class="num">${ils(c.pre)}</span></div>
+    <div class="spread"><span>+ מע"מ ${Math.round(VAT * 100)}%</span><span class="num">${ils(c.total - c.pre)}</span></div>
+    <div class="spread"><b>מחיר הדירה</b><b class="num">${ils(c.total)}</b></div></div>
+    <button class="ghost small" data-wz="price:${c.total}" style="margin-top:8px">להשתמש ב-${ils(c.total)}</button><p class="small muted">כולל מע"מ, לפני הצמדה למדד.</p>`;
+}
+function liveComma(t) {
+  const raw = t.value, pos = t.selectionStart == null ? raw.length : t.selectionStart, digitsBefore = raw.slice(0, pos).replace(/\D/g, "").length, digits = raw.replace(/\D/g, "");
+  const out = digits ? nf2.format(+digits) : ""; if (out === raw) return;
+  t.value = out; let i = 0, seen = 0; while (i < out.length && seen < digitsBefore) { if (/\d/.test(out[i])) seen++; i++; }
+  try { t.setSelectionRange(i, i); } catch (e) {}
 }
 function wizValidate(k) {
   const d = wiz.d, num = v => Number(String(v).replace(/[^\d.]/g, "")) || 0;
@@ -1554,7 +1577,8 @@ document.addEventListener("toggle", e => { const d = e.target.dataset; if (d && 
 document.addEventListener("input", e => {
   const t = e.target, d = t.dataset;
   if (t.id === "qpcts") { const p = parsePcts(t.value), s = p.reduce((a, b) => a + b, 0), el = document.getElementById("qsum"); if (el) { el.textContent = `${p.length} תשלומים, סה"כ ${nf.format(s)}%`; el.style.color = Math.abs(s - 100) < .01 ? "var(--ok)" : "var(--warn)"; } return; }
-  if (d.wzf) { wiz.d[d.wzf] = t.value; if (d.wzf === "city") wizSuggest(t.value); if (d.wzf === "size") { const num = Number(String(t.value).replace(/[^\d.]/g, "")) || 0; wiz.d.size = num; const keep = t.value; render(); const el = document.querySelector('[data-key="wz_size"]'); if (el) el.value = keep; } return; }
+  if (t.inputMode === "numeric" && !(d.pf || "").endsWith(":voucher")) liveComma(t);
+  if (d.wzf) { wiz.d[d.wzf] = t.value; if (d.wzf === "city") wizSuggest(t.value); if (["size", "balc", "stor", "park"].includes(d.wzf)) { const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); } return; }
   if (t.id === "areasearch") { applyAreaFilter(t.value); areaSuggest(t.value); return; }
   if (d.src) { const [id, f] = d.src.split(":"), x = srcList().find(k => k.id === id); if (x) { x[f] = (f === "amount" || f === "monthly" || f === "now") ? Math.max(0, Number(String(t.value).replace(/[^\d.]/g, "")) || 0) : t.value; persist(); refreshOut(); } return; }
   if (d.c === "fin.equity") { const v = String(t.value).trim(); S.fin.equity = v ? Math.max(0, Number(v.replace(/[^\d.]/g, "")) || 0) : null; S.fin.eqCustom = !!v; persist(); refreshOut(); return; }
