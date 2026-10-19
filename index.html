@@ -22,7 +22,7 @@
   --card: #ffffff;
   --fg: #1c2420;
   --muted: #5e6a63;
-  --line: #dde1d8;
+  --line: #dde1d8; --field-line: #8a948d;
   --accent: #1e5a4a;
   --accent-soft: #dcebe4;
   --gold: #85600f;
@@ -36,16 +36,16 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #98a59d; --line: #2c3530;
+    --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #98a59d; --line: #2c3530; --field-line: #5d6a63;
     --accent: #79c2a6; --accent-soft: #23362e; --gold: #e2b25a; --ok: #6cc28f; --warn: #e89a62; --top: #183a2f; --on-accent: #121714; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #98a59d; --line: #2c3530;
+  --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #98a59d; --line: #2c3530; --field-line: #5d6a63;
   --accent: #79c2a6; --accent-soft: #23362e; --gold: #e2b25a; --ok: #6cc28f; --warn: #e89a62; --top: #183a2f; --on-accent: #121714; color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 1rem; line-height: 1.5; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--top); }
 .app { max-width: 560px; margin: 0 auto; min-height: 100vh; padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 24px); }
 .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--top); color: #fff;
@@ -78,7 +78,7 @@ p { margin: 0; }
 .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
 label.f { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); min-width: 0; }
-input, select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+input, select, textarea { font: inherit; font-size: max(1rem, 16px); color: var(--fg); background: var(--bg); border: 1px solid var(--field-line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
 input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); padding: 8px 14px; font-weight: 600; }
@@ -109,7 +109,7 @@ details.stagebox[open] > summary::after { content: "▴"; }
 .laterrow:last-child { border-bottom: none; }
 .laterrow span[aria-hidden] { color: var(--accent); font-size: 1.2rem; }
 .strip { display: flex; align-items: center; overflow-x: auto; gap: 0; padding: 2px 0 4px; scrollbar-width: none; }
-.strip .st { flex: 1 1 auto; min-width: 0; text-align: center; white-space: nowrap; background: var(--card); border: 1px solid var(--line); color: var(--muted); border-radius: 99px; padding: 4px 6px; font-size: .76rem; font-weight: 600; }
+.strip .st { flex: 1 0 auto; text-align: center; white-space: nowrap; background: var(--card); border: 1px solid var(--line); color: var(--muted); border-radius: 99px; padding: 4px 6px; font-size: .76rem; font-weight: 600; }
 .tlbar { position: relative; height: 8px; border-radius: 99px; background: var(--line); margin: 26px 4px 6px; }
 .tlbar i { position: absolute; inset: 0 0 0 auto; border-radius: 99px; background: var(--accent); }
 .tlbar b { position: absolute; top: -24px; transform: translateX(50%); font-size: .72rem; color: var(--accent); white-space: nowrap; }
@@ -126,14 +126,14 @@ details.stagebox[open] > summary::after { content: "▴"; }
 .tline li.warn::before { border-color: var(--warn); }
 .tline .tlt { display: flex; justify-content: space-between; gap: 8px; }
 .tline .tlt .small { white-space: nowrap; }
-.strip .st.done { color: var(--ok); border-color: transparent; background: var(--accent-soft); }
+.strip .st.done { color: var(--accent); border-color: transparent; background: var(--accent-soft); }
 .strip .st.cur { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .strip .sep { flex: none; width: 4px; height: 1px; background: var(--line); }
 .x.ed { display: none; }
 body.listedit .x.ed { display: inline-flex; align-items: center; justify-content: center; color: var(--warn); }
 @media (max-width: 420px) { .tbl th, .tbl td { padding: 6px 4px; font-size: .84rem; } }
-.steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
-.steps button { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--muted); font-size: .78rem; font-weight: 600; padding: 4px 0; border-bottom: 3px solid var(--line); border-radius: 0; }
+.steps { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 4px; }
+.steps button { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--muted); font-size: .78rem; font-weight: 600; padding: 4px 0; border-bottom: 3px solid var(--line); border-radius: 0; overflow-wrap: anywhere; min-width: 0; }
 .steps button .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--fg); font-size: .8rem; }
 .steps button.on { color: var(--fg); border-bottom-color: var(--accent); }
 .steps button.on .n { background: var(--accent); color: var(--on-accent); }
@@ -177,9 +177,9 @@ body.listedit .x.ed { display: inline-flex; align-items: center; justify-content
 .keypad span { width: 72px; height: 72px; }
 body.locked { overflow: hidden; }
 .sheet-in { background: var(--card); color: var(--fg); width: 100%; max-width: 560px; border-radius: 16px 16px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
-.livebar { position: sticky; top: var(--toph, 56px); z-index: 4; display: flex; justify-content: space-around; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.livebar { position: sticky; top: var(--toph, 56px); z-index: 4; display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
 .livebar:empty { display: none; }
-.livebar > div { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.livebar > div { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 1 28%; text-align: center; }
 .livebar span { font-size: .72rem; color: var(--muted); }
 .livebar b { font-size: .98rem; }
 .card.fold { padding: 10px 14px; }
@@ -211,7 +211,7 @@ th { color: var(--muted); font-weight: 600; font-size: .78rem; }
 tr.best td { background: var(--accent-soft); }
 .nav { position: fixed; inset: auto 0 0 0; z-index: 6; background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
-.nav .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); height: var(--nav-h); }
+.nav .in { max-width: 560px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); min-height: var(--nav-h); }
 .nav button { background: none; border: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .74rem; font-weight: 600; padding: 4px 2px; border-radius: 0; }
 .nav button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .nav button[aria-current="page"] { color: var(--accent); }
@@ -233,11 +233,17 @@ svg text { font-family: var(--body); }
 @media (prefers-reduced-motion: no-preference) { .screen.anim { animation: in .18s ease-out; } @keyframes in { from { opacity: .4; transform: translateY(4px); } } }
 .topicon { background: none; border: none; color: #fff; padding: 6px; display: inline-flex; }
 .topicon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.h2like { font-size: 1.25rem; margin: 0 0 6px; }
 .code { font-family: var(--display); font-size: 1.5rem; font-weight: 700; letter-spacing: .12em; direction: ltr; text-align: center; background: var(--accent-soft); border-radius: 10px; padding: 10px; user-select: all; }
 button.small { padding: 6px 12px; min-height: 40px; font-size: .85rem; }
-html.bigtext { font-size: 118%; }
-html.bigtext .strip .st { font-size: .64rem; padding: 4px 3px; }
+html.bigtext { font-size: 131.25%; }
+html.bigtext .strip { flex-wrap: wrap; row-gap: 4px; }
+html.bigtext th, html.bigtext td { white-space: normal; padding: 6px 4px; }
 html.bigtext .strip .sep { width: 2px; }
+html.bigtext .nav button { font-size: .66rem; }
+.toast[hidden] { display: block !important; visibility: hidden; }
+.topicon.aa { min-width: 44px; min-height: 44px; justify-content: center; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .segs button { min-height: 40px; }
 .banner h2 { font-size: 1rem; }
 details summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 8px 0; }
@@ -248,12 +254,12 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; paddi
 <div class="app" dir="rtl" lang="he">
   <header class="topbar">
     <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>מפתח</div>
-    <div class="row" style="gap:8px"><span class="sync" id="sync">נשמר בטלפון</span><button class="topicon aa" data-act="bigtoggle" aria-label="הגדלת הטקסט">א+</button>
+    <div class="row" style="gap:8px"><span class="sync" id="sync">נשמר בטלפון</span><button class="topicon aa" data-act="bigtoggle" aria-label="הגדלת הטקסט" aria-pressed="false">א+</button>
       <button class="topicon" data-act="settings" aria-label="הגדרות ושיתוף"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </header>
   <main id="view"></main>
   <nav class="nav" aria-label="ניווט"><div class="in" id="nav"></div></nav>
-  <div class="toast" id="toast" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
   <div class="sheet" id="sheet" hidden></div>
   <div class="lock" id="lock" hidden></div>
   <input type="file" id="docfile" accept="application/pdf,image/*" hidden>
@@ -457,6 +463,7 @@ function migrate(x) {
   const p = Object.assign({ buyer: "first", lottery: "", form4: "" }, x.profile, { type: typeMap[x.profile.type] || "ml" });
   const s = newState(p, x.example);
   s.payments = (x.payments || []).length ? x.payments : s.payments; s.tasks = x.tasks || s.tasks; s.defects = x.defects || [];
+  if (Array.isArray(x.offers)) s.offers = x.offers; if (Array.isArray(x.docs) && x.docs.length) s.docs = x.docs; if (x.fin) s.fin = Object.assign(s.fin, x.fin);
   return s;
 }
 
@@ -525,8 +532,15 @@ function pushCard() {
 document.addEventListener("click", e => { const b = e.target.closest("[data-pk]"); if (!b) return; const k = b.dataset.pk; if (k === "on") pushEnable(); else if (k === "off") pushDisable(); else if (k === "test") pushTest(false); });
 
 function loadLocal() { try { const r = localStorage.getItem(LS); if (r) return migrate(JSON.parse(r)); } catch (e) {} return null; }
-function saveLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
-let saveTimer = null, saving = false, dirty = false, lastSent = "", base = null;
+function saveLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(() => toast("הזיכרון בטלפון מלא. השינויים האחרונים לא נשמרו בטלפון"), 0); } } }
+let saveTimer = null, saving = false, dirty = false, lastSent = "", base = null, retryMs = 0;
+/* changes not yet confirmed by the server survive a reload or going offline: the "pending" flag and the last agreed version (base) are kept on the phone */
+const PEND = "maftech.pending", BASEK = "maftech.base";
+function setPending(on) { try { if (on) localStorage.setItem(PEND, "1"); else localStorage.removeItem(PEND); } catch (e) {} }
+const isPending = () => { try { return localStorage.getItem(PEND) === "1"; } catch (e) { return false; } };
+function setBase(b) { base = b; try { localStorage.setItem(BASEK, JSON.stringify(b)); } catch (e) {} }
+function savedBase() { try { return JSON.parse(localStorage.getItem(BASEK)); } catch (e) { return null; } }
+const knownHousehold = () => { try { const v = JSON.parse(localStorage.getItem("maftech.priv")); return v && v.household; } catch (e) { return null; } };
 const clone = o => JSON.parse(JSON.stringify(o));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 /* three-way merge: base = last state both sides agreed on; keep each side's own edits */
@@ -549,10 +563,10 @@ function mergeList(b, l, r) {
     if (!rx) { if (bx && same(bx, x)) continue; res.push(x); continue; }            // removed remotely, unchanged here -> drop
     res.push(bx && same(bx, x) ? rx : (bx && !same(bx, rx) ? mergeState(bx, x, rx) : x));
   }
-  for (const x of r) if (!lm.has(x.id) && !bm.has(x.id)) res.push(x);              // added remotely
+  for (const x of r) if (!lm.has(x.id) && (!bm.has(x.id) || !same(bm.get(x.id), x))) res.push(x);   // added remotely, or edited there while removed here (the edit wins)
   return res;
 }
-function persist() { saveLocal(); pushSoon(); if (store.kind !== "db") return; dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
+function persist() { saveLocal(); pushSoon(); if (store.shared || (!store.remote && knownHousehold())) setPending(true); if (store.kind !== "db") return; dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
 async function flush() {
   if (saving || !dirty) return; saving = true; dirty = false;
   const body = JSON.stringify(S); lastSent = body;
@@ -565,12 +579,16 @@ async function flush() {
       }
       const out = JSON.stringify(merged); lastSent = out;
       await store.shared.set({ state: out, updatedAt: new Date().toISOString() });
-      base = clone(merged);
+      setBase(clone(merged)); if (!dirty) setPending(false); retryMs = 0;
       if (!same(merged, S) && !dirty) { S = merged; saveLocal(); render(); toast("שולבו שינויים מהמכשיר השני"); }
     }
     else await store.priv.set({ state: body, savedAt: new Date().toISOString() });
     setSync(store.shared ? "משותף ונשמר" : store.remote ? "נשמר בטלפון" : "נשמר בחשבון");
-  } catch (e) { if (e && e.gone) { saving = false; leaveShare(true); return; } if (e && e.conflict) dirty = true; else setSync(store.shared ? "לא מחובר. נשמר במכשיר" : "נשמר במכשיר בלבד"); }
+  } catch (e) { if (e && e.gone) { saving = false; leaveShare(true); return; } if (e && e.conflict) dirty = true;
+    else { dirty = true; retryMs = Math.min(60000, (retryMs || 4000) * 2);
+      if (e && (e.status === 400 || e.status === 413)) { setSync("לא סונכרן: גדול מדי"); if (!flush.big) { flush.big = true; toast("הנתונים גדולים מדי לשיתוף. קצרו הערות ארוכות. בינתיים הכול נשמר בטלפון הזה"); } }
+      else setSync(store.shared ? "אין חיבור. יסונכרן כשיחזור" : "נשמר במכשיר בלבד");
+      saving = false; clearTimeout(saveTimer); saveTimer = setTimeout(flush, retryMs); return; } }
   saving = false; if (dirty) flush();
 }
 function setSync(t) { document.getElementById("sync").textContent = t; }
@@ -581,7 +599,7 @@ function attachShared(code) {
     if (snap.gone) { leaveShare(true); return; }
     if (!snap.exists || snap.metadata.hasPendingWrites || dirty || saving) return;
     const body = snap.data().state; if (!body || body === lastSent || body === JSON.stringify(S)) return;
-    try { S = migrate(JSON.parse(body)); base = clone(S); saveLocal(); render(); toast("עודכן מהמכשיר השני"); } catch (e) {}
+    try { S = migrate(JSON.parse(body)); setBase(clone(S)); saveLocal(); render(); toast("עודכן מהמכשיר השני"); } catch (e) {}
   }, () => setSync("נשמר במכשיר בלבד"));
   setSync("משותף");
 }
@@ -609,7 +627,7 @@ function remoteDoc(path) {
     get,
     set: async v => { const r = await fetch(url, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ state: await encText(code, v.state), ifMatch: seen }) });
       if (r.status === 409) { const e = new Error("conflict"); e.conflict = true; throw e; }
-      if (r.status === 410) { const e = new Error("gone"); e.gone = true; throw e; } if (!r.ok) throw new Error("http " + r.status); seen = (await r.json()).updatedAt; },
+      if (r.status === 410) { const e = new Error("gone"); e.gone = true; throw e; } if (!r.ok) { const e = new Error("http " + r.status); e.status = r.status; throw e; } seen = (await r.json()).updatedAt; },
     onSnapshot(cb, err) {   /* poll while the app is open; check right away when it comes back to the screen */
       let last = null, stop = false;
       const tick = async () => { if (stop || document.hidden) return; try { const s = await get(); if (s.gone) { cb(s); return; } const u = s.exists ? s.data().updatedAt : null; if (u && u !== last) { last = u; cb(s); } } catch (e) { if (err) err(e); } };
@@ -619,17 +637,24 @@ function remoteDoc(path) {
     }
   };
 }
+/* offline at start: try again when the connection comes back, and every 30 seconds */
+function retryRemote() { if (retryRemote.on) return; retryRemote.on = true; const go = () => { if (store.remote) return stopR(); if (!navigator.onLine) return; initRemote(); };
+  const t = setInterval(go, 30000); addEventListener("online", go); const stopR = () => { clearInterval(t); removeEventListener("online", go); retryRemote.on = false; }; retryRemote.stop = stopR; }
+addEventListener("online", () => { if (dirty && store.shared) { retryMs = 0; flush(); } });
 async function initRemote() {
   if (location.protocol !== "https:" && location.hostname !== "localhost") return;
-  try { const r = await fetch("/api/household?ping=1", { cache: "no-store" }); if (!r.ok) return; } catch (e) { return; }
-  store.remote = true; store.kind = "db"; store.db = { doc: remoteDoc }; store.priv = localDoc("maftech.priv"); store.assets = remoteAssets; if (tab === "buy") render();
+  try { const r = await fetch("/api/household?ping=1", { cache: "no-store" }); if (!r.ok) { retryRemote(); return; } } catch (e) { if (knownHousehold()) setSync("אין חיבור. יסונכרן כשיחזור"); retryRemote(); return; }
+  if (store.remote) return; store.remote = true; store.kind = "db"; store.db = { doc: remoteDoc }; store.priv = localDoc("maftech.priv"); store.assets = remoteAssets; if (tab === "buy") render();
   const p = (await store.priv.get()).data();
   if (p && p.household) {
     try { const h = await store.db.doc("households/" + p.household).get();
-      if (h.exists) { S = migrate(JSON.parse(h.data().state)); base = clone(S); saveLocal(); attachShared(p.household); render(); return; } } catch (e) { setSync("נשמר בטלפון"); return; }
+      if (h.exists) { const remote = migrate(JSON.parse(h.data().state)), local = loadLocal(), b0 = savedBase();
+        if (isPending() && local && !local.example) { S = migrate(mergeState(b0, local, remote)); setBase(clone(remote)); saveLocal(); attachShared(p.household); dirty = true; flush(); render(); toast("שינויים שנעשו בלי חיבור נשמרו ונשלחו"); return; }
+        S = remote; setBase(clone(S)); saveLocal(); attachShared(p.household); render(); return; } } catch (e) { store.remote = false; setSync("אין חיבור. יסונכרן כשיחזור"); retryRemote(); return; }
   }
   setSync("נשמר בטלפון");
   const jc = new URLSearchParams(location.search).get("join");
+  if (jc && !/^[a-z0-9]{6,20}$/i.test(jc)) { history.replaceState(history.state, "", location.pathname); invite = { code: "", missing: true }; render(); return; }
   if (jc && /^[a-z0-9]{6,20}$/i.test(jc)) { history.replaceState(history.state, "", location.pathname); invite = { code: jc.toLowerCase() }; render();
     try { const h = await store.db.doc("households/" + invite.code).get(); if (h.exists) { const st = JSON.parse(h.data().state); invite.city = st.profile && st.profile.city; invite.type = st.profile && TYPES[st.profile.type] ? TYPES[st.profile.type].name : ""; } else invite.missing = true; } catch (e) { invite.missing = true; } render(); }
 }
@@ -662,7 +687,7 @@ async function createShare() {
   try {
     await store.db.doc("households/" + code).set({ state: JSON.stringify(S), updatedAt: new Date().toISOString() });
     await store.priv.set({ household: code });
-    base = clone(S); attachShared(code); render(); toast("נוצר קוד שיתוף");
+    setBase(clone(S)); setPending(false); attachShared(code); render(); toast("נוצר קוד שיתוף");
   } catch (e) { toast("השיתוף לא הצליח. נסה שוב."); }
 }
 async function joinShare(code) {
@@ -673,12 +698,12 @@ async function joinShare(code) {
     const h = await store.db.doc("households/" + code).get();
     if (!h.exists) { toast("לא נמצאה רכישה עם הקוד הזה"); return; }
     await store.priv.set({ household: code });
-    S = migrate(JSON.parse(h.data().state)); base = clone(S); saveLocal(); attachShared(code); joinOpen = false; setupOpen = false; tab = "home"; render(); window.scrollTo(0, 0); toast("הצטרפתם לרכישה המשותפת");
+    S = migrate(JSON.parse(h.data().state)); setBase(clone(S)); setPending(false); saveLocal(); attachShared(code); joinOpen = false; setupOpen = false; tab = "home"; render(); window.scrollTo(0, 0); toast("הצטרפתם לרכישה המשותפת");
   } catch (e) { toast("ההצטרפות לא הצליחה. נסה שוב."); }
 }
 async function leaveShare(byOther) {
   if (store.unsub) store.unsub();
-  store.unsub = null; store.shared = null; store.code = null;
+  store.unsub = null; store.shared = null; store.code = null; setPending(false); dirty = false;
   try { await store.priv.set({ state: JSON.stringify(S), savedAt: new Date().toISOString() }); } catch (e) {}
   setSync(store.remote ? "נשמר בטלפון" : "נשמר בחשבון"); render(); toast(byOther ? "השיתוף הופסק מהטלפון השני. הנתונים נשארו אצלכם" : "השיתוף הופסק בטלפון הזה");
 }
@@ -735,7 +760,7 @@ async function openDoc(id) {
     <div id="docview" style="display:flex;flex-direction:column;gap:10px"><p class="muted">טוען את הקובץ...</p></div>
     <label class="f">שם המסמך<input data-docname="${x.id}" value="${esc(x.name)}"></label>
     <div class="row">${store.assets ? `<button class="ghost small" data-attach="${x.id}">החלפת הקובץ</button>` : ""}<button class="link small" data-deldoc="${x.id}" style="color:var(--warn)">מחיקה</button></div></div>`;
-  el.hidden = false;
+  sheetShow(el);
   let href = x.url, type = x.ftype || "";
   if (x.url.startsWith("file:")) {
     try { const b = await getFileBlob(x.url.slice(5), x.fkey, x.ftype); if (docObjUrl) URL.revokeObjectURL(docObjUrl); docObjUrl = href = URL.createObjectURL(b); type = b.type || type; }
@@ -758,20 +783,25 @@ function saveLock() { try { if (lockCfg) localStorage.setItem(LOCK_KEY, JSON.str
 function showLock(mode) { lockMode = mode; lockPin = ""; lockErr = ""; drawLock(); if (mode === "unlock" && lockCfg && lockCfg.cred) bioUnlock(); }
 function drawLock(shake) {
   const el = document.getElementById("lock"); if (!el) return;
+  const fk = document.activeElement && el.contains(document.activeElement) && document.activeElement.dataset ? document.activeElement.dataset.lk : null;
+  drawLock0(el, shake); if (fk) { const b = el.querySelector(`[data-lk="${fk}"]`); if (b) b.focus(); }
+}
+function drawLock0(el, shake) {
   if (!lockMode) { el.hidden = true; el.innerHTML = ""; document.body.classList.remove("locked"); return; }
   el.hidden = false; document.body.classList.add("locked");
   const key = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>`;
   if (lockMode === "forgot") {
     el.innerHTML = `<div class="lock-in"><div class="lbrand">${key}מפתח</div><h2>שכחתם את הקוד?</h2>
       <p class="small">אי אפשר לפתוח בלי הקוד. אפשר למחוק את הנתונים מהטלפון הזה ולהתחיל מחדש:</p>
-      <p class="small muted">אם הרכישה משותפת, הנתונים והמסמכים נשארים אצל בן או בת הזוג. אחרי המחיקה בחרו "יש לי קוד" בהגדרות והקלידו את קוד השיתוף מהטלפון השני. אם שמרתם גיבוי, אפשר גם לשחזר ממנו.</p>
+      <p class="small muted">אם הרכישה משותפת, מה שכבר סונכרן נשאר אצל מי שמשתף איתכם (שינויים שעוד לא סונכרנו יימחקו). אחרי המחיקה בחרו "יש לי קוד" בהגדרות והקלידו את קוד השיתוף מהטלפון השני. אם שמרתם גיבוי, אפשר גם לשחזר ממנו.</p>
       <button data-lk="wipe" style="background:var(--warn);border-color:var(--warn)">מחיקת הנתונים מהטלפון הזה</button><button class="link" data-lk="back">חזרה להקלדת הקוד</button></div>`;
     return;
   }
-  const title = lockMode === "unlock" ? "הקלידו את הקוד" : lockMode === "set1" ? "בחרו קוד בן 4 ספרות" : "הקלידו שוב את אותו קוד";
+  const title = lockMode === "unlock" ? "הקלידו את הקוד" : lockMode === "verify" ? "הקלידו את הקוד הנוכחי" : lockMode === "set1" ? "בחרו קוד בן 4 ספרות" : "הקלידו שוב את אותו קוד";
   const bio = lockMode === "unlock" && lockCfg && lockCfg.cred ? `<button class="kf" data-lk="bio" aria-label="פתיחה בטביעת אצבע או בפנים">טביעת<br>אצבע</button>` : "<span></span>";
   el.innerHTML = `<div class="lock-in" role="dialog" aria-modal="true" aria-label="${title}"><div class="lbrand">${key}מפתח</div><h2>${title}</h2>
     <div class="pindots ${shake ? "shake" : ""}" aria-hidden="true">${[0, 1, 2, 3].map(i => `<i class="${i < lockPin.length ? "on" : ""}"></i>`).join("")}</div>
+    <p class="sr-only" aria-live="polite">${lockPin.length ? `הוקשו ${lockPin.length} מתוך 4 ספרות` : ""}</p>
     <p class="small" style="color:var(--warn);min-height:1.3em;margin:0" role="alert">${lockErr}</p>
     <div class="keypad">${["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(n => `<button data-lk="d${n}">${n}</button>`).join("")}${bio}<button data-lk="d0">0</button><button class="kf" data-lk="del" aria-label="מחיקת ספרה">⌫</button></div>
     ${lockMode === "unlock" ? `<button class="link small" data-lk="forgot">שכחתי את הקוד</button>` : `<button class="link small" data-lk="cancel">ביטול</button>`}</div>`;
@@ -779,6 +809,7 @@ function drawLock(shake) {
 async function lockDigit(n) {
   if (lockPin.length >= 4) return; lockPin += n; lockErr = ""; drawLock(); if (lockPin.length < 4) return;
   const pin = lockPin;
+  if (lockMode === "verify") { if (await sha(lockCfg.salt + pin) === lockCfg.hash) { lockMode = "set1"; lockPin = ""; drawLock(); } else { lockPin = ""; lockErr = "קוד שגוי"; drawLock(true); } return; }
   if (lockMode === "unlock") {
     if (await sha(lockCfg.salt + pin) === lockCfg.hash) { lockMode = null; lockTries = 0; drawLock(); return; }
     lockTries++; lockPin = ""; lockErr = lockTries >= 5 ? "קוד שגוי. אם שכחתם, יש אפשרות למטה." : "קוד שגוי"; drawLock(true); return;
@@ -812,9 +843,10 @@ document.addEventListener("click", e => {
   else if (k === "bio") bioUnlock();
   else if (k === "forgot") { lockMode = "forgot"; drawLock(); }
   else if (k === "back") showLock("unlock");
-  else if (k === "wipe") { try { localStorage.clear(); } catch (err) {} location.reload(); }
+  else if (k === "wipe") { try { localStorage.clear(); } catch (err) {} Promise.resolve(window.caches ? caches.delete("maftech-files") : 0).catch(() => {}).finally(() => location.reload()); }
   else if (k === "cancel") { lockMode = null; drawLock(); }
-  else if (k === "set" || k === "change") showLock("set1");
+  else if (k === "set") showLock("set1");
+  else if (k === "change") showLock("verify");
   else if (k === "bioon") bioEnable();
   else if (k === "biooff") { lockCfg.cred = null; saveLock(); render(); }
   else if (k === "off") { if (!store.remote || confirm("לבטל את הנעילה בטלפון הזה?")) { lockCfg = null; saveLock(); render(); toast("הנעילה בוטלה"); } }
@@ -823,10 +855,12 @@ document.addEventListener("keydown", e => { if (!lockMode || lockMode === "forgo
 document.addEventListener("visibilitychange", () => { if (document.hidden) hiddenAt = Date.now(); else if (lockCfg && !lockMode && hiddenAt && Date.now() - hiddenAt > 60000) showLock("unlock"); });
 if (lockCfg && lockCfg.hash) showLock("unlock");
 let bigText = false; try { bigText = localStorage.getItem("maftech.big") === "1"; } catch (e) {} document.documentElement.classList.toggle("bigtext", bigText);
+function syncBigBtn() { document.querySelectorAll("[data-act=bigtoggle]").forEach(b => b.setAttribute("aria-pressed", bigText ? "true" : "false")); }
+setTimeout(syncBigBtn, 0);
 function textCard() {
   return `<div class="card"><h2>תצוגה</h2><label class="row" style="gap:10px"><input type="checkbox" data-bigtext ${bigText ? "checked" : ""} style="width:auto">טקסט גדול יותר</label><p class="small muted">מגדיל את כל הטקסט והכפתורים באפליקציה, בטלפון הזה.</p></div>`;
 }
-document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); setTopH && setTopH(); });
+document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 function privacyCard() {
   if (!store.remote) return "";
   return `<details class="card"><summary><b>איפה הנתונים שלכם</b> <span class="small muted">· מה נשאר בטלפון ומה נשמר בשרת</span></summary>
@@ -870,14 +904,16 @@ function toastUndo(t, undo, after) {
 function undoRemove(msg, getList, setList, id, after) {
   const list = getList(), i = list.findIndex(x => x.id === id); if (i < 0) return; const item = list[i];
   setList(list.filter(x => x.id !== id)); persist(); render();
-  toastUndo(msg, () => { const cur = getList(); if (!cur.some(x => x.id === id)) { const c = cur.slice(); c.splice(Math.min(i, c.length), 0, item); setList(c); } persist(); render(); toast("שוחזר"); }, after);
+  toastUndo(msg, async () => { let fresh = item;
+    if (store.shared) { try { const sn = await store.shared.get(); if (sn.exists) { const keep = S; S = migrate(JSON.parse(sn.data().state)); const rx = (getList() || []).find(x => x.id === id); S = keep; if (rx) fresh = rx; } } catch (e) {} }
+    const cur = getList(); if (!cur.some(x => x.id === id)) { const c = cur.slice(); c.splice(Math.min(i, c.length), 0, fresh); setList(c); } persist(); render(); toast("שוחזר"); }, after);
 }
-function toast(t) { commitUndo(); const el = document.getElementById("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
+function toast(t) { commitUndo(); const el = document.getElementById("toast"); el.textContent = ""; el.hidden = false; requestAnimationFrame(() => { el.textContent = t; }); clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
 const T = () => TYPES[S.profile.type];
 const stagesOf = () => STAGES[S.profile.type];
 function payAmount(p) { return S.payMode === "vouchers" ? (Number(p.amount) || 0) : S.profile.price * (Number(p.pct) || 0) / 100; }
 function linkageCost(p, rate = S.idxRate) {
-  if (!T().contractor || !p.linked || p.paid) return 0;
+  if (!T().contractor || !p.linked) return 0;
   if (!p.date) return 0;
   const y = Math.max(0, yearsBetween(S.profile.sign, p.date));
   return payAmount(p) * ((S.profile.linkedShare || 0) / 100) * (Math.pow(1 + rate / 100, y) - 1);
@@ -1008,7 +1044,7 @@ function renderNav() {
   document.getElementById("nav").style.display = wiz ? "none" : "";
   const dots = navDots();
   document.getElementById("nav").innerHTML = TABS.map(([k, l]) =>
-    `<button data-tab="${k}" ${tab === k && !setupOpen ? 'aria-current="page"' : ""}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>${dots[k] ? '<i class="dot" aria-label="יש כאן משהו שמחכה לכם"></i>' : ""}</span>${l}</button>`).join("");
+    `<button data-tab="${k}" ${tab === k && !setupOpen ? 'aria-current="page"' : ""}><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>${dots[k] ? '<i class="dot" aria-hidden="true"></i><span class="sr-only">, יש כאן משהו שמחכה לכם</span>' : ""}</span>${l}</button>`).join("");
 }
 const segs = (key, list) => `<div class="segs" role="group">${list.map(([k, l]) => `<button data-sub="${k}" aria-pressed="${sub[key] === k}">${l}</button>`).join("")}</div>`;
 
@@ -1020,9 +1056,9 @@ function exampleBanner() {
 }
 function screenInvite() {
   const i = invite;
-  return `<div class="screen"><div class="card hero" style="margin-top:12px"><span class="small muted">הזמנה</span><h2>הוזמנתם לרכישה משותפת</h2>
+  return `<div class="screen"><div class="card hero" style="margin-top:12px"><span class="small muted">הזמנה</span><h1 class="h2like">הוזמנתם לרכישה משותפת</h1>
     ${i.missing ? `<p style="color:var(--warn)">לא מצאנו רכישה עם הקוד הזה. אולי השיתוף הופסק. בקשו קישור חדש.</p>` : `<p>${i.city ? `${esc(i.type || "")} · ${esc(i.city)}` : "טוען את פרטי הרכישה..."}</p>
-    <p class="small muted">שניכם תראו ותעדכנו את אותה רכישה, כל אחד מהטלפון שלו: תשלומים, משימות, מסמכים ומחשבונים.</p>
+    <p class="small muted">כל מי שמשתף (בן או בת זוג, הורה) רואה ומעדכן את אותה רכישה מהטלפון שלו: תשלומים, משימות, מסמכים ומחשבונים.</p>
     ${!S.example ? `<p class="small" style="color:var(--warn)">בטלפון הזה כבר יש רכישה. ההצטרפות תחליף אותה ברכישה המשותפת.</p>` : ""}`}
     <div class="row">${i.missing ? "" : `<button data-act="invjoin">הצטרפות</button>`}<button class="ghost" data-act="invno">לא עכשיו</button></div></div></div>`;
 }
@@ -1105,18 +1141,21 @@ function timelineCard() {
   if (p.form4) ev.push({ d: p.form4, t: "טופס 4" });
   if (p.delivery) ev.push({ d: p.delivery, t: t.contractor ? "מסירת הדירה 🔑" : "קבלת המפתח 🔑" });
   const sale = saleAllowed(); if (sale) ev.push({ d: sale, t: "מותר למכור את הדירה", s: "5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם" });
+  const we = t.contractor ? warrantyEnd() : ""; if (we) ev.push({ d: we, t: "סוף שנת הבדק", s: "עד אז מדווחים לקבלן על ליקויים" });
   ev.sort((a, b) => a.d.localeCompare(b.d));
-  const td = ymd(today()), past = ev.filter(e => e.d < td && !(e.pay && !e.paid)), fut = ev.filter(e => !past.includes(e));
-  const a = p.lottery && p.lottery < p.sign ? p.lottery : p.sign, z = p.delivery || (ev[ev.length - 1] || {}).d;
+  const td = ymd(today()), past = ev.filter(e => e.d < td), fut = ev.filter(e => !past.includes(e));
+  const late = past.filter(e => e.pay && !e.paid), pastShown = tlAll ? past : [...past.filter(e => !late.includes(e)).slice(-1), ...late].sort((x, y) => x.d.localeCompare(y.d));
+  const a = p.lottery && p.lottery < p.sign ? p.lottery : p.sign, z = we || p.delivery || (ev[ev.length - 1] || {}).d;
   const span = z && z > a ? (dt(z) - dt(a)) : 0, pct = span ? Math.max(0, Math.min(100, (today() - dt(a)) / span * 100)) : 0;
   const shown = tlAll ? fut : fut.slice(0, 4);
-  const li = (e, cls) => `<li class="${cls}${e.pay && !e.paid && e.d < td ? " warn" : ""}"><div class="tlt"><span>${esc(e.t)}</span><span class="small muted">${fmtDate(e.d)}</span></div>${e.s ? `<div class="small muted">${e.s}</div>` : ""}</li>`;
-  const paid = S.payments.filter(x => x.paid).reduce((s, x) => s + payAmount(x), 0), dl = p.delivery ? daysTo(p.delivery) : null;
+  const li = (e, cls) => `<li class="${cls}${e.pay && !e.paid && e.d < td ? " warn" : ""}"><div class="tlt"><span>${esc(e.t)}${e.pay && !e.paid && e.d < td ? ' <span class="chip warn">באיחור</span>' : ""}</span><span class="small muted">${fmtDate(e.d)}</span></div>${e.s ? `<div class="small muted">${e.s}</div>` : ""}</li>`;
+  const paid = S.payments.filter(x => x.paid).reduce((s, x) => s + payAmount(x) + linkageCost(x), 0), dueAll = S.payments.reduce((s, x) => s + payAmount(x) + linkageCost(x), 0) || p.price, dl = p.delivery ? daysTo(p.delivery) : null;
   return `<div class="card"><div class="spread"><h2>המסלול שלכם</h2><span class="small muted">${dl != null && dl > 0 ? nf.format(dl) + " ימים " + (t.contractor ? "למסירה" : "למפתח") : span ? Math.round(pct) + "% מהדרך" : ""}</span></div>
     ${span ? `<div class="tlbar" aria-hidden="true"><i style="width:${pct}%"></i><b style="right:${pct}%">אתם כאן</b></div><div class="tlends"><span>${fmtDate(a)}</span><span>${fmtDate(z)}</span></div>` : ""}
-    <ul class="tline">${tlAll ? past.map(e => li(e, "past")).join("") : past.slice(-1).map(e => li(e, "past")).join("")}<li class="now">היום · ${fmtDate(td)}</li>${shown.map(e => li(e, "")).join("")}</ul>
-    <div class="spread small" style="margin-top:8px"><span>שולם ${ils(paid)} מתוך ${ils(p.price)}</span><button class="link small" data-go="buy" data-sub="payments">לתשלומים</button></div>
-    <div class="bar"><i style="width:${Math.min(100, paid / p.price * 100)}%"></i></div>
+    <ul class="tline">${pastShown.map(e => li(e, late.includes(e) ? "" : "past")).join("")}<li class="now">היום · ${fmtDate(td)}</li>${shown.map(e => li(e, "")).join("")}</ul>
+    <div class="spread small" style="margin-top:8px"><span>שולם ${ils(paid)} מתוך ${ils(dueAll)}</span><button class="link small" data-go="buy" data-sub="payments">לתשלומים</button></div>
+    <div class="bar"><i style="width:${Math.min(100, paid / dueAll * 100)}%"></i></div>
+    ${p.type === "ml" && t.contractor && !p.form4 && stageIdx() >= stageIdx("build") ? `<p class="small muted" style="margin:8px 0 0">קיבלתם טופס 4? <button class="link small" data-step="act:form4">הזנת התאריך</button></p>` : ""}
     ${fut.length > 4 || past.length > 1 ? `<button class="link small" data-act="tlall">${tlAll ? "פחות" : `כל הציר (${ev.length} אבני דרך)`}</button>` : ""}</div>`;
 }
 function screenHome() {
@@ -1181,11 +1220,11 @@ function screenBuy() {
     }).join("");
   } else if (sub.buy === "payments" && !payEdit) {
     const pays = [...S.payments].sort((a, b) => (a.date || "9").localeCompare(b.date || "9")), vm = S.payMode === "vouchers";
-    const tot = pays.reduce((s, x) => s + payAmount(x), 0), paid = pays.filter(x => x.paid).reduce((s, x) => s + payAmount(x), 0), next = pays.find(x => !x.paid);
+    const tot = pays.reduce((s, x) => s + payAmount(x) + linkageCost(x), 0), paid = pays.filter(x => x.paid).reduce((s, x) => s + payAmount(x) + linkageCost(x), 0), next = pays.find(x => !x.paid);
     const diff = payDiffText(), src = {};
     if (t.contractor && !S.example) { let own = Math.max(chosenEquity(), pays.length ? payAmount(pays[0]) : 0); for (const x of pays) { const a = payAmount(x); src[x.id] = own >= a - 1 ? "own" : own > 1 ? "mix" : "bank"; own -= a; } }
     body = `<div class="card"><div class="spread"><h2>${t.contractor ? "תשלומים לקבלן" : "תשלומים למוכר"}</h2><button class="ghost small" data-act="payedit">עריכה</button></div>
-      <p class="small muted">שולמו ${ils(paid)} מתוך ${ils(tot)}${vm ? " · פנקס שוברים" : ""}. סמנו ✓ כשתשלום יוצא.</p>
+      <p class="small muted">שולמו ${ils(paid)} מתוך ${ils(tot)}${t.contractor && pays.some(x => linkageCost(x) > 0) ? " (כולל הצמדה משוערת)" : ""}${vm ? " · פנקס שוברים" : ""}. סמנו ✓ כשתשלום יוצא.</p>
       <div class="bar" style="margin:6px 0"><i style="width:${tot ? Math.min(100, paid / tot * 100) : 0}%"></i></div>
       ${diff ? `<p class="small" style="color:var(--warn)">${diff} <button class="link small" data-act="payedit">לתיקון</button></p>` : ""}
       ${t.contractor ? `<p class="small muted">"מהכיס" = מההון העצמי שלכם. "מהמשכנתא" = הבנק מעביר ישירות לקבלן. ההצמדה מחושבת בהערכה.</p>` : ""}
@@ -1193,7 +1232,7 @@ function screenBuy() {
         <label class="paybox"><input type="checkbox" data-paid="${x.id}" ${x.paid ? "checked" : ""} aria-label="שולם: ${esc(x.name)}"><span>שולם</span></label>
         <div class="grow"><div><b>${esc(x.name)}</b>${x === next ? ' <span class="chip gold">הבא</span>' : ""}</div><div class="small muted">${x.date ? fmtDate(x.date) : "בלי תאריך"}${vm ? "" : ` · ${nf.format(x.pct)}%`}${linkageCost(x) > 0 ? ` · בסיס ${ils(payAmount(x))} + הצמדה משוערת ${ils(linkageCost(x))}` : x.linked && t.contractor ? " · צמוד" : ""}</div>
         ${src[x.id] ? `<span class="chip ${src[x.id] === "own" ? "gold" : src[x.id] === "bank" ? "mute" : ""}">${src[x.id] === "own" ? "מהכיס" : src[x.id] === "bank" ? "מהמשכנתא" : "חלק מהכיס, חלק מהמשכנתא"}</span>` : ""}
-        ${t.contractor && x.paid && !x.guarantee ? `<label class="row small" style="gap:4px;color:var(--warn)"><input type="checkbox" data-pguar="${x.id}">קיבלתי ערבות חוק מכר</label>${q("guarantee")}` : ""}</div>
+        ${t.contractor && x.paid ? `<label class="row small" style="gap:4px;color:${x.guarantee ? "var(--ok)" : "var(--warn)"}"><input type="checkbox" data-pguar="${x.id}" ${x.guarantee ? "checked" : ""}>${x.guarantee ? "יש ערבות חוק מכר ✓" : "קיבלתי ערבות חוק מכר"}</label>${x.guarantee ? "" : q("guarantee")}` : ""}</div>
         <b class="num">${ils(payAmount(x) + linkageCost(x))}</b></div>`).join("")}</div>
       <div class="row" style="margin-top:8px"><button class="ghost" data-act="payedit">עריכת התשלומים</button><button class="link" data-act="ics">הוספה ליומן</button></div></div>
       ${t.contractor && !flow().pay ? `<div class="card hero"><span class="small muted">צעד אחד</span><h2>הלוח תואם לחוזה?</h2><p class="small">השוו את האחוזים והתאריכים ללוח שבחוזה. אם יש הבדל, לחצו "עריכה". אם הכול תואם, סמנו ונמשיך.</p><div class="row"><button data-act="paysok">כן, תואם ✓</button><button class="ghost" data-act="payedit">עריכה</button></div></div>` : ""}`;
@@ -1226,8 +1265,8 @@ function screenBuy() {
   } else if (sub.buy === "defects") {
     const open = S.defects.filter(x => x.status !== "תוקן").length;
     body = `<div class="card"><div class="spread"><h2>ליקויים</h2>${S.defects.length ? `<span class="chip ${open ? "warn" : "ok"}">${open} פתוחים</span>` : ""}</div>
-      <p class="small muted">רשמו כל ליקוי שמצאתם במסירה או בשנת הבדק, ועקוב אחרי הטיפול בו.</p>
-      <div class="row"><input id="nd_text" data-key="nd_text" placeholder="תיאור הליקוי" aria-label="תיאור הליקוי" style="flex:2"><input id="nd_room" data-key="nd_room" placeholder="חדר" aria-label="חדר" style="flex:1"><button class="ghost" data-act="adddefect">הוספה</button></div>
+      <p class="small muted">רשמו כל ליקוי שמצאתם במסירה או בשנת הבדק, ועקבו אחרי הטיפול בו.</p>
+      <div class="row"><input id="nd_text" data-key="nd_text" maxlength="600" placeholder="תיאור הליקוי" aria-label="תיאור הליקוי" style="flex:2"><input id="nd_room" data-key="nd_room" placeholder="חדר" aria-label="חדר" style="flex:1"><button class="ghost" data-act="adddefect">הוספה</button></div>
       ${S.defects.length ? `<div class="list">${S.defects.map(x => `<div class="item"><div class="grow"><div class="t">${esc(x.text)}</div><div class="small muted">${esc(x.room)} · נוסף ${fmtDate(x.added)}</div></div>
         <select data-dstat="${x.id}" data-key="ds_${x.id}" style="width:auto">${["פתוח", "נשלח לקבלן", "תוקן"].map(s => `<option ${x.status === s ? "selected" : ""}>${s}</option>`).join("")}</select>
         <button class="x" data-deldef="${x.id}" aria-label="מחיקת הליקוי">×</button></div>`).join("")}</div>` : `<p class="muted">עוד אין ליקויים רשומים.</p>`}</div>`;
@@ -1589,7 +1628,7 @@ async function openStreetDeals(city, street) {
   street = String(street || "").trim(); if (street.length < 2) { toast("כתבו שם רחוב"); return; }
   const el = document.getElementById("sheet"), key = Object.keys(PX.c).find(c => sameCity(c, city)); if (!el || !key) return;
   el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="עסקאות ברחוב"><div class="spread"><h2>רחוב ${esc(street)}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div><div id="dealsbox"><p class="muted">מחפש את הרחוב...</p></div></div>`;
-  el.hidden = false;
+  sheetShow(el);
   let pairs = [];
   try {
     const j = await (await fetch(`https://www.over.org.il/api/nadlan/lookup?city=${encodeURIComponent(key)}&street=${encodeURIComponent(street)}&fields=identity&limit=200`)).json();
@@ -1608,7 +1647,7 @@ async function openDeals(city, label, extra) {
   const desc = [PX_AGES[pxAge][0], PX_ROOMS[pxRooms][0], per].join(" · ");
   el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="עסקאות"><div class="spread"><h2>${esc(extra ? extra.title : label || key)}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div>
     <p class="small muted" style="margin:0">${esc(desc)}</p><div id="dealsbox"><p class="muted">טוען את העסקאות מרשות המסים...</p></div></div>`;
-  el.hidden = false;
+  sheetShow(el);
   const ym = thruYM(); if (!ym) return;
   const start = new Date(ym[0], ym[1] - 1 - [11, 23, 59][pxPer], 1), end = new Date(ym[0], ym[1], 1);
   const sq = s => "'" + String(s).replace(/'/g, "''") + "'";
@@ -1862,20 +1901,26 @@ function nextSteps() {
   const add = (id, title, text, btn, act, tone = "") => out.push({ id, title, text, btn, act, tone });
   if (S.example) { add("setup", "בואו נגדיר את הרכישה שלכם", "כמה שאלות קצרות, ואחר כך כל המסכים יתאימו לכם.", "בואו נתחיל", "act:setup"); return out; }
   const st = stagesOf(), stageName = (st.find(s => s[0] === p.stage) || st[0])[1];
+  const ds = dataStage(), si = stageIdx(), hi = stageIdx("handover"), early = si <= 2, preHand = hi < 0 || si < hi;
+  if (ds) add("stagefix", `נראה שאתם כבר בשלב "${(st.find(s => s[0] === ds) || [])[1]}"`, `לפי התאריכים והתשלומים. השלב קובע אילו משימות ותזכורות תראו.`, "עדכון השלב", "stage:" + ds);
   const np = nextPayment(), dn = np ? daysTo(np.date) : null;
   if (np && dn != null && dn <= 21) add("pay", `${esc(np.name)}: ${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + dn + " ימים"}`, `${ils(payAmount(np) + linkageCost(np))}, ${fmtDate(np.date)}. סמנו ✓ כשהתשלום יוצא.`, "לתשלומים", "go:buy:payments", "warn");
   const ceg = cashEarly(); if (ceg.gap > 0 && p.sign && daysTo(p.sign) > -60) add("gap", `חסרים ${ils(ceg.gap)} לתשלומים הראשונים`, `בחודשיים הראשונים משלמים לקבלן ${ils(ceg.early)}, לפני שהבנק מתחיל לממן. בררו עם יועץ המשכנתאות אם הבנק יממן כבר את התשלום השני, או איך לגשר על הפער.`, "פרטים", "go:calc:equity", "warn");
   const apprTask = S.tasks.find(x => !x.done && /אישור עקרוני/.test(x.text));
   if (apprTask && p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 60) add("appr", "קבלו אישור עקרוני למשכנתא לפני החתימה", "בלי אישור עקרוני אין ודאות שהבנק יממן, והתשלום השני לקבלן מגיע כ-45 יום אחרי החתימה.", "קיבלנו ✓", "task:" + apprTask.id, "warn");
   if (p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 45 && !fl.lawyer && t.contractor) add("lawyer", "עורך דין שיעבור על החוזה", "לפני החתימה כדאי שעורך דין מטעמכם יבדוק את החוזה, את המפרט ואת לוח התשלומים. במחיר למשתכן שכר הטרחה מוגבל בחוק.", "יש לנו עו\"ד ✓", "seen:lawyer");
-  if (t.contractor && S.payments.some(x => x.paid && !x.guarantee)) add("guar", "חסרה ערבות חוק מכר", "על כל תשלום לקבלן צריך לקבל ערבות. בלעדיה הכסף לא מוגן.", "לתשלומים", "go:buy:payments", "warn");
-  if (!f.savings) add("sav", "כמה כסף יש לכם?", "החסכונות קובעים כמה הון עצמי תוכלו לשים, ומזה נגזרת המשכנתא.", "הזנת חסכונות", "go:calc:equity");
-  else if (!f.income) add("inc", "מה ההכנסה החודשית נטו?", "הבנק מגביל את ההחזר החודשי לפי ההכנסה.", "הזנת הכנסה", "go:calc:equity");
-  if (f.savings && fundsTotal() - costsTotal() < minEquity()) add("short", "חסר כסף להון העצמי", `צריך לפחות ${ils(minEquity())} מהכיס, אחרי העלויות הנלוות.`, "מה אפשר לעשות", "go:calc:equity", "warn");
-  if (!fl.costs) add("costs", "בדקו את העלויות הנלוות", "עורך דין, יועץ, שיפוץ, הובלה: מה צפוי ומתי משלמים.", "לעלויות", "go:calc:costs");
-  if (f.savings && f.equity == null) add("eq", "בחרו כמה הון עצמי לשים", "שלוש אפשרויות, וכמה כל אחת עולה בחודש.", "לבחירה", "go:calc:equity");
-  if (t.contractor && !fl.pay) add("sched", "השוו את לוח התשלומים לחוזה", p.type === "ml" ? "במחיר למשתכן בדרך כלל: 7% בחתימה, 13% תוך 45 יום, והשאר לפי התקדמות הבנייה." : "עדכנו אחוזים ותאריכים לפי החוזה.", "ללוח התשלומים", "go:buy:payments");
-  if (!fl.mortgage && f.savings) add("mort", "בנו תמהיל משכנתא", "כמה בפריים, בקבועה ובצמודה, ומה ההחזר החודשי.", "למשכנתא", "go:calc:mortgage");
+  const ng = S.payments.filter(x => x.paid && !x.guarantee);
+  if (t.contractor && ng.length && preHand) add("guar", ng.length === 1 ? `ל"${esc(ng[0].name)}" (${ils(payAmount(ng[0]))}) חסרה ערבות חוק מכר` : `ל-${ng.length} תשלומים ששולמו חסרה ערבות חוק מכר`, "בקשו מהקבלן או מהבנק המלווה ערבות על כל תשלום ששילמתם. בלעדיה הכסף לא מוגן אם הקבלן נקלע לקשיים. כשמקבלים, סמנו ✓ בתשלום.", "לתשלומים", "go:buy:payments", "warn");
+  if (t.contractor && hi >= 0 && si >= hi) { const od = S.defects.filter(x => x.status !== "תוקן").length, we = warrantyEnd();
+    if (od || we) add("defects", od ? (od === 1 ? "ליקוי פתוח אחד" : `${od} ליקויים פתוחים`) : "שנת הבדק", `${we ? `שנת הבדק נגמרת ב-${fmtDate(we)}. ` : ""}דווחו לקבלן בכתב על כל ליקוי, ועקבו אחרי התיקון.`, "לליקויים", "go:buy:defects", od ? "warn" : ""); }
+  if (t.contractor && p.type === "ml" && !p.form4 && si === stageIdx("build")) add("form4", "קיבלתם טופס 4?", "התאריך קובע מתי מותר למכור את הדירה.", "הזנת התאריך", "act:form4");
+  if (early && !f.savings) add("sav", "כמה כסף יש לכם?", "החסכונות קובעים כמה הון עצמי תוכלו לשים, ומזה נגזרת המשכנתא.", "הזנת חסכונות", "go:calc:equity");
+  else if (early && !f.income) add("inc", "מה ההכנסה החודשית נטו?", "הבנק מגביל את ההחזר החודשי לפי ההכנסה.", "הזנת הכנסה", "go:calc:equity");
+  if (early && f.savings && fundsTotal() - costsTotal() < minEquity()) add("short", "חסר כסף להון העצמי", `צריך לפחות ${ils(minEquity())} מהכיס, אחרי העלויות הנלוות.`, "מה אפשר לעשות", "go:calc:equity", "warn");
+  if (early && !fl.costs) add("costs", "בדקו את העלויות הנלוות", "עורך דין, יועץ, שיפוץ, הובלה: מה צפוי ומתי משלמים.", "לעלויות", "go:calc:costs");
+  if (early && f.savings && f.equity == null) add("eq", "בחרו כמה הון עצמי לשים", "שלוש אפשרויות, וכמה כל אחת עולה בחודש.", "לבחירה", "go:calc:equity");
+  if (t.contractor && !fl.pay && preHand) add("sched", "השוו את לוח התשלומים לחוזה", p.type === "ml" ? "במחיר למשתכן בדרך כלל: 7% בחתימה, 13% תוך 45 יום, והשאר לפי התקדמות הבנייה." : "עדכנו אחוזים ותאריכים לפי החוזה.", "ללוח התשלומים", "go:buy:payments");
+  if (early && !fl.mortgage && f.savings) add("mort", "בנו תמהיל משכנתא", "כמה בפריים, בקבועה ובצמודה, ומה ההחזר החודשי.", "למשכנתא", "go:calc:mortgage");
   if (S.offers.length < 2 && !fl.offers && ["before", "sign", "mortgage"].includes(p.stage)) add("offers", "השוו הצעות מ-2 בנקים לפחות", "השוואה בין בנקים חוסכת לרוב עשרות אלפי שקלים.", "להשוואת הצעות", "go:calc:offers");
   if (store.remote && !store.code && !S.example && !fl.share) add("share", "שתפו את הרכישה עם בן או בת הזוג", "שניכם תראו ותעדכנו את אותה רכישה, כל אחד מהטלפון שלו.", "לשיתוף", "act:share");
   if (pushOK() && !pushOn && t.contractor && S.payments.some(x => !x.paid)) add("push", "קבלו תזכורת לפני כל תשלום", "התראה לטלפון 3 ימים לפני כל תשלום לקבלן ויום לפני החלטת ריבית, גם כשהאפליקציה סגורה.", "הפעלת תזכורות", "act:push");
@@ -1890,7 +1935,7 @@ function nextSteps() {
 function doStep(a) {
   const [k, x, y] = a.split(":");
   if (k === "go") return go(x, y);
-  if (k === "act") { if (x === "setup") startWizard(); if (x === "push") pushEnable(); if (x === "share") { setupOpen = true; render(); window.scrollTo(0, document.body.scrollHeight); } return; }
+  if (k === "act") { if (x === "setup") startWizard(); if (x === "push") pushEnable(); if (x === "form4") { setupOpen = true; render(); setTimeout(() => { const f = document.getElementById("f_form4"); if (f) { const dd = f.closest("details"); if (dd) dd.open = true; f.scrollIntoView({ block: "center" }); f.focus(); } }, 60); } if (x === "share") { setupOpen = true; render(); window.scrollTo(0, document.body.scrollHeight); } return; }
   if (k === "seen") { flow()[x] = true; persist(); render(); closeSheetQuiet(); toastUndo("סומן ✓", () => { flow()[x] = false; persist(); render(); }); return; }
   if (k === "task") { const t = S.tasks.find(z => z.id === x); if (t) { const st = S.profile.stage; t.done = true; maybeAdvance(); persist(); render(); closeSheetQuiet(); toastUndo("סומן ✓", () => { t.done = false; S.profile.stage = st; persist(); render(); }); } return; }
   if (k === "stage") { S.profile.stage = x; persist(); render(); toast("עברתם לשלב הבא"); }
@@ -1921,6 +1966,7 @@ function calcNext() {
 /* ---------- onboarding wizard ---------- */
 let wiz = null;
 function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", size: "", balc: "", stor: "", park: "", disc: true, ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
+function wizProjs(c) { return officialIn(matchCity(c)).sort((a, b) => b.date.localeCompare(a.date)).filter((o, j, arr) => arr.findIndex(z => z.nb === o.nb && z.name === o.name && z.date === o.date) === j); }
 function wizSteps() { return ["type", ...(wiz.d.type && wiz.d.type !== "ml" ? ["buyer"] : []), "city", "price", "dates", "money"]; }
 function screenWizard() {
   const d = wiz.d, steps = wizSteps(), k = steps[Math.min(wiz.i, steps.length - 1)], n = steps.length, i = steps.indexOf(k);
@@ -1930,7 +1976,7 @@ function screenWizard() {
   if (k === "type") body = `<h2>איזו דירה אתם קונים?</h2><div class="opts">${opt("type", "ml", "מחיר למשתכן / דירה בהנחה", "זכיתם בהגרלה של משרד השיכון")}${opt("type", "new", "דירה חדשה מקבלן", "בשוק החופשי, על הנייר או בבנייה")}${opt("type", "resale", "דירה יד שנייה", "מבעלים פרטיים")}</div>`;
   if (k === "buyer") body = `<h2>זו הדירה הראשונה שלכם?</h2><p class="small muted">משפיע על מס הרכישה ועל גובה המשכנתא שמותר לקבל.</p><div class="opts">${opt("buyer", "first", "כן, דירה ראשונה", "או שזו הדירה היחידה שתהיה לכם")}${opt("buyer", "upgrade", "משפרי דיור", "יש לנו דירה ונמכור אותה")}${opt("buyer", "additional", "דירה נוספת", "להשקעה או לילדים")}</div>`;
   if (k === "city") {
-    const projs = d.type === "ml" && matchCity(d.city) ? officialIn(matchCity(d.city)).sort((a, b) => b.date.localeCompare(a.date)) : [];
+    const projs = d.type === "ml" && matchCity(d.city) ? wizProjs(d.city) : [];
     body = `<h2>באיזו עיר?</h2>${inp("city", "עיר", 'autocomplete="off" placeholder="התחילו להקליד, למשל: פתח תקווה"')}<div id="wzsug" class="sugs"></div>
       ${projs.length ? `<label class="f">הפרויקט שלכם (לא חובה)<select data-wzsel="proj"><option value="">לא יודע / לא ברשימה</option>${projs.map((o, j) => `<option value="${j}" ${d.proj === String(j) ? "selected" : ""}>${esc(o.nb || "")} · מגרש ${esc(o.name)} · הגרלה ${fmtDate(o.date)}</option>`).join("")}</select></label>
         <p class="small muted">אם תבחרו, נמלא בשבילכם את תאריך ההגרלה ואת המחיר למ"ר מהרשימה הרשמית.</p>` : ""}`;
@@ -2034,8 +2080,13 @@ const q = k => GLOSS[k] ? `<button class="q" data-q="${k}" aria-label="מה זה
 function openSheet(k) {
   const g = GLOSS[k], el = document.getElementById("sheet"); if (!g || !el) return;
   el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="${g[0]}"><div class="spread"><h2>${g[0]}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div><p>${g[1]}</p><button class="ghost" data-act="sheetclose">הבנתי</button></div>`;
-  el.hidden = false; el.querySelector(".x").focus();
+  sheetShow(el);
 }
+const BEHIND = () => document.querySelectorAll(".topbar, #view, .nav");
+function sheetShow(el) { if (el.hidden) sheetShow.opener = document.activeElement; el.hidden = false; BEHIND().forEach(x => x.inert = true); const x = el.querySelector(".x, button"); if (x) x.focus(); }
+new MutationObserver(() => { const el = document.getElementById("sheet"); if (el && el.hidden && sheetShow.opener !== undefined) { BEHIND().forEach(x => x.inert = false); const o0 = sheetShow.opener; sheetShow.opener = undefined; const at = o0 && o0.attributes ? [...o0.attributes].find(x => x.name.startsWith("data-")) : null;
+    const back = () => { let o = o0; if (o && !document.contains(o) && at) o = document.querySelector(`[${at.name}="${CSS.escape(at.value)}"]`); if (o && document.contains(o) && document.getElementById("sheet").hidden) o.focus({ preventScroll: true }); };
+    back(); setTimeout(back, 120); } }).observe(document.getElementById("sheet") || document.body, { attributes: true, attributeFilter: ["hidden"] });
 /* ---------- live result bar on the money screens ---------- */
 function liveBar() {
   const s = sub.calc, m = mortgageCalc(), r = pti(m.first), ml = moneyLeft();
@@ -2065,7 +2116,7 @@ window.addEventListener("resize", setTopH); setTimeout(setTopH, 0);
 /* ================= render & events ================= */
 function render() {
   const a = document.activeElement, key = a && a.dataset ? a.dataset.key : null, pos = a && "selectionStart" in a ? a.selectionStart : null;
-  renderNav();
+  renderNav(); { const nv = document.querySelector(".nav"); if (nv) nv.hidden = !!invite; }
   const sk = wiz ? "wiz" + wiz.i : setupOpen ? "setup" : tab + ":" + (sub[tab] || ""), v = document.getElementById("view");
   if (tab === "market") { tab = "waves"; sub.waves = "market"; }
   v.innerHTML = invite ? screenInvite() : wiz ? screenWizard() : setupOpen ? screenSetup() : ({ home: screenHome, buy: screenBuy, calc: screenCalc, waves: screenWaves })[tab]();
@@ -2096,17 +2147,33 @@ addEventListener("popstate", e => {
   navPop = true; tab = n.tab; Object.assign(sub, n.sub); setupOpen = n.setupOpen; navPush.last = JSON.stringify(n); render(); window.scrollTo(0, 0); navPop = false;
 });
 function go(t, s) { if (t === "market") { t = "waves"; s = "market"; } tab = t; setupOpen = false; if (s) sub[t] = s; render(); window.scrollTo(0, 0); }
+function warrantyEnd() { const d = S.profile.delivery; if (!d) return ""; const x = dt(d); x.setFullYear(x.getFullYear() + 1); return ymd(x); }
+/* the stage the data says you are in (only ever suggests moving forward) */
+function dataStage() {
+  const p = S.profile, st = stagesOf().map(s => s[0]), t = T(); let k = null;
+  const paidN = S.payments.filter(x => x.paid).length;
+  if (p.sign && daysTo(p.sign) < 0) k = "mortgage";
+  if (t.contractor && (paidN >= 2 || (p.sign && daysTo(p.sign) < -90))) k = "build";
+  if (p.delivery && daysTo(p.delivery) <= 0) k = "handover";
+  if (t.contractor && p.delivery && daysTo(p.delivery) < -30) k = "warranty";
+  if (!k || !st.includes(k)) return null;
+  return st.indexOf(k) > st.indexOf(p.stage) ? k : null;
+}
+const stageIdx = k => stagesOf().findIndex(s => s[0] === (k || S.profile.stage));
 function maybeAdvance() {
   const st = stagesOf(), cur = S.profile.stage, ts = S.tasks.filter(x => x.stage === cur);
   if (ts.length && ts.every(x => x.done)) { const i = st.findIndex(s => s[0] === cur); if (i >= 0 && i < st.length - 1) { S.profile.stage = st[i + 1][0]; toast("כל המשימות הושלמו. עברת לשלב: " + st[i + 1][1]); } }
 }
 function buildICS() {
   const esc2 = s => String(s).replace(/[,;\\]/g, m => "\\" + m);
-  const ev = (date, title, desc) => { const d = date.replace(/-/g, ""), e = addMonths(date, 0).replace(/-/g, "");
+  const ev = (date, title, desc, id) => { const d = date.replace(/-/g, ""), e = addMonths(date, 0).replace(/-/g, "");
     const nd = new Date(date + "T00:00:00"); nd.setDate(nd.getDate() + 1); const end = ymd(nd).replace(/-/g, "");
-    return ["BEGIN:VEVENT", "UID:" + uid() + "@maftech", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z", "DTSTART;VALUE=DATE:" + d, "DTEND;VALUE=DATE:" + end, "SUMMARY:" + esc2(title), "DESCRIPTION:" + esc2(desc), "BEGIN:VALARM", "TRIGGER:-P7D", "ACTION:DISPLAY", "DESCRIPTION:" + esc2(title), "END:VALARM", "END:VEVENT"].join("\r\n"); };
-  const evs = S.payments.filter(p => !p.paid && p.date).map(p => ev(p.date, "תשלום לדירה: " + p.name, "סכום משוער " + ils(payAmount(p) + linkageCost(p))));
-  if (S.profile.delivery) evs.push(ev(S.profile.delivery, T().contractor ? "מסירת הדירה" : "קבלת מפתח", S.profile.city || ""));
+    return ["BEGIN:VEVENT", "UID:" + (id || date + "-" + title.length) + "@maftech", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z", "DTSTART;VALUE=DATE:" + d, "DTEND;VALUE=DATE:" + end, "SUMMARY:" + esc2(title), "DESCRIPTION:" + esc2(desc), "BEGIN:VALARM", "TRIGGER:-P7D", "ACTION:DISPLAY", "DESCRIPTION:" + esc2(title), "END:VALARM", "END:VEVENT"].join("\r\n"); };
+  const td = ymd(today()), P = S.profile;
+  const evs = S.payments.filter(p => !p.paid && p.date && p.date >= td).map(p => ev(p.date, "תשלום לדירה: " + p.name, "סכום משוער " + ils(payAmount(p) + linkageCost(p)), "pay-" + p.id));
+  if (P.delivery && P.delivery >= td) evs.push(ev(P.delivery, T().contractor ? "מסירת הדירה" : "קבלת מפתח", P.city || "", "delivery"));
+  const we = warrantyEnd(); if (we && we >= td && T().contractor) evs.push(ev(we, "סוף שנת הבדק", "עד המועד הזה כדאי לדווח לקבלן על כל הליקויים", "warranty"));
+  const sa = saleAllowed(); if (sa && sa >= td) evs.push(ev(sa, "מותר למכור את הדירה", "לפי כללי מחיר למשתכן", "sale"));
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//maftech//he", "CALSCALE:GREGORIAN", ...evs, "END:VCALENDAR"].join("\r\n");
 }
 /* outside the Claude viewer (installed app) files are saved with a plain browser download */
@@ -2128,6 +2195,7 @@ document.getElementById("restorefile").addEventListener("change", e => {
   rd.onload = () => {
     try {
       const j = JSON.parse(rd.result); if (!j || j.app !== "maftech" || !j.state || !j.state.profile) throw 0;
+      if (store.shared && !confirm("הרכישה משותפת. השחזור יחליף את הנתונים גם בטלפון של מי שמשתף איתכם. להמשיך?")) return;
       S = migrate(j.state); S.example = false; persist(); setupOpen = false; tab = "home"; render(); toast("הנתונים שוחזרו מהגיבוי");
     } catch (err) { toast("הקובץ הזה הוא לא גיבוי של מפתח"); }
   };
@@ -2159,7 +2227,7 @@ document.addEventListener("click", e => {
   if (d.step) { if (d.closesheet) closeSheetQuiet(); doStep(d.step); return; }
   if (d.stepinfo) { const s = nextSteps().find(x => x.id === d.stepinfo), el = document.getElementById("sheet"); if (!s || !el) return;
     el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="${esc(s.title)}"><div class="spread"><h2>${s.title}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div><p>${s.text}</p>
-      <div class="row"><button data-step="${s.act}" data-closesheet="1">${s.btn}</button><button class="ghost" data-act="sheetclose">אחר כך</button></div></div>`; el.hidden = false; return; }
+      <div class="row"><button data-step="${s.act}" data-closesheet="1">${s.btn}</button><button class="ghost" data-act="sheetclose">אחר כך</button></div></div>`; sheetShow(el); return; }
   if (d.q) { openSheet(d.q); return; }
   if (d.fold) { editOpen[d.fold] = !editOpen[d.fold]; render(); return; }
   if (d.stagego) { openStages.add(d.stagego); go("buy", "tasks"); return; }
@@ -2186,7 +2254,7 @@ document.addEventListener("click", e => {
   switch (d.act) {
     case "setup": if (S.example) { startWizard(); break; }
     case "setappr": advOpen = true; go("calc", "equity"); setTimeout(() => { const i = document.querySelector('[data-c="fin.appraisal"]'); if (i) { i.scrollIntoView({ block: "center" }); i.focus(); } }, 80); break;
-    case "bigtoggle": bigText = !bigText; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (e) {} document.documentElement.classList.toggle("bigtext", bigText); setTopH(); toast(bigText ? "הטקסט הוגדל" : "גודל טקסט רגיל"); if (setupOpen) render(); break;
+    case "bigtoggle": bigText = !bigText; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (e) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH(); toast(bigText ? "הטקסט הוגדל" : "גודל טקסט רגיל"); if (setupOpen) render(); break;
     case "tlall": tlAll = !tlAll; render(); break;
     case "listedit": listEdit = !listEdit; document.body.classList.toggle("listedit", listEdit); render(); break;
     case "settings": setupOpen = true; joinOpen = false; render(); window.scrollTo(0, 0); break;
@@ -2293,7 +2361,7 @@ document.addEventListener("change", e => {
   if (t.id === "wcity") { wavesCity = t.value; areaShowAll = false; areaQ = areaQraw = ""; render(); return; }
   if (t.id === "pxage") { pxAge = +t.value; render(); return; }
   if (t.id === "pxrooms") { pxRooms = +t.value; render(); return; }
-  if (d.wzsel === "proj") { const projs = officialIn(matchCity(wiz.d.city)).sort((a, b) => b.date.localeCompare(a.date)), o = projs[+t.value]; wiz.d.proj = t.value; if (o) { wiz.d.lottery = o.date; wiz.d.ppsqm = o.ppsqm || 0; } else { wiz.d.ppsqm = 0; } return; }
+  if (d.wzsel === "proj") { const projs = wizProjs(wiz.d.city), o = projs[+t.value]; wiz.d.proj = t.value; if (o) { wiz.d.lottery = o.date; wiz.d.ppsqm = o.ppsqm || 0; } else { wiz.d.ppsqm = 0; } return; }
   if (t.id === "f_type") {
     const ty = t.value; document.querySelector(".contractor-only").hidden = ty === "resale"; document.querySelector(".ml-only").hidden = ty !== "ml";
     document.getElementById("l_deliv").firstChild.textContent = ty === "resale" ? "קבלת מפתח" : "מסירה צפויה";
