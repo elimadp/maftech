@@ -108,10 +108,13 @@ details.stagebox[open] > summary::after { content: "▴"; }
 .laterrow:last-child { border-bottom: none; }
 .laterrow span[aria-hidden] { color: var(--accent); font-size: 1.2rem; }
 .strip { display: flex; align-items: center; overflow-x: auto; gap: 0; padding: 2px 0 4px; scrollbar-width: none; }
-.strip .st { flex: none; background: var(--card); border: 1px solid var(--line); color: var(--muted); border-radius: 99px; padding: 4px 10px; font-size: .78rem; font-weight: 600; }
+.strip .st { flex: 1 1 auto; min-width: 0; text-align: center; white-space: nowrap; background: var(--card); border: 1px solid var(--line); color: var(--muted); border-radius: 99px; padding: 4px 6px; font-size: .76rem; font-weight: 600; }
 .strip .st.done { color: var(--ok); border-color: transparent; background: var(--accent-soft); }
 .strip .st.cur { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.strip .sep { flex: none; width: 10px; height: 1px; background: var(--line); }
+.strip .sep { flex: none; width: 4px; height: 1px; background: var(--line); }
+.x.ed { display: none; }
+body.listedit .x.ed { display: inline-flex; align-items: center; justify-content: center; color: var(--warn); }
+@media (max-width: 420px) { .tbl th, .tbl td { padding: 6px 4px; font-size: .84rem; } }
 .steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
 .steps button { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--muted); font-size: .78rem; font-weight: 600; padding: 4px 0; border-bottom: 3px solid var(--line); border-radius: 0; }
 .steps button .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--fg); font-size: .8rem; }
@@ -434,7 +437,7 @@ function migrate(x) {
 /* ================= state & storage ================= */
 let S = exampleState();
 const openStages = new Set();
-let payEdit = false;
+let payEdit = false, listEdit = false;
 let tab = "home", setupOpen = false, joinOpen = false, confirmReset = false;
 const sub = { buy: "tasks", calc: "costs", waves: "prices" };
 const LS = "maftech.state.v1";
@@ -730,6 +733,7 @@ const pct = (v, d = 1) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFix
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const today = () => new Date(new Date().toDateString());
 const dt = s => new Date(s + "T00:00:00");
+const ilsK = v => Math.abs(v) >= 1e6 ? "₪" + (v / 1e6).toFixed(2) + " מ׳" : "₪" + nf.format(Math.round(v / 1000)) + " אלף";
 const fmtDate = s => s ? dt(s).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" }) : "";
 const daysTo = s => Math.round((dt(s) - today()) / 864e5);
 const yearsBetween = (a, b) => (dt(b) - dt(a)) / (365.25 * 864e5);
@@ -984,8 +988,9 @@ function screenBuy() {
     body = `<p class="small muted">המשימות מחולקות לפי שלבי הרכישה. השלב הנוכחי פתוח; אפשר לפתוח כל שלב אחר.</p>` + stagesOf().map(([k, l]) => {
       const ts = S.tasks.filter(x => x.stage === k), dn = ts.filter(x => x.done).length, isCur = cur === k, open = isCur || openStages.has(k);
       return `<details class="card stagebox" data-stagebox="${k}" ${open ? "open" : ""}><summary class="spread"><span><b>${l}</b>${isCur ? ' <span class="chip ok">עכשיו</span>' : ""}</span><span class="small ${dn === ts.length && ts.length ? "" : "muted"}" style="${dn === ts.length && ts.length ? "color:var(--ok)" : ""}">${dn === ts.length && ts.length ? "✓ " : ""}${dn}/${ts.length}</span></summary>
-        <div class="list" style="margin-top:8px">${ts.map(x => `<div class="item ${x.done ? "done" : ""}"><input type="checkbox" data-task="${x.id}" ${x.done ? "checked" : ""} aria-label="${esc(x.text)}"><span class="grow t">${esc(x.text)}</span><button class="x" data-deltask="${x.id}" aria-label="מחיקת המשימה">×</button></div>`).join("")}</div>
+        <div class="list" style="margin-top:8px">${ts.map(x => `<div class="item ${x.done ? "done" : ""}"><input type="checkbox" data-task="${x.id}" ${x.done ? "checked" : ""} aria-label="${esc(x.text)}"><span class="grow t">${esc(x.text)}</span><button class="x ed" data-deltask="${x.id}" aria-label="מחיקת המשימה">×</button></div>`).join("")}</div>
         <div class="row"><input id="nt_${k}" data-key="nt_${k}" placeholder="משימה חדשה" aria-label="משימה חדשה ב${l}" style="flex:1"><button class="ghost" data-addtask="${k}">הוספה</button></div>
+        ${k === S.profile.stage || listEdit ? `<div style="text-align:left"><button class="link small" data-act="listedit">${listEdit ? "סיום מחיקה" : "מחיקת משימות"}</button></div>` : ""}
         ${isCur ? "" : `<button class="link small" data-stage="${k}" style="margin-top:6px">זה השלב שאני נמצא בו עכשיו</button>`}</details>`;
     }).join("");
   } else if (sub.buy === "payments" && !payEdit) {
@@ -1044,8 +1049,9 @@ function screenBuy() {
       <div class="list">${S.docs.map(x => `<div class="item"><input type="checkbox" data-doc="${x.id}" ${x.have ? "checked" : ""} aria-label="${esc(x.name)}">
         <div class="grow"><div class="t">${esc(x.name)}</div>${x.url ? `<div class="small muted">${x.ftype && x.ftype.startsWith("image/") ? "תמונה" : "קובץ"}${x.size ? " · " + fmtSize(x.size) : ""}</div>` : ""}</div>
         ${x.url ? `<button class="ghost small" data-opendoc="${x.id}">פתיחה</button>` : can ? `<button class="link small" data-attach="${x.id}">צירוף</button>` : ""}
-        <button class="x" data-deldoc="${x.id}" aria-label="מחיקת המסמך">×</button></div>`).join("")}</div>
+        <button class="x ed" data-deldoc="${x.id}" aria-label="מחיקת המסמך">×</button></div>`).join("")}</div>
       <div class="row"><input id="ndoc" data-key="ndoc" placeholder="שם של מסמך נוסף לרשימה" aria-label="שם המסמך" style="flex:1"><button class="ghost" data-act="adddoc">הוספה</button></div>
+      <div style="text-align:left"><button class="link small" data-act="listedit">${listEdit ? "סיום מחיקה" : "מחיקת מסמכים מהרשימה"}</button></div>
       ${can ? `<p class="src">${store.remote ? "הקבצים נשמרים בשרת של האפליקציה בכתובת סודית. רק מי שיש לו את הרכישה יכול לפתוח אותם. מומלץ לשמור עותק גם במקום נוסף." : "קבצים מצורפים נגישים לכל מי שיש לו גישה לעמוד הזה."}</p>` : ""}</div>`;
   }
   return `<div class="screen">${exampleBanner()}<h1>הרכישה</h1>${segs("buy", list)}${body}</div>`;
@@ -1218,7 +1224,7 @@ function outMortgage() {
     <div class="card"><div class="grid2"><div class="stat"><span class="v">${ils(m.first)}</span><span class="l">החזר חודשי ראשון</span></div>
       <div class="stat"><span class="v">${ils(m.total)}</span><span class="l">סך הכול לאורך ${yrs()} שנה</span></div></div>
       <div class="tbl"><table><thead><tr><th>מסלול</th><th>קרן</th><th>החזר ראשון</th><th>סך הכול</th></tr></thead><tbody>
-      ${m.rows.map(r => `<tr><td>${r.name}</td><td>${ils(r.P)}</td><td>${ils(r.pay)}</td><td>${ils(r.tot)}</td></tr>`).join("")}</tbody></table></div>
+      ${m.rows.map(r => `<tr><td style="white-space:normal">${r.name}</td><td>${ilsK(r.P)}</td><td>${ils(r.pay)}</td><td>${ilsK(r.tot)}</td></tr>`).join("")}</tbody></table></div>
       <p class="small muted">חישוב בשיטת שפיצר. הפריים מחושב לפי הריבית של היום, וההחזר בפועל ישתנה עם ריבית בנק ישראל.</p></div>
     <div class="card"><div class="spread"><h2>יחס החזר מההכנסה</h2>${ptiChip(r)}</div>${ptiNote(r)}</div>
     <div class="card"><div class="spread"><span>המשכנתא הגבוהה ביותר שבנק יכול לאשר</span><b class="num">${ils(maxLoan())}</b></div><p class="small muted">${loanAmount() > maxLoan() + 1 ? `<span style="color:var(--warn)">המשכנתא כאן גבוהה מהמקסימום.</span> ` : ""}פירוט ובחירת ההון העצמי: <button class="link small" data-go="calc" data-sub="equity">הון עצמי</button></p></div>`;
@@ -1260,8 +1266,8 @@ function outLinkage() {
   const per1 = pays.reduce((s, p) => s + linkageCost(p, rate + 1), 0) - tot;
   return `<div class="card"><div class="stat"><span class="v">${ils(tot)}</span><span class="l">תוספת הצמדה משוערת על התשלומים שנותרו</span></div>
     <p class="small">כל אחוז נוסף בקצב השנתי של המדד מוסיף כ-${ils(per1)}.</p>
-    <div class="tbl"><table><thead><tr><th>תשלום</th><th>תאריך</th><th>בסיס</th><th>הצמדה</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><td>${esc(r.p.name)}</td><td>${fmtDate(r.p.date)}</td><td>${ils(r.base)}</td><td>${r.p.paid ? "שולם" : r.p.linked ? ils(r.add) : "—"}</td></tr>`).join("")}</tbody></table></div>
+    <div class="tbl"><table><thead><tr><th>תשלום</th><th>בסיס</th><th>הצמדה</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td style="white-space:normal">${esc(r.p.name)}<div class="small muted">${fmtDate(r.p.date)}</div></td><td>${ils(r.base)}</td><td><b>${r.p.paid ? "שולם" : r.p.linked ? ils(r.add) : "—"}</b></td></tr>`).join("")}</tbody></table></div>
     <p class="small muted">שיטת ההצמדה המדויקת, כולל המדד הבסיסי, כתובה בחוזה. זו הערכה לתכנון.</p></div>`;
 }
 function inLinkage() {
@@ -1906,6 +1912,7 @@ document.addEventListener("click", e => {
   if (d.pickeq) { S.fin.equity = Number(d.pickeq); S.fin.eqCustom = false; persist(); refreshOut(); const ei = document.querySelector('[data-c="fin.equity"]'); if (ei) ei.value = ""; toast("ההון העצמי עודכן. המשכנתא חושבה מחדש."); return; }
   switch (d.act) {
     case "setup": if (S.example) { startWizard(); break; }
+    case "listedit": listEdit = !listEdit; document.body.classList.toggle("listedit", listEdit); render(); break;
     case "settings": setupOpen = true; joinOpen = false; render(); window.scrollTo(0, 0); break;
     case "wznext": { const steps = wizSteps(), k = steps[wiz.i]; wiz.err = wizValidate(k); if (wiz.err) { render(); break; } if (wiz.i >= steps.length - 1) wizFinish(); else { wiz.i++; render(); window.scrollTo(0, 0); } break; }
     case "wzback": wiz.i = Math.max(0, wiz.i - 1); wiz.err = ""; render(); break;
