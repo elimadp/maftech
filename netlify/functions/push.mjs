@@ -15,8 +15,9 @@ export default async (req) => {
   if (req.method === "GET") return json({ key: (await getKeys(cfg)).pub });
   if (req.method !== "POST") return json({ error: "method" }, 405);
   let b; try { b = await req.json(); } catch { return json({ error: "bad body" }, 400); }
+  if (!b || typeof b !== "object") return json({ error: "bad body" }, 400);
   const endpoint = b.sub ? b.sub.endpoint : b.endpoint;
-  if (!endpoint || !/^https:\/\//.test(endpoint) || endpoint.length > 1000) return json({ error: "bad endpoint" }, 400);
+  if (!endpoint || !/^https:\/\/(fcm\.googleapis\.com|[a-z0-9.-]+\.push\.apple\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.notify\.windows\.com)\//.test(endpoint) || endpoint.length > 1000) return json({ error: "bad endpoint" }, 400);
   const id = subKey(endpoint), cur = (await subs.get(id, { type: "json" })) || null;
   if (b.action === "save") {
     if (!b.sub || !b.sub.keys) return json({ error: "bad sub" }, 400);

@@ -364,26 +364,26 @@ const TYPES = {
   resale: { name: "יד שנייה", contractor: false }
 };
 const STAGES = {
-  ml: [["before", "לפני חתימה"], ["sign", "חתימה"], ["mortgage", "משכנתא"], ["build", "בנייה"], ["handover", "מסירה"], ["warranty", "שנת בדק"]],
-  new: [["before", "לפני חתימה"], ["sign", "חתימה"], ["mortgage", "משכנתא"], ["build", "בנייה"], ["handover", "מסירה"], ["warranty", "שנת בדק"]],
+  ml: [["before", "לפני חתימה"], ["sign", "חתימה"], ["mortgage", "משכנתא"], ["build", "בנייה"], ["handover", "מסירה"], ["warranty", "בדק ואחריות"]],
+  new: [["before", "לפני חתימה"], ["sign", "חתימה"], ["mortgage", "משכנתא"], ["build", "בנייה"], ["handover", "מסירה"], ["warranty", "בדק ואחריות"]],
   resale: [["before", "לפני הקנייה"], ["sign", "חתימה"], ["mortgage", "משכנתא"], ["handover", "קבלת מפתח"]]
 };
 const TASKS = {
   ml: {
-    before: ["לוודא שתעודת הזכאות בתוקף", "לבדוק את המפרט הטכני ואת התוכניות", "לבחור דירה, חניה ומחסן", "לקבל אישור עקרוני למשכנתא", "לבדוק את לוח התשלומים בחוזה"],
-    sign: ["לקרוא את החוזה ואת סעיף ההצמדה", "לבדוק את הבטוחה: ערבות חוק מכר", "לחתום ולשלם את התשלום הראשון", "לשמור עותק חתום של החוזה"],
+    before: ["לוודא שתעודת הזכאות בתוקף", "לבדוק את המפרט הטכני ואת התוכניות", "לבחור דירה, חניה ומחסן", "לקבל אישור עקרוני למשכנתא", "לבדוק את לוח התשלומים בחוזה", "לקבל מהקבלן את שם הבנק המלווה ומספר הפרויקט", "לבקש מכתב החרגה מהבנק המלווה (בלעדיו הבנק לא ישחרר משכנתא)", "עורך דין מטעמכם יבדוק את החוזה, המפרט, מועד המסירה וסעיף הכוח העליון"],
+    sign: ["לקרוא את החוזה ואת סעיף ההצמדה", "לבדוק את הבטוחה: ערבות חוק מכר", "לחתום ולשלם את התשלום הראשון", "לשמור עותק חתום של החוזה", "לחתום על כתב ההתחייבות של משרד השיכון (איסור מכירה)", "לדווח למיסוי מקרקעין תוך 30 יום מהחתימה, גם אם המס 0 ₪. לבדוק מי מגיש ולקבל אישור", "לוודא שנרשמה הערת אזהרה לטובתכם, או שיש התחייבות לרשום אותה", "לקבל פנקס שוברים, ולשלם רק בשוברים לחשבון הליווי"],
     mortgage: ["להשוות הצעות מ-3 בנקים לפחות", "לבחור תמהיל ולקבל אישור סופי", "לתאם שחרור כספים לפי לוח התשלומים"],
-    build: ["לעקוב אחרי שלבי הבנייה", "לבדוק כל דרישת תשלום מול הלוח", "לקבל ערבות חוק מכר על כל תשלום", "לבקש שינויי דיירים בזמן"],
-    handover: ["להזמין בודק בית ליום המסירה", "לתעד ליקויים עם תמונות", "לקבל מפתחות ופרוטוקול מסירה", "לעדכן ארנונה, מים וחשמל"],
-    warranty: ["לרכז ליקויים ולשלוח לקבלן בכתב", "לעקוב אחרי תיקונים", "לבדוק רישום בטאבו"]
+    build: ["לעקוב אחרי שלבי הבנייה", "לבדוק כל דרישת תשלום מול הלוח", "לקבל ערבות חוק מכר על כל תשלום", "לבקש שינויי דיירים בזמן", "גם על תשלום לשינויי דיירים לבקש שובר או ערבות (בלי זה הוא לא מוגן)", "לשמור את המקור של כל ערבות"],
+    handover: ["לוודא שיש טופס 4 לפני קבלת המפתח", "להזמין בודק בית ליום המסירה", "לתעד ליקויים עם תמונות", "לרשום בפרוטוקול כל ליקוי שנראה, ולא לחתום על ויתור", "לקבל מפתחות ופרוטוקול מסירה", "לא להחזיר ערבויות חוק מכר עד שנרשמה הערת אזהרה לטובתכם", "המסירה באיחור? לבדוק עם עורך דין פיצוי לפי חוק המכר", "לעדכן ארנונה, מים וחשמל"],
+    warranty: ["לרכז ליקויים ולשלוח לקבלן בכתב", "לעקוב אחרי תיקונים", "לעקוב עם עורך הדין אחרי רישום הבית המשותף והעברת הזכויות על שמכם"]
   },
   new: {
-    before: ["לבדוק את הקבלן ופרויקטים קודמים שלו", "לבדוק את המפרט הטכני ואת התוכניות", "לנהל משא ומתן על מחיר והטבות", "לקבל אישור עקרוני למשכנתא"],
-    sign: ["עורך דין מטעמך לבדיקת החוזה", "לבדוק את סעיף ההצמדה ואת הבטוחה", "לחתום ולשלם את התשלום הראשון", "לשמור עותק חתום של החוזה"],
+    before: ["לבדוק את הקבלן ופרויקטים קודמים שלו", "לבדוק את המפרט הטכני ואת התוכניות", "לנהל משא ומתן על מחיר והטבות", "לקבל אישור עקרוני למשכנתא", "לקבל מהקבלן את שם הבנק המלווה ומספר הפרויקט", "לבקש מכתב החרגה מהבנק המלווה (בלעדיו הבנק לא ישחרר משכנתא)"],
+    sign: ["עורך דין מטעמכם יבדוק את החוזה, המפרט, מועד המסירה וסעיף הכוח העליון", "לבדוק את סעיף ההצמדה ואת הבטוחה", "לחתום ולשלם את התשלום הראשון", "לשמור עותק חתום של החוזה", "לדווח למיסוי מקרקעין תוך 30 יום מהחתימה ולשלם תוך 60 יום. לבדוק מי מגיש ולקבל אישור", "לוודא שנרשמה הערת אזהרה לטובתכם, או שיש התחייבות לרשום אותה", "לקבל פנקס שוברים, ולשלם רק בשוברים לחשבון הליווי"],
     mortgage: ["להשוות הצעות מ-3 בנקים לפחות", "לבחור תמהיל ולקבל אישור סופי", "לתאם שחרור כספים לפי לוח התשלומים"],
-    build: ["לעקוב אחרי שלבי הבנייה", "לבדוק כל דרישת תשלום מול הלוח", "לקבל ערבות חוק מכר על כל תשלום", "לבקש שינויי דיירים בזמן"],
-    handover: ["להזמין בודק בית ליום המסירה", "לתעד ליקויים עם תמונות", "לקבל מפתחות ופרוטוקול מסירה", "לעדכן ארנונה, מים וחשמל"],
-    warranty: ["לרכז ליקויים ולשלוח לקבלן בכתב", "לעקוב אחרי תיקונים", "לבדוק רישום בטאבו"]
+    build: ["לעקוב אחרי שלבי הבנייה", "לבדוק כל דרישת תשלום מול הלוח", "לקבל ערבות חוק מכר על כל תשלום", "לבקש שינויי דיירים בזמן", "גם על תשלום לשינויי דיירים לבקש שובר או ערבות (בלי זה הוא לא מוגן)", "לשמור את המקור של כל ערבות"],
+    handover: ["לוודא שיש טופס 4 לפני קבלת המפתח", "להזמין בודק בית ליום המסירה", "לתעד ליקויים עם תמונות", "לרשום בפרוטוקול כל ליקוי שנראה, ולא לחתום על ויתור", "לקבל מפתחות ופרוטוקול מסירה", "לא להחזיר ערבויות חוק מכר עד שנרשמה הערת אזהרה לטובתכם", "המסירה באיחור? לבדוק עם עורך דין פיצוי לפי חוק המכר", "לעדכן ארנונה, מים וחשמל"],
+    warranty: ["לרכז ליקויים ולשלוח לקבלן בכתב", "לעקוב אחרי תיקונים", "לעקוב עם עורך הדין אחרי רישום הבית המשותף והעברת הזכויות על שמכם"]
   },
   resale: {
     before: ["לבדוק עסקאות דומות ברחוב ובשכונה", "לבדוק תוכניות בנייה בסביבה", "לקבל אישור עקרוני למשכנתא", "להזמין שמאי או בודק בית"],
@@ -393,8 +393,8 @@ const TASKS = {
   }
 };
 const DOCS = {
-  ml: ["אישור זכאות", "חוזה רכישה חתום", "נספח מפרט טכני (מפרט מכר)", "תשריט הדירה", "נספח תשלומים", "ערבויות חוק מכר", "אישור עקרוני למשכנתא", "פרוטוקול מסירה"],
-  new: ["חוזה רכישה חתום", "נספח מפרט טכני (מפרט מכר)", "תשריט הדירה", "נספח תשלומים", "ערבויות חוק מכר", "אישור עקרוני למשכנתא", "פרוטוקול מסירה"],
+  ml: ["אישור זכאות", "חוזה רכישה חתום", "נספח מפרט טכני (מפרט מכר)", "תשריט הדירה", "נספח תשלומים", "כתב התחייבות (מחיר למשתכן)", "מכתב החרגה מהבנק המלווה", "פנקס שוברים", "ערבויות חוק מכר", "אישור דיווח למס רכישה", "אישור רישום הערת אזהרה", "אישור עקרוני למשכנתא", "טופס 4", "פרוטוקול מסירה", "תעודות אחריות וספר דירה"],
+  new: ["חוזה רכישה חתום", "נספח מפרט טכני (מפרט מכר)", "תשריט הדירה", "נספח תשלומים", "מכתב החרגה מהבנק המלווה", "פנקס שוברים", "ערבויות חוק מכר", "אישור דיווח למס רכישה", "אישור רישום הערת אזהרה", "אישור עקרוני למשכנתא", "טופס 4", "פרוטוקול מסירה", "תעודות אחריות וספר דירה"],
   resale: ["נסח טאבו", "חוזה רכישה חתום", "דוח שמאי", "אישור עקרוני למשכנתא", "אישור תשלום מס רכישה"]
 };
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -406,7 +406,9 @@ const monthsBetween = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(a
 const PCTS_DEFAULT = { ml: "7, 13, 12, 12, 12, 12, 11, 11, 10", new: "10, 15, 15, 20, 20, 20" };
 /* payments from a list of percentages: 1st at signing, 2nd 45 days later, last 2 weeks before delivery, the rest evenly between */
 function scheduleFromPcts(pcts, sign, delivery) {
-  const end = addDays(delivery || addMonths(sign, 36), -14), n = pcts.length, d45 = addDays(sign, 45);
+  let end = addDays(delivery || addMonths(sign, 36), -14), n = pcts.length, d45 = addDays(sign, 45);
+  if (end <= d45) { const last = delivery || addMonths(sign, 36), sp = Math.max(1, (new Date(last) - new Date(sign)) / 864e5);   /* delivery very soon: spread everything between signing and delivery */
+    return pcts.map((pct, i) => { const before = pcts.slice(0, i).reduce((a, b) => a + b, 0); return { id: uid(), name: i === 0 ? "חתימה" : i === n - 1 ? "לפני מסירה" : "תשלום " + (i + 1), date: i === 0 ? sign : addDays(sign, Math.round(sp * i / Math.max(1, n - 1))), pct, linked: before >= 20 - 1e-9, paid: false }; }); }
   const span = Math.max(1, (new Date(end) - new Date(d45)) / 864e5);
   return pcts.map((pct, i) => {
     const date = i === 0 ? sign : i === n - 1 ? end : i === 1 ? d45 : addDays(d45, Math.round(span * (i - 1) / (n - 2)));
@@ -428,7 +430,7 @@ function paymentTemplate(type, sign, delivery) {
   return rows;
 }
 function defaultCosts(type, price) {
-  const lawyer = type === "ml" ? 5000 : Math.round(price * 0.005 * (1 + VAT));
+  const lawyer = type === "ml" ? Math.round(5000 * (1 + VAT)) + 5000 : Math.round(price * 0.005 * (1 + VAT));   /* ML: the contractor's lawyer (capped, about ₪5,000 + VAT) plus your own */
   return { lawyer, advisor: 6000, broker: type === "resale" ? Math.round(price * 0.02 * (1 + VAT)) : 0, appraiser: 2000, bankfees: 1500, moving: 5000, renovation: type === "resale" ? 30000 : 60000, other: 0 };
 }
 function newState(profile, example) {
@@ -443,7 +445,7 @@ function newState(profile, example) {
     payments: paymentTemplate(type, profile.sign, profile.delivery),
     tasks: STAGES[type].flatMap(([k]) => TASKS[type][k].map(text => ({ id: uid(), stage: k, text, done: false }))),
     defects: [],
-    docs: DOCS[type].map(name => ({ id: uid(), name, have: false, url: null, assetId: null })), docsV2: true,
+    docs: DOCS[type].map(name => ({ id: uid(), name, have: false, url: null, assetId: null })), docsV2: true, tasksV3: true,
     idxRate: IDX_RATE
   };
 }
@@ -453,11 +455,41 @@ function exampleState() {
   s.profile.stage = "sign";
   return s;
 }
-function migrate(x) {
+/* every state that comes in (server, backup, this phone) is checked: ids and links must look like ours, so a
+   tampered state cannot inject markup into the page; unknown purchase types fall back instead of breaking the app */
+function sanitize(x) {
+  if (!x || typeof x !== "object") return x;
+  const okId = v => typeof v === "string" && /^[A-Za-z0-9_-]{1,40}$/.test(v);
+  for (const k of ["payments", "tasks", "defects", "docs", "offers"]) { if (!Array.isArray(x[k])) x[k] = []; x[k] = x[k].filter(i => i && typeof i === "object"); for (const i of x[k]) if (!okId(i.id)) i.id = uid(); }
+  if (x.fin && Array.isArray(x.fin.sources)) for (const i of x.fin.sources) if (i && !okId(i.id)) i.id = uid();
+  for (const d of x.docs) {
+    if (d.url != null && !(typeof d.url === "string" && (/^file:[a-z0-9]{20,40}$/.test(d.url) || /^https:\/\/[^"'<>\s`]+$/.test(d.url)))) { d.url = null; d.assetId = null; }
+    if (d.assetId != null && !(typeof d.assetId === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(d.assetId))) d.assetId = null;
+    if (d.fkey != null && !(typeof d.fkey === "string" && /^[A-Za-z0-9+/=_-]{1,120}$/.test(d.fkey))) d.fkey = null;
+    if (d.ftype != null && !(typeof d.ftype === "string" && /^[\w.+-]{1,40}\/[\w.+-]{1,60}$/.test(d.ftype))) d.ftype = "";
+  }
+  if (x.profile) { if (!TYPES[x.profile.type]) x.profile.type = "ml"; if (!["first", "upgrade", "additional"].includes(x.profile.buyer)) x.profile.buyer = "first";
+    if (!STAGES[x.profile.type].some(st => st[0] === x.profile.stage)) x.profile.stage = STAGES[x.profile.type][0][0]; }
+  return x;
+}
+function migrate(x) { return sanitize(migrate0(x)); }
+function migrate0(x) {
   if (x && x.v === 2 && x.profile && x.profile.type !== "resale" && Array.isArray(x.docs) && !x.docsV2) {
     x.docsV2 = true; for (const n of ["תשריט הדירה", "נספח תשלומים"]) if (!x.docs.some(d => d.name.includes(n.split(" ")[0]) && d.name.includes(n.split(" ")[1]))) x.docs.push({ id: uid(), name: n, have: false, url: null, assetId: null });
   }
   if (x && x.v === 2 && x.mix && x.mix.pVar == null) { x.mix.pVar = 0; x.mix.rVar = MARKET.mortgage.varLinked || x.mix.rLinked; }
+  if (x && x.v === 2 && !x.tasksV3 && x.profile && TASKS[x.profile.type] && x.profile.type !== "resale" && Array.isArray(x.tasks)) {
+    x.tasksV3 = true; const have = new Set(x.tasks.map(t => t.text)), old = { "עורך דין מטעמך לבדיקת החוזה": 1, "לבדוק רישום בטאבו": 1 };
+    x.tasks = x.tasks.filter(t => !(old[t.text] && !t.done));
+    /* fixed ids, so two phones that both upgrade add the same items instead of duplicates */
+    const hid = t => "v3" + Array.from(t).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+    for (const [k, list] of Object.entries(TASKS[x.profile.type])) for (const text of list) if (!have.has(text)) x.tasks.push({ id: hid(k + text), stage: k, text, done: false });
+    if (Array.isArray(x.docs)) { const dn = new Set(x.docs.map(d => d.name)); for (const n of DOCS[x.profile.type]) if (!dn.has(n)) x.docs.push({ id: hid("doc" + n), name: n, have: false, url: null, assetId: null }); }
+  }
+  if (x && x.v === 2 && x.profile && TYPES[x.profile.type]) { const d = newState(x.profile, x.example);   /* fill anything missing (e.g. a partial backup) */
+    for (const k of ["payments", "tasks", "docs", "defects", "offers"]) if (!Array.isArray(x[k])) x[k] = d[k];
+    for (const k of ["costs", "mix", "fin"]) x[k] = Object.assign({}, d[k], x[k] && typeof x[k] === "object" ? x[k] : {});
+    if (x.idxRate == null) x.idxRate = d.idxRate; }
   if (x && x.v === 2) { x.payMode = x.payMode || "schedule"; x.fin = Object.assign({ income: 0, otherLoans: 0, grant: 0, age: 0, sources: [] }, x.fin); return x; }
   if (!x) return x;
   const typeMap = { ml: "ml", market: "new" };
@@ -600,7 +632,7 @@ function attachShared(code) {
     if (snap.gone) { leaveShare(true); return; }
     if (!snap.exists || snap.metadata.hasPendingWrites || dirty || saving) return;
     const body = snap.data().state; if (!body || body === lastSent || body === JSON.stringify(S)) return;
-    try { S = migrate(JSON.parse(body)); setBase(clone(S)); saveLocal(); render(); toast("עודכן מהמכשיר השני"); } catch (e) {}
+    try { S = migrate(JSON.parse(body)); setBase(clone(S)); saveLocal(); render(); pushSoon(); toast("עודכן מהמכשיר השני"); } catch (e) {}
   }, () => setSync("נשמר במכשיר בלבד"));
   setSync("משותף");
 }
@@ -613,22 +645,38 @@ function localDoc(key) {
 const b64big = buf => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
 const unb64big = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const hhKeys = new Map();
-async function hhKey(code) {
-  if (!hhKeys.has(code)) { const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
-    hhKeys.set(code, await crypto.subtle.deriveKey({ name: "PBKDF2", salt: new TextEncoder().encode("maftech-household-v1"), iterations: 150000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"])); }
-  return hhKeys.get(code);
+/* v2: the server never sees the share code. From the code the phone derives three separate values:
+   an id for the server record, a write token, and the encryption key (v1 used the code itself as the id) */
+async function hhKey(code, salt = "maftech-key-v2") {
+  const k = salt + "|" + code;
+  if (!hhKeys.has(k)) { const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(code), "PBKDF2", false, ["deriveKey"]);
+    hhKeys.set(k, await crypto.subtle.deriveKey({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 150000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"])); }
+  return hhKeys.get(k);
 }
-async function encText(code, txt) { const iv = crypto.getRandomValues(new Uint8Array(12)), ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await hhKey(code), new TextEncoder().encode(txt)); return "enc1:" + b64big(iv) + ":" + b64big(ct); }
-async function decText(code, s) { if (!s || !String(s).startsWith("enc1:")) return s; const [, a, b] = s.split(":"); return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64big(a) }, await hhKey(code), unb64big(b))); }
+const shaHex = async s => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))), x => x.toString(16).padStart(2, "0")).join("");
+async function encText(code, txt) { const iv = crypto.getRandomValues(new Uint8Array(12)), ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await hhKey(code), new TextEncoder().encode(txt)); return "enc2:" + b64big(iv) + ":" + b64big(ct); }
+async function decText(code, s) { s = String(s || ""); const v = s.startsWith("enc2:") ? "maftech-key-v2" : s.startsWith("enc1:") ? "maftech-household-v1" : null; if (!v) return s; const [, a, b] = s.split(":"); return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64big(a) }, await hhKey(code, v), unb64big(b))); }
 function remoteDoc(path) {
-  const code = path.split("/")[1], url = "/api/household?code=" + encodeURIComponent(code);
-  let seen = null;   /* updatedAt of the version this phone last read; the server refuses a save made on an older one */
-  const get = async () => { const r = await fetch(url, { cache: "no-store" }); if (r.status === 404 || r.status === 410) return { exists: false, gone: r.status === 410, data: () => null }; if (!r.ok) throw new Error("http " + r.status); const v = await r.json(); seen = v.updatedAt; v.state = await decText(code, v.state); return { exists: true, data: () => v, metadata: { hasPendingWrites: false } }; };
+  const code = path.split("/")[1], oldUrl = "/api/household?code=" + encodeURIComponent(code);
+  const ids = Promise.all([shaHex("maftech-id:" + code), shaHex("maftech-write:" + code)]).then(([i, w]) => ({ url: "/api/household?code=" + i.slice(0, 32), w }));
+  let seen = null, oldSeen = null, onOld = false;   /* updatedAt of the version this phone last read; the server refuses a save made on an older one */
+  const read = async u => { const r = await fetch(u, { cache: "no-store" }); if (r.status === 404 || r.status === 410) return { st: r.status }; if (!r.ok) throw new Error("http " + r.status); return { st: 200, v: await r.json() }; };
+  const get = async () => {
+    const { url } = await ids; let x = await read(url);
+    if (x.st === 404) { const o = await read(oldUrl); if (o.st === 200 && o.v.state !== "moved:v2") { onOld = true; oldSeen = o.v.updatedAt; seen = null; x = o; } else if (o.st === 410) x = o; }
+    else onOld = false;
+    if (x.st !== 200) return { exists: false, gone: x.st === 410, data: () => null };
+    const v = x.v; if (!onOld) seen = v.updatedAt; v.state = await decText(code, v.state); return { exists: true, data: () => v, metadata: { hasPendingWrites: false } };
+  };
+  const put = async (u, w, body) => { const r = await fetch(u, { method: "PUT", headers: { "content-type": "application/json", "x-maftech-w": w }, body: JSON.stringify(body) });
+    if (r.status === 409) { const e = new Error("conflict"); e.conflict = true; throw e; }
+    if (r.status === 410) { const e = new Error("gone"); e.gone = true; throw e; } if (!r.ok) { const e = new Error("http " + r.status); e.status = r.status; throw e; } return r.json(); };
   return {
     get,
-    set: async v => { const r = await fetch(url, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ state: await encText(code, v.state), ifMatch: seen }) });
-      if (r.status === 409) { const e = new Error("conflict"); e.conflict = true; throw e; }
-      if (r.status === 410) { const e = new Error("gone"); e.gone = true; throw e; } if (!r.ok) { const e = new Error("http " + r.status); e.status = r.status; throw e; } seen = (await r.json()).updatedAt; },
+    del: async () => { const { url, w } = await ids; await Promise.all([fetch(url, { method: "DELETE", headers: { "x-maftech-w": w } }), fetch(oldUrl, { method: "DELETE" })]).catch(() => {}); },
+    set: async v => { const { url, w } = await ids;
+      seen = (await put(url, w, { state: await encText(code, v.state), ifMatch: seen })).updatedAt;
+      if (onOld) { onOld = false; put(oldUrl, "", { state: "moved:v2", ifMatch: oldSeen }).catch(() => {}); } },   /* moved to the new record: the old one keeps no data */
     onSnapshot(cb, err) {   /* poll while the app is open; check right away when it comes back to the screen */
       let last = null, stop = false;
       const tick = async () => { if (stop || document.hidden) return; try { const s = await get(); if (s.gone) { cb(s); return; } const u = s.exists ? s.data().updatedAt : null; if (u && u !== last) { last = u; cb(s); } } catch (e) { if (err) err(e); } };
@@ -684,12 +732,12 @@ async function initStore() {
 }
 async function createShare() {
   if (store.kind !== "db") { toast("שיתוף זמין רק כשמחוברים לחשבון"); return; }
-  const code = Array.from(crypto.getRandomValues(new Uint8Array(9)), b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
+  const code = Array.from(crypto.getRandomValues(new Uint8Array(9)), b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");   /* 9 of 31 characters, about 44 bits; the tiny modulo bias is irrelevant here */
   try {
     await store.db.doc("households/" + code).set({ state: JSON.stringify(S), updatedAt: new Date().toISOString() });
     await store.priv.set({ household: code });
     setBase(clone(S)); setPending(false); attachShared(code); render(); toast("נוצר קוד שיתוף");
-  } catch (e) { toast("השיתוף לא הצליח. נסה שוב."); }
+  } catch (e) { toast("השיתוף לא הצליח. נסו שוב."); }
 }
 async function joinShare(code) {
   code = code.trim().toLowerCase();
@@ -700,7 +748,7 @@ async function joinShare(code) {
     if (!h.exists) { toast("לא נמצאה רכישה עם הקוד הזה"); return; }
     await store.priv.set({ household: code });
     S = migrate(JSON.parse(h.data().state)); setBase(clone(S)); setPending(false); saveLocal(); attachShared(code); joinOpen = false; setupOpen = false; tab = "home"; render(); window.scrollTo(0, 0); toast("הצטרפתם לרכישה המשותפת");
-  } catch (e) { toast("ההצטרפות לא הצליחה. נסה שוב."); }
+  } catch (e) { toast("ההצטרפות לא הצליחה. נסו שוב."); }
 }
 async function leaveShare(byOther) {
   if (store.unsub) store.unsub();
@@ -769,8 +817,8 @@ async function openDoc(id) {
   }
   const v = document.getElementById("docview"); if (!v) return;
   const ext = type.includes("pdf") ? ".pdf" : type.includes("png") ? ".png" : type.startsWith("image/") ? ".jpg" : "";
-  v.innerHTML = `${type.startsWith("image/") ? `<img class="docimg" src="${href}" alt="${esc(x.name)}">` : ""}
-    <div class="row"><a class="abtn" href="${href}" target="_blank" rel="noopener">פתיחה</a><a class="abtn ghost" href="${href}" download="${esc(x.name + ext)}">שמירה בטלפון</a></div>`;
+  v.innerHTML = `${type.startsWith("image/") ? `<img class="docimg" src="${esc(href)}" alt="${esc(x.name)}">` : ""}
+    <div class="row"><a class="abtn" href="${esc(href)}" target="_blank" rel="noopener">פתיחה</a><a class="abtn ghost" href="${esc(href)}" download="${esc(x.name + ext)}">שמירה בטלפון</a></div>`;
 }
 
 /* ---------- app lock: a 4-digit code (and optionally the phone's fingerprint/face unlock), per device ---------- */
@@ -807,13 +855,15 @@ function drawLock0(el, shake) {
     <div class="keypad">${["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(n => `<button data-lk="d${n}">${n}</button>`).join("")}${bio}<button data-lk="d0">0</button><button class="kf" data-lk="del" aria-label="מחיקת ספרה">⌫</button></div>
     ${lockMode === "unlock" ? `<button class="link small" data-lk="forgot">שכחתי את הקוד</button>` : `<button class="link small" data-lk="cancel">ביטול</button>`}</div>`;
 }
+let lockUntil = 0;
 async function lockDigit(n) {
-  if (lockPin.length >= 4) return; lockPin += n; lockErr = ""; drawLock(); if (lockPin.length < 4) return;
+  if (lockPin.length >= 4) return;
+  if ((lockMode === "unlock" || lockMode === "verify") && Date.now() < lockUntil) { lockErr = `יותר מדי ניסיונות. נסו שוב בעוד ${Math.ceil((lockUntil - Date.now()) / 1000)} שניות.`; drawLock(true); return; } lockPin += n; lockErr = ""; drawLock(); if (lockPin.length < 4) return;
   const pin = lockPin;
   if (lockMode === "verify") { if (await sha(lockCfg.salt + pin) === lockCfg.hash) { lockMode = "set1"; lockPin = ""; drawLock(); } else { lockPin = ""; lockErr = "קוד שגוי"; drawLock(true); } return; }
   if (lockMode === "unlock") {
     if (await sha(lockCfg.salt + pin) === lockCfg.hash) { lockMode = null; lockTries = 0; drawLock(); return; }
-    lockTries++; lockPin = ""; lockErr = lockTries >= 5 ? "קוד שגוי. אם שכחתם, יש אפשרות למטה." : "קוד שגוי"; drawLock(true); return;
+    lockTries++; lockPin = ""; if (lockTries >= 5) lockUntil = Date.now() + 30000 * (lockTries - 4); lockErr = lockTries >= 5 ? "קוד שגוי. אם שכחתם, יש אפשרות למטה." : "קוד שגוי"; drawLock(true); return;
   }
   if (lockMode === "set1") { lockFirst = pin; lockMode = "set2"; lockPin = ""; drawLock(); return; }
   if (lockMode === "set2") {
@@ -874,7 +924,7 @@ function privacyCard() {
 }
 function lockCard() {
   return `<div class="card"><h2>נעילת האפליקציה</h2>
-    <p class="small muted">קוד בכניסה לאפליקציה בטלפון הזה. אחרי דקה ברקע היא ננעלת שוב. כל טלפון מגדיר נעילה משלו.</p>
+    <p class="small muted">קוד בכניסה לאפליקציה בטלפון הזה. אחרי דקה ברקע היא ננעלת שוב. כל טלפון מגדיר נעילה משלו. הנעילה מונעת הצצה, אבל לא מחליפה את נעילת הטלפון עצמו.</p>
     ${lockCfg ? `<p>✓ הנעילה פעילה${lockCfg.cred ? ", כולל טביעת אצבע" : ""}</p>
       <div class="row"><button class="ghost" data-lk="change">שינוי הקוד</button>${bioOK ? (lockCfg.cred ? `<button class="ghost" data-lk="biooff">בלי טביעת אצבע</button>` : `<button class="ghost" data-lk="bioon">הוספת טביעת אצבע</button>`) : ""}<button class="link" data-lk="off">ביטול הנעילה</button></div>`
       : `<button data-lk="set">הפעלת נעילה בקוד</button>`}</div>`;
@@ -912,7 +962,7 @@ function undoRemove(msg, getList, setList, id, after) {
 function toast(t) { commitUndo(); const el = document.getElementById("toast"); el.textContent = ""; el.hidden = false; requestAnimationFrame(() => { el.textContent = t; }); clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
 const T = () => TYPES[S.profile.type];
 const stagesOf = () => STAGES[S.profile.type];
-function payAmount(p) { return S.payMode === "vouchers" ? (Number(p.amount) || 0) : S.profile.price * (Number(p.pct) || 0) / 100; }
+function payAmount(p) { if (p.paid && p.paidAmt > 0) return p.paidAmt; return S.payMode === "vouchers" ? (Number(p.amount) || 0) : S.profile.price * (Number(p.pct) || 0) / 100; }
 function linkageCost(p, rate = S.idxRate) {
   if (!T().contractor || !p.linked) return 0;
   if (!p.date) return 0;
@@ -1067,7 +1117,13 @@ function screenInvite() {
     <div class="row">${i.missing ? "" : `<button data-act="invjoin">הצטרפות</button>`}<button class="ghost" data-act="invno">לא עכשיו</button></div></div></div>`;
 }
 function screenSetup() {
-  const p = S.example ? { type: "ml", buyer: "first", city: "", price: "", sign: "", delivery: "", linkedShare: 40, lottery: "", form4: "" } : S.profile;
+  const p = S.example ? { type: "ml", buyer: "first", city: "", price: "", sign: "", delivery: "", linkedShare: 50, lottery: "", form4: "" } : S.profile;
+  const shareCard0 = () => `    <div class="card"><h2>שיתוף עם בן או בת הזוג</h2>
+      <p class="small muted">שניכם תראו ותעדכנו את אותה רכישה, כל אחד מהטלפון שלו. ${store.remote ? "צרו קוד, ובטלפון השני פתחו את האפליקציה ובחרו \"יש לי קוד\"." : "בן הזוג צריך גישה לעמוד הזה (דרך כפתור השיתוף של העמוד), ואז להזין את הקוד בהגדרות אצלו."}</p>
+      ${sharing}
+      <p class="src">${store.remote ? "מי שיודע את הקוד יכול לראות ולשנות את הרכישה. שתפו אותו רק עם בן או בת הזוג." : "כל מי שקיבל גישה לעמוד הזה יכול טכנית לקרוא רכישות משותפות. לכן כדאי לשתף את העמוד רק עם בן הזוג."}</p>
+    </div>
+`;
   const sharing = store.kind !== "db" ? `<p class="small muted">${window.claude ? "שיתוף יהיה זמין כשתפתחו את האפליקציה מחוברים לחשבון." : "באפליקציה המותקנת הנתונים נשמרים בטלפון. כדי להעביר אותם לטלפון אחר: שמירת גיבוי כאן, ושחזור מגיבוי בטלפון השני."}</p>`
     : store.code ? `<p>הרכישה משותפת. הקוד לשיתוף:</p><div class="code num" id="sharecode">${store.code}</div>
         <div class="row"><button data-act="sharesend">שליחה לבן או בת הזוג</button><button class="ghost" data-act="copycode">העתקת הקוד</button></div>
@@ -1079,7 +1135,7 @@ function screenSetup() {
     : `<div class="row"><button data-act="share">יצירת קוד שיתוף</button><button class="ghost" data-act="joinopen">יש לי קוד</button></div>`;
   return `<div class="screen">
     <h1>${S.example ? "הגדרת הרכישה" : "הגדרות"}</h1>
-    ${S.example ? "" : `<h2 style="margin:4px 0 0">הטלפון שלי</h2>${pushCard()}${lockCard()}${textCard()}<h2 style="margin:8px 0 0">הרכישה המשותפת</h2>`}
+    ${S.example ? "" : `<h2 style="margin:4px 0 0">הטלפון שלי</h2>${pushCard()}${lockCard()}${textCard()}<h2 style="margin:8px 0 0">הרכישה המשותפת</h2>${shareCard0()}`}
     ${S.example ? `<div class="card">` : `<details class="card"><summary><b>פרטי הרכישה</b> <span class="small muted">· עיר, מחיר, תאריכים. משותף לשניכם</span></summary><div style="margin-top:10px">`}
       <label class="f">סוג הרכישה<select id="f_type" data-key="f_type">
         ${Object.entries(TYPES).map(([k, t]) => `<option value="${k}" ${p.type === k ? "selected" : ""}>${t.name}</option>`).join("")}</select></label>
@@ -1104,21 +1160,19 @@ function screenSetup() {
       ${!S.example ? `<p class="small muted">שינוי סוג הרכישה יחליף את רשימת המשימות, לוח התשלומים והמסמכים בברירת המחדל של הסוג החדש.</p>` : ""}
       <div class="row"><button data-act="saveSetup">שמירה</button>${S.example ? "" : `<button class="ghost" data-act="cancelSetup">ביטול</button>`}</div>
     ${S.example ? "</div>" + lockCard() + textCard() : "</div></details>"}
+    ${S.example ? shareCard0() : ""}
     ${privacyCard()}
     ${S.example ? "" : `<div class="card"><h2>גיבוי</h2>
       <p class="small muted">שמרו עותק של כל הנתונים בקובץ. אפשר לשחזר ממנו בכל מכשיר, וגם במעבר לגרסה הבאה של האפליקציה.</p>
+      <p class="small muted">קובץ הגיבוי פותח גם את המסמכים שצירפתם. שמרו אותו במקום פרטי, ואל תשלחו אותו בצ'אט.</p>
       <div class="row"><button class="ghost" data-act="backup">שמירת גיבוי</button><button class="ghost" data-act="restore">שחזור מגיבוי</button></div>
       ${confirmReset ? `<p style="color:var(--warn)">כל הנתונים יימחקו, כולל משימות, תשלומים ומסמכים. אי אפשר לבטל.</p><div class="row"><button data-act="resetyes" style="background:var(--warn);border-color:var(--warn)">כן, למחוק הכול</button><button class="ghost" data-act="resetno">ביטול</button></div>`
         : `<div><button class="link" data-act="reset" style="color:var(--warn)">התחלה מחדש</button></div>`}</div>`}
-    <div class="card"><h2>שיתוף עם בן או בת הזוג</h2>
-      <p class="small muted">שניכם תראו ותעדכנו את אותה רכישה, כל אחד מהטלפון שלו. ${store.remote ? "צרו קוד, ובטלפון השני פתחו את האפליקציה ובחרו \"יש לי קוד\"." : "בן הזוג צריך גישה לעמוד הזה (דרך כפתור השיתוף של העמוד), ואז להזין את הקוד בהגדרות אצלו."}</p>
-      ${sharing}
-      <p class="src">${store.remote ? "מי שיודע את הקוד יכול לראות ולשנות את הרכישה. שתפו אותו רק עם בן או בת הזוג." : "כל מי שקיבל גישה לעמוד הזה יכול טכנית לקרוא רכישות משותפות. לכן כדאי לשתף את העמוד רק עם בן הזוג."}</p>
-    </div></div>`;
+    </div>`;
 }
 function setPayMode(mode) {
   if (mode === S.payMode) return;
-  if (mode === "vouchers") S.payments.forEach((x, i) => { if (!x.amount) x.amount = Math.round(S.profile.price * (Number(x.pct) || 0) / 100); if (!x.voucher) x.voucher = String(i + 1); });
+  if (mode === "vouchers") S.payments.forEach((x, i) => { if (!x.paid || !x.amount) x.amount = Math.round(S.profile.price * (Number(x.pct) || 0) / 100); if (!x.voucher) x.voucher = String(i + 1); });
   else S.payments.forEach(x => { if (x.amount) x.pct = +(x.amount / S.profile.price * 100).toFixed(2); });
   S.payMode = mode; persist(); render(); toast(mode === "vouchers" ? "עברת לפנקס שוברים" : "עברת לתשלומים לפי אחוזים");
 }
@@ -1144,8 +1198,9 @@ function timelineCard() {
   if (MARKET.nextBoiISO) ev.push({ d: MARKET.nextBoiISO, t: "החלטת ריבית של בנק ישראל", s: "משפיעה על ההחזר במסלול הפריים" });
   if (p.form4) ev.push({ d: p.form4, t: "טופס 4" });
   if (p.delivery) ev.push({ d: p.delivery, t: t.contractor ? "מסירת הדירה 🔑" : "קבלת המפתח 🔑" });
-  const sale = saleAllowed(); if (sale) ev.push({ d: sale, t: "מותר למכור את הדירה", s: "5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם" });
-  const we = t.contractor ? warrantyEnd() : ""; if (we) ev.push({ d: we, t: "סוף שנת הבדק", s: "עד אז מדווחים לקבלן על ליקויים" });
+  const sale = saleAllowed(); if (sale) ev.push({ d: sale, t: p.form4 ? "מותר למכור את הדירה" : "מותר למכור את הדירה (משוער)", s: "5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם." + (p.form4 ? "" : " עד שתזינו טופס 4 החישוב לפי מועד המסירה.") + " התנאים המחייבים כתובים בכתב ההתחייבות" });
+  const we = t.contractor ? warrantyEnd() : ""; if (we) ev.push({ d: we, t: "שנה מהמסירה", s: "מועד אחרון לדווח על ליקויים שנראו במסירה. לליקויים אחרים (צנרת, איטום, סדקים) תקופות הבדק ארוכות יותר, 2 עד 7 שנים, ואחריהן עוד 3 שנות אחריות" });
+  if (t.contractor && p.delivery) { const lt = addDays(p.delivery, 30); if (lt >= ymd(today())) ev.push({ d: lt, t: "אם המסירה מתאחרת", s: "לפי חוק המכר ייתכן שמגיע לכם פיצוי לפי דמי שכירות של דירה דומה. בדקו עם עורך דין, ואל תחתמו על ויתור בפרוטוקול המסירה" }); }
   ev.sort((a, b) => a.d.localeCompare(b.d));
   const td = ymd(today()), past = ev.filter(e => e.d < td), fut = ev.filter(e => !past.includes(e));
   const late = past.filter(e => e.pay && !e.paid), pastShown = tlAll ? past : [...past.filter(e => !late.includes(e)).slice(-1), ...late].sort((x, y) => x.d.localeCompare(y.d));
@@ -1225,7 +1280,7 @@ function screenBuy() {
   } else if (sub.buy === "payments" && !payEdit) {
     const pays = [...S.payments].sort((a, b) => (a.date || "9").localeCompare(b.date || "9")), vm = S.payMode === "vouchers";
     const tot = pays.reduce((s, x) => s + payAmount(x) + linkageCost(x), 0), paid = pays.filter(x => x.paid).reduce((s, x) => s + payAmount(x) + linkageCost(x), 0), next = pays.find(x => !x.paid);
-    const diff = payDiffText(), src = {};
+    const diff = payDiffText(), src = {}, ceLim = cashEarly().lim, early45 = x => ceLim && x.date && x.date <= ceLim;
     if (t.contractor && !S.example) { let own = Math.max(chosenEquity(), pays.length ? payAmount(pays[0]) : 0); for (const x of pays) { const a = payAmount(x); src[x.id] = own >= a - 1 ? "own" : own > 1 ? "mix" : "bank"; own -= a; } }
     body = `<div class="card"><div class="spread"><h2>${t.contractor ? "תשלומים לקבלן" : "תשלומים למוכר"}</h2><button class="ghost small" data-act="payedit">עריכה</button></div>
       <p class="small muted">שולמו ${ils(paid)} מתוך ${ils(tot)}${t.contractor && pays.some(x => linkageCost(x) > 0) ? " (כולל הצמדה משוערת)" : ""}${vm ? " · פנקס שוברים" : ""}. סמנו ✓ כשתשלום יוצא.</p>
@@ -1235,7 +1290,7 @@ function screenBuy() {
       <div class="list" style="margin-top:8px">${pays.map(x => `<div class="item paysum ${x.paid ? "done" : ""} ${x === next ? "next" : ""}">
         <label class="paybox"><input type="checkbox" data-paid="${x.id}" ${x.paid ? "checked" : ""} aria-label="שולם: ${esc(x.name)}"><span>שולם</span></label>
         <div class="grow"><div><b>${esc(x.name)}</b>${x === next ? ' <span class="chip gold">הבא</span>' : ""}</div><div class="small muted">${x.date ? fmtDate(x.date) : "בלי תאריך"}${vm ? "" : ` · ${nf.format(x.pct)}%`}${linkageCost(x) > 0 ? ` · בסיס ${ils(payAmount(x))} + הצמדה משוערת ${ils(linkageCost(x))}` : x.linked && t.contractor ? " · צמוד" : ""}</div>
-        ${src[x.id] ? `<span class="chip ${src[x.id] === "own" ? "gold" : src[x.id] === "bank" ? "mute" : ""}">${src[x.id] === "own" ? "מהכיס" : src[x.id] === "bank" ? "מהמשכנתא" : "חלק מהכיס, חלק מהמשכנתא"}</span>` : ""}
+        ${src[x.id] ? `<span class="chip ${src[x.id] === "own" ? "gold" : src[x.id] === "bank" ? "mute" : ""}">${src[x.id] === "own" ? "מהכיס" : src[x.id] === "bank" ? (early45(x) ? "מהמשכנתא, אם הבנק יספיק עד אז" : "מהמשכנתא") : early45(x) ? "חלק מהכיס, חלק מהמשכנתא (אם הבנק יספיק)" : "חלק מהכיס, חלק מהמשכנתא"}</span>` : ""}
         ${t.contractor && x.paid ? `<label class="row small" style="gap:4px;color:${x.guarantee ? "var(--ok)" : "var(--warn)"}"><input type="checkbox" data-pguar="${x.id}" ${x.guarantee ? "checked" : ""}>${x.guarantee ? "יש ערבות חוק מכר ✓" : "קיבלתי ערבות חוק מכר"}</label>${x.guarantee ? "" : q("guarantee")}` : ""}</div>
         <b class="num">${ils(payAmount(x) + linkageCost(x))}</b></div>`).join("")}</div>
       <div class="row" style="margin-top:8px"><button class="ghost" data-act="payedit">עריכת התשלומים</button><button class="link" data-act="ics">הוספה ליומן</button></div></div>
@@ -1284,7 +1339,7 @@ function screenBuy() {
         <button class="x ed" data-deldoc="${x.id}" aria-label="מחיקת המסמך">×</button></div>`).join("")}</div>
       <div class="row"><input id="ndoc" data-key="ndoc" placeholder="שם של מסמך נוסף לרשימה" aria-label="שם המסמך" style="flex:1"><button class="ghost" data-act="adddoc">הוספה</button></div>
       <div style="text-align:left"><button class="link small" data-act="listedit">${listEdit ? "סיום מחיקה" : "מחיקת מסמכים מהרשימה"}</button></div>
-      ${can ? `<p class="src">${store.remote ? "הקבצים נשמרים בשרת של האפליקציה בכתובת סודית. רק מי שיש לו את הרכישה יכול לפתוח אותם. מומלץ לשמור עותק גם במקום נוסף." : "קבצים מצורפים נגישים לכל מי שיש לו גישה לעמוד הזה."}</p>` : ""}</div>`;
+      ${can ? `<p class="src">${store.remote ? "הקבצים מוצפנים בטלפון לפני שהם עולים לשרת. רק מי שיש לו את הרכישה (אתם ומי שמשתף איתכם) יכול לפתוח אותם. מומלץ לשמור עותק גם במקום נוסף." : "קבצים מצורפים נגישים לכל מי שיש לו גישה לעמוד הזה."}</p>` : ""}</div>`;
   }
   return `<div class="screen">${exampleBanner()}<h1>הרכישה</h1>${segs("buy", list)}${body}</div>`;
 }
@@ -1324,7 +1379,7 @@ function outCosts() {
     ${left2 >= 0 && unused.length ? `<p class="small muted">לא נכללו: ${unused.map(x => esc(x.name)).join(", ")}. אם תשתמשו בהם, יישאר לכם יותר.</p>` : ""}
     ${p.buyer === "upgrade" ? `<p class="small" style="color:var(--gold)">משפרי דיור: מס הרכישה כאן (${ils(tax)}) מותנה במכירת הדירה הקיימת תוך 18 חודשים. אם היא לא תימכר בזמן, המס יחושב כדירה נוספת: ${ils(purchaseTax(p.price, "additional"))}.</p>` : ""}
     <p class="small muted">ההון העצמי נקבע במסך <button class="link small" data-go="calc" data-sub="equity">הון עצמי</button>. ${grantOf() ? `המענק המותנה (${ils(grantOf())}) משולם דרך הבנק ולא נכלל כאן. ` : ""}מס רכישה ${p.buyer === "additional" ? "לדירה נוספת" : "לדירה יחידה"}: ${ils(tax)}.${p.buyer === "upgrade" ? " משפר דיור משלם כדירה יחידה בתנאי שימכור את הדירה הקודמת בתוך 18 חודשים." : ""}</p>
-    <p class="src">מדרגות מס רכישה 2026, מוקפאות עד 15.1.2028. <a href="${TAX.src}" target="_blank" rel="noopener">מקור</a></p></div>`;
+    <p class="src">את מס הרכישה מדווחים תוך 30 יום מהחתימה (גם כשהוא 0 ₪) ומשלמים תוך 60 יום. מדרגות מס רכישה 2026, מוקפאות עד 15.1.2028. <a href="${TAX.src}" target="_blank" rel="noopener">מקור</a></p></div>`;
 }
 function inCosts() {
   const c = S.costs, sum = flow().costs ? `בחתימה ${ils(costsEarly())} · בכניסה לדירה ${ils(costsTotal() - costsEarly())} · חסכונות ${ils(S.fin.savings || 0)}` : "";
@@ -1332,7 +1387,7 @@ function inCosts() {
     ${numIn("fin.savings", "חסכונות נזילים (₪)")}
     <p class="small muted">הערכות התחלתיות, כולל מע"מ. עדכנו לפי ההצעות שקיבלתם.</p>
     <h3>בחתימה</h3>
-    <div class="grid2">${numIn("costs.lawyer", "עורך דין")}${numIn("costs.advisor", "יועץ משכנתאות")}${numIn("costs.broker", "תיווך")}${numIn("costs.appraiser", "שמאי (הבנק דורש)")}${numIn("costs.bankfees", "עמלות בנק ורישום משכון")}</div>
+    <div class="grid2">${numIn("costs.lawyer", S.profile.type === "resale" ? "עורך דין" : "עורכי דין (שלכם ושל הקבלן)")}${numIn("costs.advisor", "יועץ משכנתאות")}${numIn("costs.broker", "תיווך")}${numIn("costs.appraiser", "שמאי (הבנק דורש)")}${numIn("costs.bankfees", "עמלות בנק ורישום משכון")}</div>
     <h3 style="margin-top:10px">בכניסה לדירה</h3>
     <div class="grid2">${numIn("costs.renovation", "מיזוג, מטבח, ריהוט ושיפוץ")}${numIn("costs.moving", "הובלה")}${numIn("costs.other", "אחר")}</div>`, !sum || editOpen.costs);
 }
@@ -1410,8 +1465,9 @@ function outEquity() {
   const answer = `<div class="card hero"><span class="small muted">${isBest ? "ההמלצה לפי הנתונים שלכם" : "האפשרות שבחרתם"}</span>
     <h2>לשים <span class="num">${ils(chosen.eq)}</span> מהכיס</h2>
     <p style="margin:4px 0">החזר חודשי <b class="num">${ils(chosen.pay)}</b> · יישאר לכם בצד <b class="num">${ils(chosen.liquid)}</b>${ce.early > chosen.eq + 1 ? ` <span class="small muted">(אם הבנק מממן כבר את התשלום של יום 45)</span>` : ""}</p>
-    ${ce.early > chosen.eq + 1 ? `<p class="small" style="margin:0 0 4px">אם הבנק לא יספיק לממן את התשלום השני: תשלמו לקבלן מהכיס ${ils(ce.early)}, המשכנתא תקטן לכ-${ils(Math.max(0, S.profile.price - ce.early))}, ויישארו לכם ${ils(Math.max(0, ce.left))} עד המסירה. כדאי לסגור אישור עקרוני ושמאות לפני החתימה, ולוודא שהבנק יעביר את התשלום של יום 45 ישירות לחשבון הליווי.</p>` : ""}
+    ${ce.early > chosen.eq + 1 ? `<p class="small" style="margin:0 0 4px">אם הבנק לא יספיק לממן את התשלום השני: תשלמו לקבלן מהכיס ${ils(ce.early)}, המשכנתא תקטן לכ-${ils(Math.max(0, S.profile.price - ce.early))}, ויישארו לכם בצד ${ils(Math.max(0, ce.left))}, עוד לפני העלויות של הכניסה לדירה. כדאי לסגור אישור עקרוני ושמאות לפני החתימה, ולוודא שהבנק יעביר את התשלום של יום 45 ישירות לחשבון הליווי.</p>` : ""}
     ${ce.gap > 0 ? `<p class="small" style="margin:0;color:var(--warn)">⚠ ההון העצמי מספיק, אבל בחודשיים הראשונים משלמים לקבלן ${ils(ce.early)} לפני שהבנק מתחיל לממן. יש לכם עד אז ${ils(Math.max(0, ce.avail))}, אז חסרים ${ils(ce.gap)}. בררו עם הבנק אם הוא יממן כבר את התשלום השני.</p>`
+      : ce.early > chosen.eq + 1 ? ""
       : ce.early > need + 1 ? `<p class="small" style="margin:0;color:${ce.left < 2 * (f.expenses || 10000) ? "var(--gold)" : "var(--ok)"}">${ce.left < 2 * (f.expenses || 10000) ? "⚠ מספיק, אבל בקושי:" : "✓ יש לכם מספיק,"} גם לתשלומים של החודשיים הראשונים (${ils(ce.early)}). אחריהם יישארו לכם כ-${ils(Math.max(0, ce.left))} עד שהבנק מתחיל לממן.</p>`
       : `<p class="small" style="margin:0;color:var(--ok)">✓ יש לכם מספיק: צריך מהכיס לפחות ${ils(need)}, ויש לכם ${ils(avail)} אחרי העלויות הנלוות.</p>`}
     ${apprNote}</div>`;
@@ -1758,7 +1814,7 @@ function drawGm() {
     <p class="small muted" style="margin:0 0 6px">${v.kind === "street" ? "כל הרחוב" : "כל השכונה"}, מאז ${fmtDate(v.start + "-01")}. העסקה האחרונה: ${fmtDate(newest)}. בלי סינון לפי גיל הבניין (אין שנת בנייה ב-GovMap).</p>
     <div class="row" style="gap:6px;margin-bottom:6px">${sortBtn("date", "החדשות קודם")}${sortBtn("high", "היקרות קודם")}${sortBtn("low", "הזולות קודם")}</div>
     <div class="deals">${L.slice(0, g.limit).map(d => {
-      const bits = [d.rm ? `${+d.rm.toFixed(1)} חד׳` : "", d.ar ? `${nf.format(d.ar)} מ"ר` : "", d.ar > 20 ? `${ils(d.pr / d.ar)} למ"ר` : "", floorTxt(d.floor)].filter(Boolean);
+      const bits = [d.rm ? `${+d.rm.toFixed(1)} חד׳` : "", d.ar ? `${nf.format(d.ar)} מ"ר` : "", d.ar > 20 ? `${ils(d.pr / d.ar)} למ"ר` : "", esc(floorTxt(d.floor))].filter(Boolean);
       const addr = d.street ? `${d.street}${d.house ? " " + d.house : ""}` : "";
       const map = addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr + " " + v.city)}` : "";
       return `<div class="deal"><div class="spread"><b class="num">${ils(d.pr)}</b><span class="small muted">${fmtDate(d.iso)}</span></div>
@@ -1786,7 +1842,7 @@ function addrHtml(g, h) {
   const a = addrCache.get(g + "-" + h);
   if (a === undefined) return `<span class="muted">מאתר כתובת...</span>`;
   if (!a || !a.text) return `<span class="muted">אין כתובת רשומה למגרש (לרוב בנייה חדשה)</span>`;
-  const map = a.lat ? `https://www.google.com/maps/search/?api=1&query=${a.lat},${a.lon}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.text + " " + (dealsView ? dealsView.city : ""))}`;
+  const map = a.lat ? `https://www.google.com/maps/search/?api=1&query=${Number(a.lat)},${Number(a.lon)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.text + " " + (dealsView ? dealsView.city : ""))}`;
   return `📍 <a href="${map}" target="_blank" rel="noopener">${esc(a.text)}</a>${a.approx ? ' <span class="muted">(רחוב בלבד)</span>' : ""}`;
 }
 async function fillAddrs(list) {
@@ -1911,15 +1967,17 @@ function nextSteps() {
   const ds = dataStage(), si = stageIdx(), hi = stageIdx("handover"), early = si <= 2, preHand = hi < 0 || si < hi;
   if (ds) add("stagefix", `נראה שאתם כבר בשלב "${(st.find(s => s[0] === ds) || [])[1]}"`, `לפי התאריכים והתשלומים. השלב קובע אילו משימות ותזכורות תראו.`, "עדכון השלב", "stage:" + ds);
   const np = nextPayment(), dn = np ? daysTo(np.date) : null;
-  if (np && dn != null && dn <= 21) add("pay", `${esc(np.name)}: ${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + dn + " ימים"}`, `${ils(payAmount(np) + linkageCost(np))}, ${fmtDate(np.date)}. סמנו ✓ כשהתשלום יוצא.`, "לתשלומים", "go:buy:payments", "warn");
+  const preSign = np && p.sign && np.date === p.sign && daysTo(p.sign) >= 0, payLater = [];
+  if (np && dn != null && dn <= 21) (preSign ? (...a) => payLater.push(a) : add)("pay", `${esc(np.name)}: ${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + dn + " ימים"}`, `${ils(payAmount(np) + linkageCost(np))}, ${fmtDate(np.date)}. סמנו ✓ כשהתשלום יוצא.`, "לתשלומים", "go:buy:payments", "warn");
   const ceg = cashEarly(); if (ceg.gap > 0 && p.sign && daysTo(p.sign) > -60) add("gap", `חסרים ${ils(ceg.gap)} לתשלומים הראשונים`, `בחודשיים הראשונים משלמים לקבלן ${ils(ceg.early)}, לפני שהבנק מתחיל לממן. בררו עם יועץ המשכנתאות אם הבנק יממן כבר את התשלום השני, או איך לגשר על הפער.`, "פרטים", "go:calc:equity", "warn");
   const apprTask = S.tasks.find(x => !x.done && /אישור עקרוני/.test(x.text));
   if (apprTask && p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 60) add("appr", "קבלו אישור עקרוני למשכנתא לפני החתימה", "בלי אישור עקרוני אין ודאות שהבנק יממן, והתשלום השני לקבלן מגיע כ-45 יום אחרי החתימה.", "קיבלנו ✓", "task:" + apprTask.id, "warn");
-  if (p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 45 && !fl.lawyer && t.contractor) add("lawyer", "עורך דין שיעבור על החוזה", "לפני החתימה כדאי שעורך דין מטעמכם יבדוק את החוזה, את המפרט ואת לוח התשלומים. במחיר למשתכן שכר הטרחה מוגבל בחוק.", "יש לנו עו\"ד ✓", "seen:lawyer");
-  const ng = S.payments.filter(x => x.paid && !x.guarantee);
+  if (p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 45 && !fl.lawyer && t.contractor) add("lawyer", "עורך דין שיעבור על החוזה", "לפני החתימה כדאי שעורך דין מטעמכם יבדוק את החוזה, את המפרט ואת לוח התשלומים. במחיר למשתכן יש תקרה בחוק רק לשכר עורך הדין של הקבלן שאתם משלמים. שכר עורך הדין שלכם נקבע בהסכם איתו.", "יש לנו עו\"ד ✓", "seen:lawyer");
+  payLater.forEach(a => add(...a));
+  const ng = (() => { let cum = 0; return [...S.payments].sort((a, b) => (a.date || "").localeCompare(b.date || "")).filter(x => { const pc = S.payMode === "vouchers" ? payAmount(x) / (p.price || 1) * 100 : Number(x.pct) || 0; cum += pc; return x.paid && !x.guarantee && cum > 7.01; }); })();   /* the law requires security beyond the first 7% */
   if (t.contractor && ng.length && preHand) add("guar", ng.length === 1 ? `ל"${esc(ng[0].name)}" (${ils(payAmount(ng[0]))}) חסרה ערבות חוק מכר` : `ל-${ng.length} תשלומים ששולמו חסרה ערבות חוק מכר`, "בקשו מהקבלן או מהבנק המלווה ערבות על כל תשלום ששילמתם. בלעדיה הכסף לא מוגן אם הקבלן נקלע לקשיים. כשמקבלים, סמנו ✓ בתשלום.", "לתשלומים", "go:buy:payments", "warn");
   if (t.contractor && hi >= 0 && si >= hi) { const od = S.defects.filter(x => x.status !== "תוקן").length, we = warrantyEnd();
-    if (od || we) add("defects", od ? (od === 1 ? "ליקוי פתוח אחד" : `${od} ליקויים פתוחים`) : "שנת הבדק", `${we ? `שנת הבדק נגמרת ב-${fmtDate(we)}. ` : ""}דווחו לקבלן בכתב על כל ליקוי, ועקבו אחרי התיקון.`, "לליקויים", "go:buy:defects", od ? "warn" : ""); }
+    if (od || we) add("defects", od ? (od === 1 ? "ליקוי פתוח אחד" : `${od} ליקויים פתוחים`) : "בדק ואחריות", `${we ? `ליקויים שנראו במסירה מדווחים עד ${fmtDate(we)}. לצנרת, איטום וסדקים יש 2 עד 7 שנים. ` : ""}דווחו לקבלן בכתב על כל ליקוי, ועקבו אחרי התיקון.`, "לליקויים", "go:buy:defects", od ? "warn" : ""); }
   if (t.contractor && p.type === "ml" && !p.form4 && si === stageIdx("build")) add("form4", "קיבלתם טופס 4?", "התאריך קובע מתי מותר למכור את הדירה.", "הזנת התאריך", "act:form4");
   if (early && !f.savings) add("sav", "כמה כסף יש לכם?", "החסכונות קובעים כמה הון עצמי תוכלו לשים, ומזה נגזרת המשכנתא.", "הזנת חסכונות", "go:calc:equity");
   else if (early && !f.income) add("inc", "מה ההכנסה החודשית נטו?", "הבנק מגביל את ההחזר החודשי לפי ההכנסה.", "הזנת הכנסה", "go:calc:equity");
@@ -1985,7 +2043,8 @@ function screenWizard() {
   if (k === "city") {
     const projs = d.type === "ml" && matchCity(d.city) ? wizProjs(d.city) : [];
     body = `<h2>באיזו עיר?</h2>${inp("city", "עיר", 'autocomplete="off" placeholder="התחילו להקליד, למשל: פתח תקווה"')}<div id="wzsug" class="sugs"></div>
-      ${projs.length ? `<label class="f">הפרויקט שלכם (לא חובה)<select data-wzsel="proj"><option value="">לא יודע / לא ברשימה</option>${projs.map((o, j) => `<option value="${j}" ${d.proj === String(j) ? "selected" : ""}>${esc(o.nb || "")} · מגרש ${esc(o.name)} · הגרלה ${fmtDate(o.date)}</option>`).join("")}</select></label>
+      ${projs.length ? `<label class="f">הפרויקט שלכם (לא חובה)<select data-wzsel="proj"><option value="">לא יודע / לא ברשימה</option>${[...new Set(projs.map(o => o.nb || ""))].map(nb => `<optgroup label="${esc(nb || "פרויקטים")}">${projs.map((o, j) => [o, j]).filter(([o]) => (o.nb || "") === nb).map(([o, j]) => `<option value="${j}" ${d.proj === String(j) ? "selected" : ""}>מגרש ${esc(o.name)} · הגרלה ${fmtDate(o.date)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+        <p class="small muted">מספר המגרש מופיע במכתב הזכייה.</p>
         <p class="small muted">אם תבחרו, נמלא בשבילכם את תאריך ההגרלה ואת המחיר למ"ר מהרשימה הרשמית.</p>` : ""}`;
   }
   if (k === "price") {
@@ -2002,7 +2061,7 @@ function screenWizard() {
     ${d.type === "ml" ? inp("appraisal", "שמאות הדירה, אם כבר יש (₪)", 'inputmode="numeric" placeholder="לא חובה"') + `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי הדירה בשוק. בלי שמאות נעריך אותו כמחיר ועוד ההנחה (20% משווי השוק, עד 300 אלף ₪).</p>` : ""}`;
   const last = i === n - 1, canNext = k !== "type" && k !== "buyer";
   return `<div class="screen wizard"><div class="wzhead"><span class="small muted">שאלה ${i + 1}${d.type ? ` מתוך ${n}` : ""}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
-    <div class="card">${body}${wiz.err ? `<p class="small" style="color:var(--warn)">${wiz.err}</p>` : ""}</div>
+    <div class="card">${body}${wiz.err ? `<p class="small wzerr" role="alert" style="color:var(--warn)">${wiz.err}</p>` : ""}</div>
     <div class="row wznav">${canNext ? `<button data-act="wznext">${last ? "סיום ←" : "המשך ←"}</button>` : ""}${k === "money" ? `<button class="ghost" data-act="wzfinish">דלג וסיים</button>` : ""}${i > 0 ? `<button class="link" data-act="wzback">חזרה</button>` : `<button class="link" data-act="wzcancel">ביטול</button>`}</div></div>`;
 }
 function wizCalc() {
@@ -2025,7 +2084,7 @@ function wizCalcHtml() {
     <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><input type="checkbox" data-wzdisc ${wiz.d.disc === false ? "" : "checked"} style="width:auto;flex:none;margin-top:3px"><span>להוריד את הנחת המשתכן: <bdi>20%</bdi> מהמחיר, עד 300 אלף ₪. בטלו את הסימון רק אם המחיר למ"ר בחוזה שלכם כבר אחרי הנחה.</span></label>`;
 }
 function liveComma(t) {
-  const raw = t.value, pos = t.selectionStart == null ? raw.length : t.selectionStart, digitsBefore = raw.slice(0, pos).replace(/\D/g, "").length, digits = raw.replace(/\D/g, "");
+  const raw = t.value, pos = t.selectionStart == null ? raw.length : t.selectionStart, int = raw.split(".")[0], digitsBefore = raw.slice(0, Math.min(pos, int.length)).replace(/\D/g, "").length, digits = int.replace(/\D/g, "");   /* whole shekels: anything after a decimal point is dropped */
   const out = digits ? nf2.format(+digits) : ""; if (out === raw) return;
   t.value = out; let i = 0, seen = 0; while (i < out.length && seen < digitsBefore) { if (/\d/.test(out[i])) seen++; i++; }
   try { t.setSelectionRange(i, i); } catch (e) {}
@@ -2078,8 +2137,8 @@ const GLOSS = {
   linked: ["קבועה צמודה", "הריבית קבועה, אבל הקרן צמודה למדד המחירים לצרכן. כשיש אינפלציה, החוב וההחזר גדלים. ההחזר הראשון נמוך, אבל הסך הכול תלוי באינפלציה."],
   mix: ["תמהיל", "החלוקה של המשכנתא בין מסלולים. לפי בנק ישראל, לפחות שליש צריך להיות בריבית קבועה."],
   pti: ["יחס החזר מההכנסה", "כמה מההכנסה החודשית נטו הולך להחזרי הלוואות. עד 40% נחשב תקין, ומעל 50% הבנק לא יאשר."],
-  linkage: ["הצמדה למדד תשומות הבנייה", "בדירה מקבלן, חלק מהתשלומים מתעדכן לפי מדד שמודד את עלויות הבנייה. כשהמדד עולה, התשלום גדל. החוזה קובע כמה מכל תשלום צמוד ומאיזה תשלום."],
-  guarantee: ["ערבות חוק מכר", "על כל תשלום לקבלן הבנק המלווה צריך לתת לכם ערבות. אם הקבלן נקלע לקשיים, הערבות מחזירה לכם את הכסף. בלי ערבות הכסף לא מוגן."],
+  linkage: ["הצמדה למדד תשומות הבנייה", "בדירה מקבלן, חלק מהתשלומים מתעדכן לפי מדד שמודד את עלויות הבנייה. כשהמדד עולה, התשלום גדל. החוזה קובע כמה מכל תשלום צמוד ומאיזה תשלום. לפי חוק המכר (מיולי 2022): 20% הראשונים מהמחיר לא צמודים, אפשר להצמיד לכל היותר 50% מכל תשלום אחריהם (עד 40% מהמחיר), וההצמדה נעצרת במועד המסירה שבחוזה, גם אם הקבלן מאחר."],
+  guarantee: ["ערבות חוק מכר", "על כל תשלום לקבלן הבנק המלווה צריך לתת לכם ערבות. אם הקבלן נקלע לקשיים, הערבות מחזירה לכם את הכסף. בלי ערבות הכסף לא מוגן. לפי החוק הקבלן לא יכול לקבל יותר מ-7% מהמחיר בלי בטוחה. כסף ששולם שלא בשובר (למשל ישירות לקבלן על שינויים) עלול לא להיות מוגן. אם לא קיבלתם ערבות, אפשר לפנות לממונה על חוק המכר במשרד השיכון."],
   appraisal: ["שמאות", "שמאי מטעם הבנק קובע כמה שווה הדירה. במחיר למשתכן הבנק מממן לפי השווי הזה, שגבוה בדרך כלל מהמחיר שאתם משלמים."],
   vouchers: ["פנקס שוברים", "בדירה מקבלן משלמים לרוב בשוברים מהבנק המלווה, ולא בהעברה לקבלן. כל שובר משויך לפרויקט, וכך מקבלים ערבות על הכסף."]
 };
@@ -2179,7 +2238,7 @@ function buildICS() {
   const td = ymd(today()), P = S.profile;
   const evs = S.payments.filter(p => !p.paid && p.date && p.date >= td).map(p => ev(p.date, "תשלום לדירה: " + p.name, "סכום משוער " + ils(payAmount(p) + linkageCost(p)), "pay-" + p.id));
   if (P.delivery && P.delivery >= td) evs.push(ev(P.delivery, T().contractor ? "מסירת הדירה" : "קבלת מפתח", P.city || "", "delivery"));
-  const we = warrantyEnd(); if (we && we >= td && T().contractor) evs.push(ev(we, "סוף שנת הבדק", "עד המועד הזה כדאי לדווח לקבלן על כל הליקויים", "warranty"));
+  const we = warrantyEnd(); if (we && we >= td && T().contractor) evs.push(ev(we, "שנה מהמסירה: דיווח ליקויים", "מועד אחרון לדווח לקבלן על ליקויים שנראו במסירה. לליקויים אחרים יש תקופות ארוכות יותר", "warranty"));
   const sa = saleAllowed(); if (sa && sa >= td) evs.push(ev(sa, "מותר למכור את הדירה", "לפי כללי מחיר למשתכן", "sale"));
   return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//maftech//he", "CALSCALE:GREGORIAN", ...evs, "END:VCALENDAR"].join("\r\n");
 }
@@ -2203,7 +2262,9 @@ document.getElementById("restorefile").addEventListener("change", e => {
     try {
       const j = JSON.parse(rd.result); if (!j || j.app !== "maftech" || !j.state || !j.state.profile) throw 0;
       if (store.shared && !confirm("הרכישה משותפת. השחזור יחליף את הנתונים גם בטלפון של מי שמשתף איתכם. להמשיך?")) return;
-      S = migrate(j.state); S.example = false; persist(); setupOpen = false; tab = "home"; render(); toast("הנתונים שוחזרו מהגיבוי");
+      const prev = S; S = migrate(j.state); S.example = false; setupOpen = false; tab = "home";
+      try { render(); } catch (er) { S = prev; render(); throw er; }
+      persist(); toast("הנתונים שוחזרו מהגיבוי");
     } catch (err) { toast("הקובץ הזה הוא לא גיבוי של מפתח"); }
   };
   rd.readAsText(f);
@@ -2276,7 +2337,7 @@ document.addEventListener("click", e => {
     case "saveSetup": {
       let saveMsg = "נשמר";
       const v = id => document.getElementById(id).value, num = id => Number(String(v(id)).replace(/[^\d.]/g, "")) || 0;
-      const prof = { type: v("f_type"), buyer: v("f_buyer"), city: v("f_city").trim(), price: num("f_price"), sign: v("f_sign"), delivery: v("f_delivery"), linkedShare: v("f_type") === "resale" ? 0 : num("f_linked"), lottery: v("f_lottery"), form4: v("f_form4"), stage: "before" };
+      const prof = { type: v("f_type"), buyer: v("f_buyer"), city: v("f_city").trim(), price: num("f_price"), sign: v("f_sign"), delivery: v("f_delivery"), linkedShare: v("f_type") === "resale" ? 0 : Math.min(100, num("f_linked")), lottery: v("f_lottery"), form4: v("f_form4"), stage: "before" };
       if (!prof.price || !prof.sign) { toast("צריך למלא מחיר ותאריך חתימה"); return; }
       if (prof.price < 200000 || prof.price > 50000000) { toast("מחיר הדירה נראה לא סביר. בדקו את המספר."); return; }
       if (prof.type === "ml" && prof.buyer !== "first") { toast("במחיר למשתכן הקונה צריך להיות חסר דירה. בחרו \"דירה ראשונה\"."); return; }
@@ -2284,9 +2345,16 @@ document.addEventListener("click", e => {
       if (prof.lottery && prof.lottery > prof.sign) { toast("תאריך ההגרלה צריך להיות לפני החתימה"); return; }
       if (prof.form4 && prof.form4 < prof.sign) { toast("טופס 4 צריך להיות אחרי החתימה"); return; }
       if (S.example) S = newState(prof, false);
-      else if (prof.type !== S.profile.type) { const keep = { fin: S.fin, mix: S.mix, offers: S.offers }; S = Object.assign(newState(prof, false), keep); }
-      else { prof.stage = S.profile.stage; const old = S.profile.price, priceChanged = prof.price !== old; S.profile = prof;
-        if (priceChanged) { S.fin.equity = null; if (S.payMode === "vouchers") S.payments.forEach(x => { if (!x.paid && x.amount) x.amount = Math.round(x.amount / old * prof.price); }); saveMsg = "המחיר עודכן. סכומי השוברים שעוד לא שולמו חושבו מחדש לפי אותם אחוזים."; } }
+      else if (prof.type !== S.profile.type) { if (!confirm("שינוי סוג הרכישה יחליף את המשימות ולוח התשלומים בברירת המחדל של הסוג החדש. ליקויים ומסמכים שצירפתם יישמרו. להמשיך?")) return;
+        const keep = { fin: S.fin, mix: S.mix, offers: S.offers, defects: S.defects }, ns = Object.assign(newState(prof, false), keep);
+        const withFile = S.docs.filter(x => x.url); ns.docs = [...withFile, ...ns.docs.filter(d => !withFile.some(w => w.name === d.name))]; S = ns; }
+      else { prof.stage = S.profile.stage; const old = S.profile.price, priceChanged = prof.price !== old, oldP = S.profile;
+        const datesChanged = T().contractor && S.payMode !== "vouchers" && (prof.sign !== oldP.sign || prof.delivery !== oldP.delivery) && S.payments.some(x => !x.paid);
+        if (datesChanged && confirm("התאריכים השתנו. לעדכן את מועדי התשלומים שעוד לא שולמו לפי התאריכים החדשים?")) {
+          const ps = [...S.payments].sort((a, b) => (a.date || "").localeCompare(b.date || "")), fresh = scheduleFromPcts(ps.map(x => Number(x.pct) || 0), prof.sign, prof.delivery);
+          ps.forEach((x, i) => { if (!x.paid && fresh[i]) x.date = fresh[i].date; }); saveMsg = "נשמר. מועדי התשלומים עודכנו"; }
+        S.profile = prof;
+        if (priceChanged) { S.fin.equity = null; if (S.payMode === "vouchers") S.payments.forEach(x => { if (!x.paid && x.amount) x.amount = Math.round(x.amount / old * prof.price); }); saveMsg = S.payMode === "vouchers" ? "המחיר עודכן. סכומי השוברים שעוד לא שולמו חושבו מחדש לפי אותם אחוזים." : "המחיר עודכן. תשלומים ששולמו נשארו בסכום ששולם."; } }
       setupOpen = false; tab = "home"; persist(); render(); window.scrollTo(0, 0); toast(saveMsg); break;
     }
     case "share": createShare(); break;
@@ -2296,7 +2364,7 @@ document.addEventListener("click", e => {
     case "sharesend": { const url = location.origin + "/?join=" + store.code, text = `הצטרפו לרכישה המשותפת שלנו באפליקציית מפתח: ${url}\n(קוד השיתוף: ${store.code})`;
       if (navigator.share) navigator.share({ title: "מפתח", text }).catch(() => {}); else location.href = "https://wa.me/?text=" + encodeURIComponent(text); break; }
     case "leavedel": { const c = store.code; if (!confirm("למחוק את הרכישה המשותפת מהשרת? בטלפון השני היא תפסיק להתעדכן. בטלפון הזה הנתונים יישארו.")) break;
-      fetch("/api/household?code=" + encodeURIComponent(c), { method: "DELETE" }).catch(() => {});
+      if (store.shared && store.shared.del) store.shared.del(); else fetch("/api/household?code=" + encodeURIComponent(c), { method: "DELETE" }).catch(() => {});
       if (confirm("למחוק מהשרת גם את קבצי המסמכים? הם יישארו רק אם שמרתם אותם בטלפון.")) { for (const x of S.docs) if (x.url && x.url.startsWith("file:") && store.assets && store.assets.remove) { store.assets.remove(x.assetId); x.url = null; x.assetId = null; x.fkey = null; } persist(); }
       leaveShare(); toast("הרכישה המשותפת נמחקה מהשרת"); break; }
     case "invjoin": { const c = invite.code; invite = null; joinShare(c); break; }
@@ -2331,7 +2399,8 @@ document.addEventListener("click", e => {
     case "restore": document.getElementById("restorefile").click(); break;
     case "reset": confirmReset = true; render(); break;
     case "resetno": confirmReset = false; render(); break;
-    case "resetyes": { const keepShare = !!store.shared; S = exampleState(); if (keepShare) S.example = false; confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("הנתונים נמחקו. מתחילים מחדש"); break; }
+    case "resetyes": { if (store.shared) { if (!confirm("הרכישה משותפת. התחלה מחדש תנתק את הטלפון הזה מהשיתוף, ואצל מי שמשתף איתכם הנתונים יישארו. להמשיך?")) break; leaveShare(); }
+      S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("הנתונים נמחקו. מתחילים מחדש"); break; }
   }
 });
 document.addEventListener("click", e => { if (e.target.id === "sheet") { e.target.hidden = true; e.target.innerHTML = ""; } });
@@ -2342,12 +2411,12 @@ document.addEventListener("input", e => {
   if (t.id === "qpcts") { const p = parsePcts(t.value), s = p.reduce((a, b) => a + b, 0), el = document.getElementById("qsum"); if (el) { el.textContent = `${p.length} תשלומים, סה"כ ${nf.format(s)}%`; el.style.color = Math.abs(s - 100) < .01 ? "var(--ok)" : "var(--warn)"; } return; }
   if ("wzdisc" in d && wiz) { wiz.d.disc = t.checked; const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); return; }
   if (t.inputMode === "numeric" && !(d.pf || "").endsWith(":voucher")) liveComma(t);
-  if (d.wzf) { wiz.d[d.wzf] = t.value; if (d.wzf === "city") { wizSuggest(t.value); const mc = matchCity(t.value); if (wiz.d.type === "ml" && mc && normCity(mc) === normCity(t.value) && mc !== render.wzCity) { render.wzCity = mc; wiz.d.proj = ""; wiz.d.ppsqm = 0; render(); } } if (["size", "balc", "stor", "park"].includes(d.wzf)) { const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); } return; }
+  if (d.wzf) { wiz.d[d.wzf] = t.value; if (wiz.err) { wiz.err = ""; const er = document.querySelector(".wzerr"); if (er) er.remove(); } if (d.wzf === "city") { wizSuggest(t.value); const mc = matchCity(t.value); if (wiz.d.type === "ml" && mc && normCity(mc) === normCity(t.value) && mc !== render.wzCity) { render.wzCity = mc; wiz.d.proj = ""; wiz.d.ppsqm = 0; render(); } } if (["size", "balc", "stor", "park"].includes(d.wzf)) { const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); } return; }
   if (t.id === "areasearch") { applyAreaFilter(t.value); areaSuggest(t.value); return; }
   if (d.src) { const [id, f] = d.src.split(":"), x = srcList().find(k => k.id === id); if (x) { x[f] = (f === "amount" || f === "monthly" || f === "now") ? Math.max(0, Number(String(t.value).replace(/[^\d.]/g, "")) || 0) : t.value; persist(); refreshOut(); } return; }
   if (d.c === "fin.equity") { const v = String(t.value).trim(); S.fin.equity = v ? Math.max(0, Number(v.replace(/[^\d.]/g, "")) || 0) : null; S.fin.eqCustom = !!v; persist(); refreshOut(); return; }
-  if (d.c) { const v = Number(String(t.value).replace(/[^\d.]/g, "")); setPath(d.c, isNaN(v) ? 0 : Math.max(0, v)); if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
-  if (d.of) { const [id, f] = d.of.split(":"), x = S.offers.find(k => k.id === id); if (x) { x[f] = f === "bank" ? t.value : Number(String(t.value).replace(/[^\d.]/g, "")) || 0; persist(); refreshOut(); } if (f === "amount" || f === "first" || f === "total") liveComma(t); return; }
+  if (d.c) { const raw = String(t.value).replace(/,(\d{1,2})$/, ".$1"), v = Number(/^(mix\.r|mix\.infl|fin\.ret|idxRate)/.test(d.c) || t.inputMode === "decimal" ? raw.replace(/[^\d.]/g, "") : raw.split(".")[0].replace(/[^\d]/g, "")); setPath(d.c, isNaN(v) ? 0 : Math.max(0, v)); if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
+  if (d.of) { const [id, f] = d.of.split(":"), x = S.offers.find(k => k.id === id); if (x) { x[f] = f === "bank" ? t.value : Number(String(t.value).replace(/,(\d{1,2})$/, ".$1").replace(/[^\d.]/g, "")) || 0; persist(); refreshOut(); } if (f === "amount" || f === "first" || f === "total") liveComma(t); return; }
   if (d.pf) { const [id, f] = d.pf.split(":"), x = S.payments.find(k => k.id === id); if (x) { if (f === "voucher") x.name = "שובר " + t.value; x[f] = (f === "pct" || f === "amount") ? Math.max(0, Number(String(t.value).replace(/[^\d.]/g, "")) || 0) : t.value;
       if (S.payMode === "vouchers" && f === "pct") { x.amount = Math.round(S.profile.price * x.pct / 100); const m = document.querySelector(`[data-pf="${id}:amount"]`); if (m) m.value = x.amount ? fmtIn(x.amount) : ""; }
       if (S.payMode === "vouchers" && f === "amount") { const pp = document.querySelector(`[data-pf="${id}:pct"]`); if (pp) pp.value = x.amount ? +(x.amount / S.profile.price * 100).toFixed(2) : ""; } persist(); const a = document.getElementById("pa_" + id); if (a) a.textContent = ils(payAmount(x) + linkageCost(x)); updatePayChip(); } return; }
@@ -2357,7 +2426,7 @@ document.addEventListener("change", e => {
   if (d.srcchk) { const [id, f] = d.srcchk.split(":"), x = srcList().find(k => k.id === id); if (x) { x[f] = t.checked; persist(); render(); } return; }
   if (d.src) { if (d.src.endsWith(":date")) render(); else if (/:amount$|:monthly$|:now$/.test(d.src)) t.value = fmtIn(Number(String(t.value).replace(/[^\d.]/g, "")) || ""); return; }
   if (d.task) { const x = S.tasks.find(k => k.id === d.task); if (x) { x.done = t.checked; if (t.checked) maybeAdvance(); persist(); render(); } return; }
-  if (d.paid) { const x = S.payments.find(k => k.id === d.paid); if (x) { x.paid = t.checked; persist(); render(); } return; }
+  if (d.paid) { const x = S.payments.find(k => k.id === d.paid); if (x) { if (t.checked) { x.paidAmt = Math.round(payAmount(x)); x.paid = true; } else { x.paid = false; delete x.paidAmt; } persist(); render(); } return; }
   if (d.plink) { const x = S.payments.find(k => k.id === d.plink); if (x) { x.linked = t.checked; persist(); render(); } return; }
   if (d.pguar) { const x = S.payments.find(k => k.id === d.pguar); if (x) { x.guarantee = t.checked; persist(); render(); } return; }
   if (d.pf) { updatePayChip(); if (d.pf.endsWith(":amount")) t.value = fmtIn(Number(String(t.value).replace(/[^\d.]/g, "")) || ""); return; }
@@ -2368,7 +2437,7 @@ document.addEventListener("change", e => {
   if (t.id === "wcity") { wavesCity = t.value; areaShowAll = false; areaQ = areaQraw = ""; render(); return; }
   if (t.id === "pxage") { pxAge = +t.value; render(); return; }
   if (t.id === "pxrooms") { pxRooms = +t.value; render(); return; }
-  if (d.wzsel === "proj") { const projs = wizProjs(wiz.d.city), o = projs[+t.value]; wiz.d.proj = t.value; if (o) { wiz.d.lottery = o.date; wiz.d.ppsqm = o.ppsqm || 0; } else { wiz.d.ppsqm = 0; } return; }
+  if (d.wzsel === "proj") { if (wiz.err) wiz.err = ""; const projs = wizProjs(wiz.d.city), o = projs[+t.value]; wiz.d.proj = t.value; if (o) { wiz.d.lottery = o.date; wiz.d.ppsqm = o.ppsqm || 0; } else { wiz.d.ppsqm = 0; } return; }
   if (t.id === "f_type") {
     const ty = t.value; document.querySelector(".contractor-only").hidden = ty === "resale"; document.querySelector(".ml-only").hidden = ty !== "ml";
     document.getElementById("l_deliv").firstChild.textContent = ty === "resale" ? "קבלת מפתח" : "מסירה צפויה";
