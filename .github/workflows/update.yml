@@ -1,0 +1,39 @@
+# Daily data refresh for the installable app. Runs every morning, updates the data inside index.html,
+# tests it, and commits. Netlify publishes automatically after each commit.
+name: daily-data-update
+on:
+  schedule:
+    - cron: "52 2 * * *"      # 02:52 UTC = 04:52 בחורף / 05:52 בקיץ, שעון ישראל
+  workflow_dispatch: {}        # "Run workflow" button for a manual run
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install requests playwright
+          python -m playwright install --with-deps chromium
+      - name: Update market numbers (Bank of Israel, CBS)
+        run: python pipeline/market_update.py pipeline/market.json
+        continue-on-error: true
+      - name: Update data
+        run: |
+          python pipeline/update.py --app index.html --data pipeline/data --out index.new.html --market pipeline/market.json --report report.json
+      - name: Test the app
+        run: python pipeline/test_app.py index.new.html
+      - name: Publish
+        run: |
+          mv index.new.html index.html
+          git config user.name "maftech-bot"
+          git config user.email "maftech-bot@users.noreply.github.com"
+          git add index.html pipeline/data pipeline/market.json
+          git diff --cached --quiet && echo "nothing changed" && exit 0
+          git commit -m "עדכון נתונים יומי $(date +%d.%m.%Y)"
+          git push

@@ -1,0 +1,9 @@
+{
+  "name": "maftech",
+  "private": true,
+  "type": "module",
+  "description": "מפתח – אפליקציה לקונים דירה",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
