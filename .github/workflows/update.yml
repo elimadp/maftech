@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "52 2 * * *"      # 02:52 UTC = 04:52 בחורף / 05:52 בקיץ, שעון ישראל
   workflow_dispatch: {}        # "Run workflow" button for a manual run
+  push:                        # also run when the update scripts themselves change
+    branches: [main]
+    paths: [".github/workflows/update.yml", "pipeline/*.py"]
 permissions:
   contents: write
 jobs:
