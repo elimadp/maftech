@@ -1363,7 +1363,20 @@ function dealKeep(d) {
   if (pxRooms === 4 && t !== "H") return false;
   return true;
 }
-async function openDeals(city, label) {
+async function openStreetDeals(city, street) {
+  street = String(street || "").trim(); if (street.length < 2) { toast("כתבו שם רחוב"); return; }
+  const el = document.getElementById("sheet"), key = Object.keys(PX.c).find(c => sameCity(c, city)); if (!el || !key) return;
+  el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="עסקאות ברחוב"><div class="spread"><h2>רחוב ${esc(street)}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div><div id="dealsbox"><p class="muted">מחפש את הרחוב...</p></div></div>`;
+  el.hidden = false;
+  let pairs = [];
+  try {
+    const j = await (await fetch(`https://www.over.org.il/api/nadlan/lookup?city=${encodeURIComponent(key)}&street=${encodeURIComponent(street)}&fields=identity&limit=200`)).json();
+    pairs = [...new Map((j.data || []).map(d => d.identity || {}).filter(i => i.gush && i.helka).map(i => [i.gush + "-" + i.helka, [String(i.gush), String(i.helka)]])).values()];
+  } catch (e) { const b = document.getElementById("dealsbox"); if (b) b.innerHTML = `<p style="color:var(--warn)">החיפוש לא הצליח. בדקו חיבור לאינטרנט ונסו שוב.</p>`; return; }
+  if (!pairs.length) { const b = document.getElementById("dealsbox"); if (b) b.innerHTML = `<p class="muted">לא מצאנו רחוב בשם "${esc(street)}" ב${esc(key)}. נסו בלי "רחוב", בלי מספר בית, או בכתיב אחר.</p>`; return; }
+  openDeals(city, null, { title: "רחוב " + street, pairs });
+}
+async function openDeals(city, label, extra) {
   const el = document.getElementById("sheet"), key = label ? Object.keys(PX.a).find(c => sameCity(c, city)) : Object.keys(PX.c).find(c => sameCity(c, city));
   if (!el || !key) return;
   const row = label ? (PX.a[key] || []).find(r => r[0] === label) : null;
@@ -1371,7 +1384,7 @@ async function openDeals(city, label) {
   if (label && !(gushes && gushes.length)) { toast("לשכונה הזו עוד אין רשימת עסקאות"); return; }
   const per = ["בשנה האחרונה", "בשנתיים האחרונות", "ב-5 השנים האחרונות"][pxPer];
   const desc = [PX_AGES[pxAge][0], PX_ROOMS[pxRooms][0], per].join(" · ");
-  el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="עסקאות"><div class="spread"><h2>${esc(label || key)}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div>
+  el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="עסקאות"><div class="spread"><h2>${esc(extra ? extra.title : label || key)}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div>
     <p class="small muted" style="margin:0">${esc(desc)}</p><div id="dealsbox"><p class="muted">טוען את העסקאות מרשות המסים...</p></div></div>`;
   el.hidden = false;
   const ym = thruYM(); if (!ym) return;
@@ -1380,6 +1393,7 @@ async function openDeals(city, label) {
   const dq = "to_date(deal_date,'DD/MM/YYYY')";
   const sql = `SELECT deal_date, deal_amount, deal_nature, year_built, asset_area, room_num, gush, chelka FROM ${DEALS_T} WHERE settlement=${sq(key)}`
     + (gushes ? ` AND gush IN (${gushes.map(sq).join(",")})` : "")
+    + (extra && extra.pairs ? ` AND (gush, chelka) IN (${extra.pairs.map(([g, h]) => `(${sq(g)},${sq(h)})`).join(",")})` : "")
     + ` AND ${dq}>='${ymd(start)}' AND ${dq}<'${ymd(end)}' AND deal_nature IN (${Object.keys(NATURE_T).map(sq).join(",")}) AND portion='1.000' ORDER BY ${dq} DESC LIMIT 3000`;
   let list;
   try {
@@ -1432,10 +1446,12 @@ async function fillAddrs(list) {
   };
   for (let i = 0; i < todo.length; i += 6) await Promise.all(todo.slice(i, i + 6).map(one));
 }
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "streetq") { e.preventDefault(); openStreetDeals(currentPxCity(), e.target.value); } });
 document.addEventListener("click", e => {
   const tr = e.target.closest("tr[data-deals]"); if (tr) { openDeals(currentPxCity(), tr.dataset.deals); return; }
-  const b = e.target.closest("[data-dealscity],[data-dsort],[data-dmore]"); if (!b) return;
+  const b = e.target.closest("[data-dealscity],[data-dsort],[data-dmore],[data-streetgo]"); if (!b) return;
   if (b.dataset.dealscity) openDeals(currentPxCity(), null);
+  else if (b.dataset.streetgo) { const i = document.getElementById("streetq"); openStreetDeals(currentPxCity(), i ? i.value : ""); }
   else if (b.dataset.dsort && dealsView) { dealsView.sort = b.dataset.dsort; dealsView.limit = 60; drawDeals(); }
   else if (b.dataset.dmore && dealsView) { dealsView.limit += 60; drawDeals(); }
 });
@@ -1451,7 +1467,8 @@ function pxCard(city) {
     <div class="segs" role="group" aria-label="תקופה">${["שנה אחרונה", "שנתיים", "5 שנים"].map((l, i) => `<button data-pxper="${i}" aria-pressed="${pxPer === i}">${l}</button>`).join("")}</div>
     <p class="small muted">${desc}. נתונים עד ${NAT.through}.</p>
     ${cc ? `<div class="kpis"><div><span class="small muted">חציון בעיר</span><b class="num">${kils(cc[0])}</b></div><div><span class="small muted">ממוצע בעיר</span><b class="num">${kils(cc[1])}</b></div><div><span class="small muted">עסקאות</span><b class="num">${nf.format(cc[2])}</b></div></div>
-      <div class="row" style="justify-content:space-between"><span class="small muted">${rows.some(r => r[2]) ? "הקישו על שכונה כדי לראות את העסקאות עצמן." : ""}</span><button class="link small" data-dealscity="1">כל העסקאות בעיר ←</button></div>` : `<p class="muted">פחות מ-5 עסקאות כאלה בעיר בתקופה הזו. נסו תקופה ארוכה יותר או פחות סינון.</p>`}
+      <div class="row" style="justify-content:space-between"><span class="small muted">${rows.some(r => r[2]) ? "הקישו על שכונה כדי לראות את העסקאות עצמן." : ""}</span><button class="link small" data-dealscity="1">כל העסקאות בעיר ←</button></div>
+      <label class="f">עסקאות ברחוב מסוים<span class="row" style="flex-wrap:nowrap"><input id="streetq" data-key="streetq" placeholder="שם הרחוב, למשל: העצמאות" enterkeyhint="search" style="flex:1;min-width:0"><button class="ghost" data-streetgo="1">חיפוש</button></span></label>` : `<p class="muted">פחות מ-5 עסקאות כאלה בעיר בתקופה הזו. נסו תקופה ארוכה יותר או פחות סינון.</p>`}
     ${rows.length ? `<div class="tbl tight"><table><thead><tr><th>שכונה</th><th>חציון<br><span class="small">מיליון ₪</span></th><th>ממוצע<br><span class="small">מיליון ₪</span></th><th>עס׳</th></tr></thead><tbody id="pxtb">
       ${rows.map((r, i) => `<tr data-nm="${esc(normNb(r[0]))}" data-i="${i}" ${r[2] ? `data-deals="${esc(r[0])}"` : ""} ${areaHidden(normNb(r[0]), i) ? "hidden" : ""}><td style="white-space:normal;min-width:7.5rem">${esc(r[0])}${r[1][2] < 10 ? ' <span class="chip mute">מעט עסקאות</span>' : ""}</td><td>${(r[1][0] / 1000).toFixed(2)}</td><td>${(r[1][1] / 1000).toFixed(2)}</td><td>${nf.format(r[1][2])}</td></tr>`).join("")}
       </tbody></table></div>
