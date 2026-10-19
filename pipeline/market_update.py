@@ -7,7 +7,7 @@
 
 Usage: python3 market_update.py market.json
 Anything that cannot be fetched or fails a sanity check is left as it was (and reported).
-Average mortgage rates are not touched here.
+Average mortgage rates are not touched here (they stay as entered).
 """
 import datetime, json, sys
 import requests

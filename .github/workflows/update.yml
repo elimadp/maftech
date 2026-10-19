@@ -52,4 +52,9 @@ jobs:
           git add index.html pipeline/data pipeline/market.json
           git diff --cached --quiet && echo "nothing changed" && exit 0
           git commit -m "עדכון נתונים יומי $(date +%d.%m.%Y)"
-          git push
+          # someone (or Claude) may have pushed while the update ran: rebase on top and retry
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            sleep 10
+          done
+          exit 1
