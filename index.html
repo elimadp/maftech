@@ -1426,9 +1426,13 @@ function drawDeals() {
   fillAddrs(L.slice(0, v.limit));
 }
 /* ---------- fresher deals with address and floor: GovMap's public real-estate API (the official map site) ---------- */
+let gmDiag = "";
 async function gmFetch(path) {
-  try { const r = await fetch("https://www.govmap.gov.il/api/" + path, { headers: { accept: "application/json" } }); if (r.ok) return await r.json(); } catch (e) {}
-  const r = await fetch("/api/govmap?p=" + encodeURIComponent(path)); if (!r.ok) throw new Error("govmap " + r.status); return await r.json();
+  let d1 = "";
+  try { const r = await fetch("https://www.govmap.gov.il/api/" + path); if (r.ok) return await r.json(); d1 = "ישיר " + r.status; } catch (e) { d1 = "ישיר: חסום"; }
+  let d2 = "";
+  try { const r = await fetch("/api/govmap?p=" + encodeURIComponent(path)); if (r.ok) return await r.json(); let j = {}; try { j = await r.json(); } catch (e) {} d2 = "שרת " + r.status + (j.status != null ? "/" + j.status : "") + (j.body ? " " + String(j.body).slice(0, 60) : ""); } catch (e) { d2 = "שרת: לא זמין"; }
+  gmDiag = d1 + " · " + d2; throw new Error(gmDiag);
 }
 const gmPick = (x, ...k) => { for (const n of k) if (x[n] != null && x[n] !== "") return x[n]; return null; };
 async function loadGm() {
@@ -1466,7 +1470,7 @@ function drawGm() {
   const b = document.getElementById("dealsbox"), v = dealsView, g = v.gm; if (!b) return;
   const back = `<button class="link small" data-gmback="1">← חזרה לרשימה הרגילה</button>`;
   if (g.loading) { b.innerHTML = `${back}<p class="muted">טוען עסקאות מ-GovMap...</p>`; return; }
-  if (g.error) { b.innerHTML = `${back}<p style="color:var(--warn)">לא הצלחנו להתחבר ל-GovMap כרגע. אפשר לנסות שוב מאוחר יותר, או לחפש ישירות ב<a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>.</p>`; return; }
+  if (g.error) { b.innerHTML = `${back}<p style="color:var(--warn)">לא הצלחנו להתחבר ל-GovMap כרגע. אפשר לנסות שוב מאוחר יותר, או לחפש ישירות ב<a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>.</p><p class="small muted">פרטים טכניים: ${esc(gmDiag)}</p>`; return; }
   const L = g.rows.slice().sort(g.sort === "date" ? (a, c) => c.iso.localeCompare(a.iso) : g.sort === "high" ? (a, c) => c.pr - a.pr : (a, c) => a.pr - c.pr);
   if (!L.length) { b.innerHTML = `${back}<p class="muted">GovMap לא החזיר עסקאות מגורים כאלה בתקופה הזו.</p>`; return; }
   const ps = L.map(d => d.pr).sort((a, c) => a - c), medv = ps.length % 2 ? ps[(ps.length - 1) / 2] : (ps[ps.length / 2 - 1] + ps[ps.length / 2]) / 2;
