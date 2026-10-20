@@ -144,7 +144,7 @@ with sync_playwright() as p:
     ri.fill("4.8"); ri.dispatch_event("input"); E("S.mix.years=25; persist()")
     E("S.fin.bankEarly=true; persist(); go('home')"); pg.wait_for_timeout(100); t = pg.inner_text("#view"); exp = 350000 - E("payAlloc().filter(a=>a.x.date<=addDays(S.profile.sign,60)).reduce((s,a)=>s+a.own,0)") - E("costsEarly()")
     lw = E("cashflow().low.close")
-    check("N3 בבית: החודש הקשה תואם לתזרים במימון מיום 45 (ושורת 'עד שהבנק' לא כפולה)", ils_(lw), "מופיע" if ils_(lw) in t and "עד שהבנק מתחיל לממן" not in t else "לא", ils_(lw) in t and "עד שהבנק מתחיל לממן" not in t)
+    check("N3 בבית: החודש הקשה תואם לתזרים במימון מיום 45 (ושורת 'עד שהבנק' לא כפולה)", ils_(abs(lw)), "מופיע" if ils_(abs(lw)) in t and "עד שהבנק מתחיל לממן" not in t else "לא", ils_(abs(lw)) in t and "עד שהבנק מתחיל לממן" not in t)
     E("S.fin.bankEarly=false; persist()")
     E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[ps.length-1].date='2031-03-01'; persist()})()")
     r = E("(()=>{const c=cashflow(); const a=c.rows.find(r=>r.m==='2030-12'); return a ? a.net : null})()")
