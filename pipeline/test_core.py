@@ -5,6 +5,7 @@ B = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8765/"
 R = []
 def check(name, expected, actual, ok):
     R.append((name, expected, str(actual), "PASS" if ok else "FAIL"))
+def ils_(v): return "₪" + f"{round(v):,}"
 def ann(P, r, n): r = r / 1200; return P / n if r == 0 else P * r / (1 - (1 + r) ** -n)
 BASE = """(()=>{ S = newState({type:'ml',buyer:'first',city:'פתח תקווה',price:1600000,sign:'2026-11-01',delivery:'2030-11-01',linkedShare:50,lottery:'2024-02-25',form4:'',stage:'before'}, false);
  S.fin.savings=350000; S.fin.income=24000; S.fin.expenses=12000; S.fin.expTouched=true; S.fin.appraisal=1900000; S.fin.equity=250000;
@@ -100,6 +101,35 @@ with sync_playwright() as p:
     E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps.forEach((x,i)=>x.pct=i?0:100); persist()})()"); c = E("cashflow().low")
     check("100% בפעימה הראשונה: זיהוי מחסור", "יתרה שלילית", round(c["close"]), c["close"] < 0)
     E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); const P=[7,13,12,12,12,12,11,11,10]; ps.forEach((x,i)=>x.pct=P[i]); persist()})()")
+    # ---- QA3 findings ----
+    E("Object.assign(S.mix,{years:25,pPrime:0,pFixed:100,pLinked:0,pVar:0,rFixed:4.8,infl:3}); S.fin.rent=5500; S.fin.equity=0; S.fin.eqCustom=true; S.fin.bankEarly=false; persist()")
+    d = E("dealFin()"); own = E("dealFin().ownTotal + costsTotal()")
+    E("go('calc','costs')"); pg.wait_for_timeout(100); lb = pg.inner_text("#livebar"); t = pg.inner_text("#view")
+    check("F03 כסף מהכיס זהה בכותרת ובפירוט", ils_(own), lb.replace("\n", " ")[:60], ils_(own) in lb and ils_(own) in t)
+    check("F05 הון ופער בשורות נפרדות", "הון 0 · פער מוצג", "תקין" if ("₪0" in t and "פער מימון (מעבר" in t) else "לא", "₪0" in t and "פער מימון (מעבר" in t)
+    E("go('calc','equity')"); pg.wait_for_timeout(100); exp = E("S.fin.savings + extraFunds() - dealFin().ownTotal - costsTotal()")
+    liq = E("equityScenarios().res.find(r=>Math.abs(r.eq-chosenEquity())<1).liquid")
+    check("F04 יתרה מהחסכונות מפחיתה את הפער", round(exp), round(liq), abs(exp - liq) < 1)
+    E("go('calc','cash')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    check("F06 בלי 'תקופה ארוכה' כשהמגבלה היא שווי", "לא מוצע", "מוצע" if "תקופה ארוכה יותר (" in t else "לא מוצע", E("bindingLimit()") != "ltv" or "תקופה ארוכה יותר (" not in t)
+    E("S.fin.equity=250000; persist(); S.mix.pFixed=90; persist(); go('home')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    check("F01 תמהיל 90%: אין יתרה חודשית בבית", "חסום", "מוצג" if "נשאר בחודש אחרי ההחזר" in t else "חסום", "נשאר בחודש אחרי ההחזר" not in t)
+    E("S.mix.pFixed=100; persist()")
+    pid = E("[...S.payments].sort((a,b)=>a.date.localeCompare(b.date))[2].id"); dt0 = E(f"S.payments.find(x=>x.id==='{pid}').date")
+    E(f"S.payments.find(x=>x.id==='{pid}').date=''; persist()"); scr = {}
+    for sb in ["linkage", "costs", "equity", "cash"]:
+        E(f"go('calc','{sb}')"); pg.wait_for_timeout(80); scr[sb] = "לא ניתן לחשב" in pg.inner_text("#view")
+    check("F02 תשלום צמוד בלי תאריך חוסם הצמדה וסיכומים", "חסום בכולם", scr, all(scr.values()))
+    E(f"S.payments.find(x=>x.id==='{pid}').date='{dt0}'; persist()")
+    E("S.mix.years=10; S.mix.rFixed=0; persist()"); pay = E("mortgageCalc().first")
+    check("ריבית 0% ל-10 שנים", 11250, round(pay, 2), abs(pay - 11250) < .01)
+    E("S.mix.years=25; S.mix.rFixed=4.8; persist(); go('calc','equity')"); pg.wait_for_timeout(100)
+    for val, nm in [("-5000", "שלילי"), ("1700000", "גבוה מהמחיר")]:
+        E(f"(()=>{{const i=document.querySelector('[data-c=\"fin.equity\"]'); i.value='{val}'; i.dispatchEvent(new Event('input',{{bubbles:true}}));}})()"); pg.wait_for_timeout(80)
+        check(f"הון {nm} נחסם", 250000, E("S.fin.equity"), E("S.fin.equity") == 250000)
+    E("(()=>{const i=document.querySelector('[data-c=\"fin.equity\"]'); i.value='250000'; i.dispatchEvent(new Event('input',{bubbles:true}));})()")
+    E("setupOpen=true; render()"); pg.wait_for_timeout(100); E("document.querySelector('details.card').open=true"); pg.select_option("#f_type", "new"); pg.click("[data-act=saveSetup]"); pg.wait_for_timeout(200)
+    check("שינוי סוג רכישה (באישור)", "new, ליקויים נשמרים", f'{E("S.profile.type")} · {E("S.payments.length")} תשלומים', E("S.profile.type") == "new" and E("S.payments.length") > 0 and not E("dealBlockers('cash').length"))
     # earlier QA passes
     E("S.idxRate=0; persist()"); check("מדד 0: אין הצמדה", 0, round(E("linkTotal()")), E("linkTotal()") == 0); E("S.idxRate=3.7; persist()")
     E("S.offers=[{id:'a',bank:'א',amount:1350000,years:25,first:7700,total:2320638},{id:'b',bank:'ב',amount:1000000,years:20,first:6500,total:1560000}]; persist(); go('calc','offers')"); pg.wait_for_timeout(100)
