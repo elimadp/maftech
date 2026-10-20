@@ -1899,6 +1899,26 @@ function pxCard(city) {
       ${rows.length > 12 ? `<div class="areamore"><button class="link" data-act="areasall">${areaShowAll ? "פחות שכונות" : `הצג את כל ${rows.length} השכונות`}</button></div>` : ""}` : ""}
     <p class="src">החציון הוא המחיר שחצי מהדירות נמכרו מתחתיו, ופחות מושפע מעסקאות חריגות. מוצגות שכונות עם 5 עסקאות ומעלה. נתוני רשות המסים לא כוללים ממ"ד, מרפסת, חניה או קומה: ממ"ד מוערך לפי שנת הבנייה (חובה בבנייה חדשה מתחילת שנות ה-90), ואין דרך לדעת על מרפסת. לא נכללו עסקאות על חלק מנכס ועסקאות במחיר חריג.</p></div>`;
 }
+let wavesKind = "ml";
+/* free market: where many NEW apartments are being sold (contractor sales in buildings up to 2 years old), from the deals data.
+   A proxy for competition between sellers, not a count of apartments listed for sale right now. */
+function freeSupplyCard(city) {
+  const cell = (r, k, per) => r && r[k] && r[k][per];
+  const rows = pxAreas(city).map(r => { const n12 = (cell(r[1], 5, 0) || [])[2] || 0, n24 = (cell(r[1], 5, 1) || [])[2] || 0, all12 = (cell(r[1], 0, 0) || [])[2] || 0;
+    return { name: r[0], n12, prev: Math.max(0, n24 - n12), all12, medNew: (cell(r[1], 5, 0) || [])[0], medOld: (cell(r[1], 10, 0) || [])[0] }; }).filter(x => x.n12 >= 5).sort((a, b) => b.n12 - a.n12);
+  const c = pxCity(city), cityNew = (cell(c, 5, 0) || [])[2] || 0, cityAll = (cell(c, 0, 0) || [])[2] || 0;
+  const typical = rows.length ? rows.map(x => x.n12).sort((a, b) => a - b)[Math.floor(rows.length / 2)] : 0;
+  const top = rows.slice(0, 8);
+  return `<div class="card"><h2>היכן נמכרות הרבה דירות חדשות ב${esc(city)}</h2>
+    <p class="small muted">כשבשכונה קטנה מוכרים הרבה דירות חדשות בבת אחת, הקבלנים מתחרים על אותם קונים, ולפעמים יש יותר מקום למשא ומתן (הנחות, שדרוגים, תנאי תשלום). זה גם מתחרה במי שמוכר דירה יד שנייה באזור.</p>
+    ${cityAll ? `<p class="small">בשנה האחרונה: <b>${nf.format(cityNew)}</b> עסקאות בדירות חדשות מתוך ${nf.format(cityAll)} בעיר (${Math.round(cityNew / cityAll * 100)}%).</p>` : ""}
+    ${top.length ? `<div class="list">${top.map(x => { const hot = x.n12 >= Math.max(20, 2 * typical), up = x.prev >= 5 && x.n12 >= 2 * x.prev;
+      return `<div class="item" style="align-items:flex-start"><div class="grow"><div class="spread"><b>${esc(x.name)}</b>${hot ? '<span class="chip warn">ריכוז גבוה</span>' : ""}</div>
+        <div class="small">${nf.format(x.n12)} דירות חדשות נמכרו בשנה האחרונה${x.all12 ? ` (${Math.round(x.n12 / x.all12 * 100)}% מהעסקאות בשכונה)` : ""}${up ? ` · <b>פי ${(x.n12 / x.prev).toFixed(1)}</b> מהשנה שלפני` : x.prev ? ` · בשנה שלפני: ${nf.format(x.prev)}` : ""}</div>
+        <div class="small muted">חציון דירה חדשה ${x.medNew ? kils(x.medNew) : "—"} · יד שנייה ${x.medOld ? kils(x.medOld) : "—"}</div></div></div>`; }).join("")}</div>`
+      : `<p class="muted">לא נמצאו בעיר הזו שכונות עם 5 עסקאות או יותר בדירות חדשות בשנה האחרונה.</p>`}
+    <p class="src">"חדשה" = בניין בן שנתיים לכל היותר בזמן העסקה (כולל דירות מחיר למשתכן, ולכן החציון של דירה חדשה יכול לצאת נמוך מיד שנייה), לפי עסקאות שדווחו לרשות המסים עד ${NAT.through}. אלה עסקאות שכבר נסגרו, לא דירות שמוצעות כרגע למכירה, ולכן זה סימן לכמה פעיל השוק החדש באזור, לא הוכחה שהמחירים יירדו. בבדיקה שלנו על גלי מכירה קודמים לא נמצאה ירידת מחירים עקבית. דירות שמוצעות עכשיו אפשר לראות במדלן וביד2.</p></div>`;
+}
 function screenWaves() {
   const wsegs = segs("waves", [["prices", "מחירים"], ["projects", "פרויקטים"], ["waves", "גלי מכירה"], ["market", "ריבית"]]);
   if (sub.waves === "market") return `<div class="screen"><h1>שוק ואזורים</h1>${wsegs}` + screenMarket().replace('<div class="screen"><h1>שוק</h1>', "");
@@ -1948,7 +1968,9 @@ function screenWaves() {
     </div>
 
 ` : ""}
-    ${(sub.waves || "prices") === "waves" ? `    <div class="card"><h2>מה זה גל מכירה?</h2><p>${intro}</p>
+    ${(sub.waves || "prices") === "waves" ? `<div class="segs" role="group" aria-label="סוג ההיצע"><button data-wkind="ml" aria-pressed="${wavesKind !== "free"}">מחיר למשתכן</button><button data-wkind="free" aria-pressed="${wavesKind === "free"}">שוק חופשי</button></div>` : ""}
+    ${(sub.waves || "prices") === "waves" && wavesKind === "free" ? freeSupplyCard(city) : ""}
+    ${(sub.waves || "prices") === "waves" && wavesKind !== "free" ? `    <div class="card"><h2>מה זה גל מכירה?</h2><p>${intro}</p>
       <p class="small">כמה זה משפיע? בפסגות אפק שבראש העין קצב העסקאות הוכפל והמחיר למ"ר ירד בכ-18% מהשיא. אבל בבדיקה על ${NAT.backtest.n} גלים שכבר הסתיימו בכל הארץ, קפיצה ברורה במכירות נראתה רק בכ-${Math.round(NAT.backtest.up / NAT.backtest.n * 100)}% מהמקרים, ובמחירים לא נמצאה השפעה עקבית. לכן כדאי להתייחס לזה כלוח זמנים של היצע, לא כתחזית מחיר.</p>
       ${sameCity(city, "ראש העין") ? `<h3>פסגות אפק, ראש העין</h3>${backtestChart()}` : ""}</div>
     ${(() => { const soon = off.filter(o => o.end >= ymd(today()) && +o.end.slice(0, 4) <= yr + 5);
@@ -2310,6 +2332,7 @@ document.addEventListener("click", e => {
   if (d.wz) { const [f, v] = d.wz.split(":"); wiz.d[f] = v; wiz.err = ""; if (f === "type" || f === "buyer") { wiz.i++; } render(); window.scrollTo(0, 0); return; }
   if (d.wzcity) { wiz.d.city = d.wzcity; wiz.d.proj = ""; wiz.d.ppsqm = 0; render(); return; }
   if (d.areasug) { const i = document.getElementById("areasearch"); if (i) i.value = d.areasug; applyAreaFilter(d.areasug); document.getElementById("areasug").innerHTML = ""; return; }
+  if (d.wkind) { wavesKind = d.wkind; render(); return; }
   if (d.wcity) { wavesCity = d.wcity; areaQ = areaQraw = ""; render(); window.scrollTo(0, 0); return; }
   if (d.paymode) { setPayMode(d.paymode); return; }
   if (d.stage) { S.profile.stage = d.stage; persist(); render(); return; }
