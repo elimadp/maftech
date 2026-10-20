@@ -1593,7 +1593,7 @@ function inLinkage() {
     <p class="small muted">כמה יוסיף המדד לתשלומים לקבלן, לפי לוח התשלומים שלכם, מתאריך החתימה.</p>
     <div class="grid2">${numIn("profile.linkedShare", "כמה מכל תשלום צמוד (%)")}${numIn("idxRate", "עלייה שנתית משוערת של המדד (%)")}</div>
     <p class="small muted">צמודים ${S.payments.filter(x => x.linked).length} מתוך ${S.payments.length} תשלומים${(() => { const i = [...S.payments].sort((a, b) => (a.date || "9").localeCompare(b.date || "9")).findIndex(x => x.linked); return i >= 0 ? `, החל מהתשלום ה-${i + 1}` : ""; })()}. את התשלומים הצמודים מסמנים ב<button class="link small" data-act="payedit2">עריכת לוח התשלומים</button>. הנתון "כמה צמוד" מופיע בחוזה, בסעיף ההצמדה.</p>
-    <p class="src">מתחילת השנה עלה המדד ב-${MARKET.construction.ytd}% (${MARKET.construction.monthly.length} חודשים), עד ${MARKET.construction.month}. <a href="${MARKET.construction.src}" target="_blank" rel="noopener">מקור</a></p></div>`;
+    <p class="src">ברירת המחדל (${IDX_RATE}%) היא הקצב של השנה הנוכחית בחישוב שנתי: מתחילת השנה עלה המדד ב-${MARKET.construction.ytd}% ב-${MARKET.construction.monthly.length} חודשים, עד ${MARKET.construction.month}. זו לא תחזית. אפשר להזין קצב אחר, למשל גבוה יותר לתרחיש זהיר. ההצמדה בפועל מתחילה ממדד הבסיס שבחוזה (לרוב המאוחר מבין החתימה להיתר הבנייה), כך שההערכה כאן זהירה. <a href="${MARKET.construction.src}" target="_blank" rel="noopener">מקור</a></p></div>`;
 }
 const CALC = { costs: [inCosts, outCosts], equity: [inEquity, outEquity, advEquity], mortgage: [inMortgage, outMortgage], offers: [inOffers, outOffers], linkage: [inLinkage, outLinkage] };
 function screenCalc() {
@@ -1715,7 +1715,7 @@ async function openDeals(city, label, extra) {
   const start = new Date(ym[0], ym[1] - 1 - [11, 23, 59][pxPer], 1), end = new Date(ym[0], ym[1], 1);
   const sq = s => "'" + String(s).replace(/'/g, "''") + "'";
   const dq = "to_date(deal_date,'DD/MM/YYYY')";
-  const sql = `SELECT deal_date, deal_amount, deal_nature, year_built, asset_area, room_num, gush, chelka FROM ${DEALS_T} WHERE settlement=${sq(key)}`
+  const sql = `SELECT deal_date, deal_amount, deal_nature, year_built, asset_area, room_num, gush, chelka, sub_chelka FROM ${DEALS_T} WHERE settlement=${sq(key)}`
     + (gushes ? ` AND gush IN (${gushes.map(sq).join(",")})` : "")
     + (extra && extra.pairs ? ` AND (gush, chelka) IN (${extra.pairs.map(([g, h]) => `(${sq(g)},${sq(h)})`).join(",")})` : "")
     + ` AND ${dq}>='${ymd(start)}' AND deal_nature IN (${Object.keys(NATURE_T).map(sq).join(",")}) AND portion='1.000' ORDER BY ${dq} DESC LIMIT 3000`;
@@ -1723,7 +1723,8 @@ async function openDeals(city, label, extra) {
   try {
     const r = await fetch(DEALS_SQL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sql }) });
     const j = await r.json(); if (!r.ok || !j.rows) throw new Error("bad");
-    list = j.rows.filter(d => dealKeep(d, 0, 0)).map(d => { const [dd, mm, yy] = d.deal_date.split("/"); return { ...d, iso: `${yy}-${mm}-${dd}`, pr: Number(d.deal_amount), ar: parseFloat(d.asset_area) || 0 }; });
+    const seenD = new Set();   /* the same unit, date and price reported twice counts once */
+    list = j.rows.filter(d => { const k = [d.gush, d.chelka, d.sub_chelka, d.deal_date, d.deal_amount].join("|"); if (seenD.has(k)) return false; seenD.add(k); return dealKeep(d, 0, 0); }).map(d => { const [dd, mm, yy] = d.deal_date.split("/"); return { ...d, iso: `${yy}-${mm}-${dd}`, pr: Number(d.deal_amount), ar: parseFloat(d.asset_area) || 0 }; });
   } catch (e) { const b = document.getElementById("dealsbox"); if (b) b.innerHTML = `<p style="color:var(--warn)">לא הצלחנו לטעון את העסקאות. בדקו חיבור לאינטרנט ונסו שוב.</p>`; return; }
   dealsView = { raw: list, age: pxAge, rooms: pxRooms, showOut: false, sort: "date", limit: 60, city: key, kind: extra && extra.pairs ? "street" : label ? "neighborhood" : "city", street: extra && extra.street, pairs: extra && extra.pairs, start: ymd(start).slice(0, 7), gm: null };
   drawDeals();
@@ -1753,7 +1754,7 @@ function drawDeals() {
       const t = NATURE_T[d.deal_nature], rm = parseFloat(d.room_num), yb = parseInt(d.year_built, 10);
       const bits = [rm ? `${+rm.toFixed(1)} חד׳` : "", d.ar ? `${nf.format(d.ar)} מ"ר` : "", d.ar > 20 ? `${ils(d.pr / d.ar)} למ"ר` : "", yb > 1900 && yb < 2035 ? (yb > Number(d.iso.slice(0, 4)) ? `על הנייר, סיום ${yb}` : `נבנה ${yb}`) : ""].filter(Boolean);
       return `<div class="deal"><div class="spread"><b class="num">${ils(d.pr)}</b><span class="small muted">${fmtDate(d.iso)}</span></div>
-        <div class="small">${bits.join(" · ")}${d.out ? ' · <span class="chip warn">מחיר חריג</span>' : ""}</div><div class="small pa" data-pa="${esc(d.gush)}-${esc(d.chelka)}">${addrHtml(d.gush, d.chelka)}</div><div class="small muted">${esc(d.deal_nature)} · גוש ${esc(d.gush)} חלקה ${esc(d.chelka)}</div></div>`; }).join("")}
+        <div class="small">${bits.join(" · ")}${d.out ? ' · <span class="chip warn">מחיר חריג</span>' : ""}</div><div class="small pa" data-pa="${esc(d.gush)}-${esc(d.chelka)}">${addrHtml(d.gush, d.chelka)}</div><div class="small muted">${esc(d.deal_nature)} · גוש ${esc(d.gush)} חלקה ${esc(d.chelka)}${d.sub_chelka ? ` · תת-חלקה ${esc(String(+d.sub_chelka || d.sub_chelka))}` : ""}</div></div>`; }).join("")}
       ${L.length > v.limit ? `<button class="link" data-dmore="1">עוד ${nf.format(Math.min(60, L.length - v.limit))} עסקאות</button>` : ""}</div>
     <p class="src">מקור: עסקאות רשות המסים, מתוך העותק הפתוח שלהן ב-over.org.il${NAT.scraped ? ` (עודכן לאחרונה ${fmtDate(NAT.scraped)})` : ""}. עסקאות מדווחות באיחור של שבועות עד חודשים, ולכן מהחודשיים-שלושה האחרונים חסרות עסקאות רבות. בעותק הזה אין כתובת וקומה: הכתובת כאן מחושבת לפי גוש וחלקה, ולכן היא של הבניין או המגרש. את העסקאות הכי חדשות, כולל קומה, אפשר לראות באתר הרשמי <a href="https://www.nadlan.gov.il/" target="_blank" rel="noopener">נדל"ן נט</a>.</p>`;
   fillAddrs(L.slice(0, v.limit));
@@ -1950,8 +1951,15 @@ function screenWaves() {
     ${(sub.waves || "prices") === "waves" ? `    <div class="card"><h2>מה זה גל מכירה?</h2><p>${intro}</p>
       <p class="small">כמה זה משפיע? בפסגות אפק שבראש העין קצב העסקאות הוכפל והמחיר למ"ר ירד בכ-18% מהשיא. אבל בבדיקה על ${NAT.backtest.n} גלים שכבר הסתיימו בכל הארץ, קפיצה ברורה במכירות נראתה רק בכ-${Math.round(NAT.backtest.up / NAT.backtest.n * 100)}% מהמקרים, ובמחירים לא נמצאה השפעה עקבית. לכן כדאי להתייחס לזה כלוח זמנים של היצע, לא כתחזית מחיר.</p>
       ${sameCity(city, "ראש העין") ? `<h3>פסגות אפק, ראש העין</h3>${backtestChart()}` : ""}</div>
-    ${supply.length ? `<div class="card"><h2>איפה צפוי הכי הרבה היצע</h2><p class="small muted">דירות מחיר למשתכן שהאיסור עליהן מסתיים לכל המאוחר ב-${yr}–${yr + 3}</p>
-      <div class="list">${supply.map(([c, n]) => `<div class="item"><button class="link grow" style="text-align:right" data-wcity="${esc(c)}">${esc(c)}</button><b class="num">${nf.format(n)}</b></div>`).join("")}</div></div>` : ""}
+    ${(() => { const soon = off.filter(o => o.end >= ymd(today()) && +o.end.slice(0, 4) <= yr + 5);
+      if (!soon.length) return `<div class="card"><h2>גלי מכירה ב${esc(city)}</h2><p class="muted">לא צפוי גל מכירה ב${esc(city)} ב-5 השנים הקרובות, לפי רשימת ההגרלות של משרד השיכון.${offPast.length ? ` ב-${offPast.length === 1 ? "פרויקט אחד" : offPast.length + " פרויקטים"} שם (${nf.format(offPast.reduce((a, o) => a + o.units, 0))} דירות) האיסור כבר הסתיים.` : ""}</p></div>`;
+      const byY = {}; for (const o of soon) { const y = o.end.slice(0, 4), k = o.nb || "ללא שם שכונה"; ((byY[y] = byY[y] || {})[k] = byY[y][k] || []).push(o); }
+      return `<div class="card"><h2>גלי מכירה ב${esc(city)}</h2><p class="small muted">${nf.format(soon.reduce((a, o) => a + o.units, 0))} דירות מחיר למשתכן שהאיסור על מכירתן מסתיים עד ${yr + 5}, לפי שנה ושכונה. המועד הוא לכל המאוחר: אם טופס 4 התקבל מוקדם, המכירה מותרת כבר 5 שנים ממנו.</p>
+        <div class="timeline">${Object.keys(byY).sort().map(y => `<div class="tl"><span class="y">${y}</span><div>${Object.entries(byY[y]).sort((a, b) => b[1].reduce((s, o) => s + o.units, 0) - a[1].reduce((s, o) => s + o.units, 0)).map(([nb, l]) => { const ms = l.map(o => o.end).sort();
+          return `<div style="margin-bottom:6px"><b>${esc(nb)}</b> · ${nf.format(l.reduce((s, o) => s + o.units, 0))} דירות<div class="small muted">${l.length === 1 ? "פרויקט אחד" : l.length + " פרויקטים"} · ${ms[0] === ms[ms.length - 1] ? fmtDate(ms[0]) : `בין ${fmtDate(ms[0])} ל-${fmtDate(ms[ms.length - 1])}`}</div></div>`; }).join("")}</div></div>`).join("")}</div>
+        <p class="small muted">פירוט לפי מגרש בלשונית <button class="link small" data-sub="projects">פרויקטים</button>.</p></div>`; })()}
+    ${supply.length ? `<div class="card"><h2>בכל הארץ: איפה צפוי הכי הרבה היצע</h2><p class="small muted">דירות מחיר למשתכן שהאיסור עליהן מסתיים לכל המאוחר ב-${yr}–${yr + 3}. לחצו על עיר לפירוט.</p>
+      <div class="list">${supply.map(([c, n]) => `<div class="item"${sameCity(c, city) ? ' style="background:var(--accent-soft)"' : ""}><button class="link grow" style="text-align:right" data-wcity="${esc(c)}">${esc(c)}${sameCity(c, city) ? " (נבחרה)" : ""}</button><b class="num">${nf.format(n)}</b></div>`).join("")}</div></div>` : ""}
 ` : ""}
     <p class="src">מקורות: רשימת הגרלות דירה בהנחה של משרד הבינוי והשיכון (data.gov.il), ו-${nf.format(NAT.deals)} עסקאות מדווחות לרשות המסים עד ${NAT.through}, דרך <a href="https://www.over.org.il/projects/deals" target="_blank" rel="noopener">גרסאות לעם</a>. עודכן ${NAT.generated}. לא ייעוץ השקעות.</p>
   </div>`;
