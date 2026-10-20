@@ -230,6 +230,12 @@ svg text { font-family: var(--body); }
 .src { font-size: .78rem; color: var(--muted); }
 .src a { color: var(--accent); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: .9rem; z-index: 9; }
+#report { display: none; }
+@media print { body > *:not(#report) { display: none !important; } #report { display: block; color: #000; background: #fff; font-size: 11pt; }
+  #report h1 { font-size: 18pt; margin: 0 0 4px; } #report h2 { font-size: 13pt; margin: 14px 0 4px; border-bottom: 1px solid #999; }
+  #report table { width: 100%; border-collapse: collapse; } #report td, #report th { border-bottom: 1px solid #ddd; padding: 3px 4px; text-align: right; white-space: normal; }
+  #report .muted { color: #555; } #report .warn { color: #b00; } @page { margin: 14mm; } }
+.backbtn { background: none; border: none; color: #fff; font-size: .9rem; padding: 6px 4px; display: inline-flex; align-items: center; gap: 2px; }
 @media (prefers-reduced-motion: no-preference) { .screen.anim { animation: in .18s ease-out; } @keyframes in { from { opacity: .4; transform: translateY(4px); } } }
 .topicon { background: none; border: none; color: #fff; padding: 6px; display: inline-flex; }
 .topicon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -251,10 +257,12 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; paddi
 .calcbox{display:grid;gap:4px;padding:10px;border-radius:10px;background:var(--bg,#0000);margin-top:6px}
 </style>
 
+<div id="report" dir="rtl" lang="he"></div>
 <div class="app" dir="rtl" lang="he">
   <header class="topbar">
     <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>מפתח</div>
     <div class="row" style="gap:8px"><span class="sync" id="sync">נשמר בטלפון</span><button class="topicon aa" data-act="bigtoggle" aria-label="הגדלת הטקסט" aria-pressed="false">א+</button>
+      <button class="backbtn" data-act="goback" id="backbtn" hidden aria-label="חזרה למסך הקודם">‹ חזרה</button>
       <button class="topicon" data-act="settings" aria-label="הגדרות ושיתוף"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </header>
   <main id="view"></main>
@@ -1270,7 +1278,7 @@ function screenSetup() {
     ${S.example ? "" : `<div class="card"><h2>גיבוי</h2>
       <p class="small muted">שמרו עותק של כל הנתונים בקובץ. אפשר לשחזר ממנו בכל מכשיר, וגם במעבר לגרסה הבאה של האפליקציה.</p>
       <p class="small muted">קובץ הגיבוי פותח גם את המסמכים שצירפתם. שמרו אותו במקום פרטי, ואל תשלחו אותו בצ'אט.</p>
-      <div class="row"><button class="ghost" data-act="backup">שמירת גיבוי</button><button class="ghost" data-act="restore">שחזור מגיבוי</button></div>
+      <div class="row"><button data-act="pdf">סיכום ל-PDF</button><button class="ghost" data-act="backup">שמירת גיבוי</button><button class="ghost" data-act="restore">שחזור מגיבוי</button></div>
       ${confirmReset ? `<p style="color:var(--warn)">כל הנתונים יימחקו, כולל משימות, תשלומים ומסמכים. אי אפשר לבטל.</p><div class="row"><button data-act="resetyes" style="background:var(--warn);border-color:var(--warn)">כן, למחוק הכול</button><button class="ghost" data-act="resetno">ביטול</button></div>`
         : `<div><button class="link" data-act="reset" style="color:var(--warn)">התחלה מחדש</button></div>`}</div>`}
     </div>`;
@@ -1355,7 +1363,7 @@ function screenHome() {
       <div class="bar"><i style="width:${Math.min(100, paid / p.price * 100)}%"></i></div>
       ${next && daysTo(next.date) > 21 ? `<p class="small muted">התשלום הבא: ${esc(next.name)}, ${fmtDate(next.date)}, ${ils(payAmount(next) + linkageCost(next))}</p>` : ""}
     </div>` : ""}
-    <div class="card"><div class="spread"><h2>הכסף</h2><button class="link" data-go="calc" data-sub="costs">פירוט</button></div>
+    <div class="card"><div class="spread"><h2>הכסף</h2><span><button class="link small" data-act="pdf">סיכום ל-PDF</button> · <button class="link" data-go="calc" data-sub="costs">פירוט</button></span></div>
       ${dealBlockers("costs").length ? `<div class="spread small"><span style="color:var(--warn)">לא ניתן לחשב: ${esc(dealBlockers("costs")[0].msg)}</span>${dealBlockers("costs")[0].tab ? `<button class="link small" data-fixgo="${dealBlockers("costs")[0].tab}:${dealBlockers("costs")[0].sb || ""}">לתיקון</button>` : ""}</div>` : `<div class="grid2"><div class="stat"><span class="v">${ils(cashNeed)}</span><span class="l">הון עצמי${finGap() > 1 ? ", פער מימון" : ""} ועלויות נלוות ${q("equity")}</span></div>
       <div class="stat"><span class="v" style="color:${S.fin.savings ? (gap >= 0 ? "var(--ok)" : "var(--warn)") : "var(--muted)"}">${S.fin.savings ? (gap >= 0 ? "נשאר " : "חסר ") + ils(Math.abs(gap)) : "—"}</span><span class="l">${S.fin.savings ? "מהחסכונות של היום, אחרי הון עצמי ועלויות (בלי חיסכון חודשי)" : "עוד לא הוזנו חסכונות"}</span></div></div>`}
       ${S.fin.income ? (dealBlockers("mortgage").length ? `<div class="spread small"><span style="color:var(--warn)">לא ניתן לחשב החזר: ${esc(dealBlockers("mortgage")[0].msg)}</span><button class="link small" data-fixgo="calc:mortgage">לתיקון</button></div>` : `<div class="spread small"><span>החזר חודשי משוער ${ils(m.first)}${finGap() > 1 ? ` <span class="small muted">(על ${ils(maxLoan())} שהבנק יכול לממן)</span> · <span style="color:var(--warn)">פער מימון ${ils(finGap())}</span>` : ""}</span>${ptiChip(pti(m.first))}</div>`) : ""}
@@ -2466,7 +2474,7 @@ function restoreBadFields() {
 }
 function render() {
   const a = document.activeElement, key = a && a.dataset ? a.dataset.key : null, pos = a && "selectionStart" in a ? a.selectionStart : null;
-  renderNav(); { const nv = document.querySelector(".nav"); if (nv) nv.hidden = !!invite; }
+  renderNav(); { const nv = document.querySelector(".nav"); if (nv) nv.hidden = !!invite; const bb = document.getElementById("backbtn"); if (bb) bb.hidden = !!(wiz || invite || (tab === "home" && !setupOpen)); }
   const sk = wiz ? "wiz" + wiz.i : setupOpen ? "setup" : tab + ":" + (sub[tab] || ""), v = document.getElementById("view");
   if (tab === "market") { tab = "waves"; sub.waves = "market"; }
   v.innerHTML = invite ? screenInvite() : wiz ? screenWizard() : setupOpen ? screenSetup() : ({ home: screenHome, buy: screenBuy, calc: screenCalc, waves: screenWaves })[tab]();
@@ -2533,6 +2541,34 @@ async function exportICS() {
   if (!store.downloads) { plainDownload("dira-payments.ics", buildICS(), "text/calendar"); toast("הקובץ ירד. פתחו אותו כדי להוסיף ליומן."); return; }
   try { await store.downloads.save({ filename: "dira-payments.ics", data: buildICS() }); toast("הקובץ מוכן. פתח אותו כדי להוסיף ליומן."); }
   catch (e) { toast(e && e.code === "declined" ? "ההורדה בוטלה" : "ההורדה לא הצליחה"); }
+}
+/* ---------- summary report: everything on one printable page; the phone's print dialog saves it as PDF ---------- */
+function reportHTML() {
+  const p = S.profile, f = S.fin, t = T(), D = dealFin(), tr = (a, b) => `<tr><td>${a}</td><td>${b}</td></tr>`, sec = (h, body) => `<h2>${h}</h2>${body}`;
+  const blM = dealBlockers("mortgage"), blC = dealBlockers("cash"), blK = dealBlockers("costs"), bad = l => `<p class="warn">לא חושב: ${esc(l[0].msg)}</p>`;
+  let h = `<h1>מפתח · סיכום הרכישה</h1><p class="muted">הופק ב-${fmtDate(ymd(today()))}. החישובים מבוססים על הנתונים שהוזנו ועל הנחות גלויות. זה לא ייעוץ ולא אישור משכנתא.</p>`;
+  h += sec("פרטי הרכישה", `<table>${tr("סוג", esc(t.name))}${tr("עיר", esc(p.city || "—"))}${tr("מחיר", ils(p.price))}${tr("חתימה", fmtDate(p.sign) || "—")}${tr(t.contractor ? "מסירה" : "קבלת מפתח", fmtDate(p.delivery) || "—")}${p.type === "ml" && p.lottery ? tr("הגרלה", fmtDate(p.lottery)) : ""}${p.form4 ? tr("טופס 4", fmtDate(p.form4)) : ""}${saleAllowed() ? tr("מותר למכור", fmtDate(saleAllowed()) + (p.form4 ? "" : " (משוער)")) : ""}</table>`);
+  h += sec("כסף", blK.length ? bad(blK) : `<table>${tr("חסכונות", ils(f.savings || 0))}${tr("הון עצמי", ils(D.equity))}${D.gap > 1 ? tr("פער מימון", `<span class="warn">${ils(D.gap)}</span>`) : ""}${tr("עלויות נלוות", ils(costsTotal() - linkTotal()))}${t.contractor ? tr("הצמדה משוערת", ils(linkTotal()) + ` (${S.idxRate}% בשנה)`) : ""}${tr("מהכיס בסך הכול", "<b>" + ils(D.ownTotal + costsTotal()) + "</b>")}${tr("יתרה מהחסכונות (חישוב פשוט)", ils(moneyLeft().left2))}</table>`);
+  if (blM.length) h += sec("משכנתא", bad(blM)); else { const m = mortgageCalc(D.bankFunds), r = pti(m.first);
+    h += sec("משכנתא", `<table>${tr("משכנתא נדרשת", ils(D.needed))}${tr("יכולת מימון לפי ההנחות", ils(D.capacity))}${tr("תקופה", yrs() + " שנה")}${tr("החזר חודשי ראשון", ils(m.first) + (r != null ? ` (${r.toFixed(0)}% מההכנסה)` : ""))}${tr("סך ההחזרים", ils(m.total))}</table>
+      <table><tr><th>מסלול</th><th>חלק</th><th>ריבית</th><th>החזר ראשון</th></tr>${m.rows.filter(x => x.P > 0).map(x => `<tr><td>${x.name}</td><td>${ils(x.P)}</td><td>${x.rate}%</td><td>${ils(x.pay)}</td></tr>`).join("")}</table>`); }
+  if (t.contractor && p.sign) { if (blC.length) h += sec("תזרים עד המסירה", bad(blC)); else { const c = cashflow(); if (c) { const rv = (f.expenses || 0) * (f.reserve || 0);
+    h += sec("תזרים עד המסירה", `<table>${tr("החודש הכי קשה", `${ymLabel(c.low.m)}: ${c.low.close < 0 ? `<span class="warn">חסרים ${ils(-c.low.close)}</span>` : ils(c.low.close)}`)}${rv ? tr("כרית ביטחון רצויה", ils(rv)) : ""}${tr("יתרה צפויה במסירה", ils(c.end.close))}${tr("ההנחה על מימון הבנק", c.bankEarly ? "מממן כבר את התשלום של יום 45" : "מתחיל 60 יום אחרי החתימה (זהיר)")}</table>
+      <table><tr><th>חודש</th><th>לקבלן מהכיס</th><th>הצמדה</th><th>עלויות</th><th>החזר משכנתא</th><th>יתרה</th></tr>${c.rows.filter(r => r.pay || r.link || r.costs || r === c.low || r === c.end).map(r => `<tr><td>${ymLabel(r.m)}</td><td>${r.pay ? ils(r.pay) : "—"}</td><td>${r.link ? ils(r.link) : "—"}</td><td>${r.costs ? ils(r.costs) : "—"}</td><td>${r.mort ? ils(r.mort) : "—"}</td><td>${ils(r.close)}</td></tr>`).join("")}</table>`); } } }
+  const pays = [...S.payments].sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+  if (pays.length) h += sec("לוח תשלומים" + (t.contractor ? (flow().pay ? " (אומת מול החוזה)" : " (טרם אומת מול החוזה)") : ""), `<table><tr><th>תשלום</th><th>תאריך</th><th>סכום</th>${t.contractor ? "<th>הצמדה</th><th>ערבות</th>" : ""}<th>שולם</th></tr>${pays.map(x => `<tr><td>${esc(x.name)}</td><td>${x.date ? fmtDate(x.date) : "—"}</td><td>${ils(payAmount(x))}</td>${t.contractor ? `<td>${linkageCost(x) ? ils(linkageCost(x)) : "—"}</td><td>${x.paid ? (x.guarantee ? "✓" : '<span class="warn">חסרה</span>') : ""}</td>` : ""}<td>${x.paid ? "✓" : ""}</td></tr>`).join("")}</table>`);
+  const st = stagesOf(), open = S.tasks.filter(x => !x.done);
+  if (open.length) h += sec("משימות פתוחות", st.map(([k, l]) => { const ts = open.filter(x => x.stage === k); return ts.length ? `<p><b>${l}</b></p><ul>${ts.map(x => `<li>${esc(x.text)}</li>`).join("")}</ul>` : ""; }).join(""));
+  if (S.docs.length) h += sec("מסמכים", `<ul>${S.docs.map(d => `<li>${esc(d.name)} · ${d.url ? "צורף" : d.have ? "יש אצלכם" : "חסר"}</li>`).join("")}</ul>`);
+  if (S.defects.length) h += sec("ליקויים", `<ul>${S.defects.map(d => `<li>${esc(d.text)}${d.room ? " · " + esc(d.room) : ""} · ${esc(d.status)} · ${fmtDate(d.added)}</li>`).join("")}</ul>`);
+  return h;
+}
+function exportPDF() {
+  if (S.example) { toast("קודם הגדירו את הרכישה שלכם"); return; }
+  document.getElementById("report").innerHTML = reportHTML();
+  const old = document.title; document.title = "מפתח - סיכום הרכישה " + ymd(today());
+  setTimeout(() => { window.print(); document.title = old; }, 50);
+  toast("בחלון ההדפסה בחרו \"שמירה כ-PDF\"");
 }
 async function exportBackup() {
   const data = JSON.stringify({ app: "maftech", savedAt: new Date().toISOString(), state: S }, null, 1);
@@ -2686,6 +2722,8 @@ document.addEventListener("click", e => {
     case "whylimit": { const w = document.getElementById("whylimit"); if (w) { w.hidden = !w.hidden; b.setAttribute("aria-expanded", String(!w.hidden)); b.textContent = w.hidden ? "איך זה נקבע? ▾" : "סגירה ▴"; } break; }
     case "areasall": areaShowAll = !areaShowAll; render(); break;
     case "backup": exportBackup(); break;
+    case "pdf": exportPDF(); break;
+    case "goback": { const before = JSON.stringify({ tab, sub, setupOpen }); history.back(); setTimeout(() => { if (JSON.stringify({ tab, sub, setupOpen }) === before && !wiz) { setupOpen = false; go("home"); } }, 250); break; }
     case "restore": document.getElementById("restorefile").click(); break;
     case "reset": confirmReset = true; render(); break;
     case "resetno": confirmReset = false; render(); break;
