@@ -253,7 +253,8 @@ def compute(deals, area_of, last_ym):
                         map12[city] += 1
 
     def cell(v):
-        return [round(statistics.median(v) / 1000), round(sum(v) / len(v) / 1000), len(v)] if len(v) >= 5 else None
+        # fewer than 5 deals: no price (too noisy), but keep the count so small towns still show activity
+        return [round(statistics.median(v) / 1000), round(sum(v) / len(v) / 1000), len(v)] if len(v) >= 5 else ([None, None, len(v)] if v else None)
 
     def pack(d):   # sparse: {key: [last 12m, 24m, 60m]} only where the 5-year cell has enough deals
         out = {}
