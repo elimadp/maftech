@@ -1,0 +1,125 @@
+"""Regression tests for the financing core (round QA-2). Usage: python3 test_core.py http://localhost:PORT/"""
+import sys, json, math, os, tempfile
+from playwright.sync_api import sync_playwright
+B = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8765/"
+R = []
+def check(name, expected, actual, ok):
+    R.append((name, expected, str(actual), "PASS" if ok else "FAIL"))
+def ann(P, r, n): r = r / 1200; return P / n if r == 0 else P * r / (1 - (1 + r) ** -n)
+BASE = """(()=>{ S = newState({type:'ml',buyer:'first',city:'פתח תקווה',price:1600000,sign:'2026-11-01',delivery:'2030-11-01',linkedShare:50,lottery:'2024-02-25',form4:'',stage:'before'}, false);
+ S.fin.savings=350000; S.fin.income=24000; S.fin.expenses=12000; S.fin.expTouched=true; S.fin.appraisal=1900000; S.fin.equity=250000;
+ Object.assign(S.mix,{years:25,pPrime:0,pFixed:100,pLinked:0,pVar:0,rFixed:4.8}); S.idxRate=3.7; persist(); go('calc','mortgage'); })()"""
+with sync_playwright() as p:
+    b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 390, "height": 844}); pg = ctx.new_page(); errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: d.accept())
+    pg.goto(B); pg.wait_for_timeout(900)
+    E = pg.evaluate
+    # 1 base
+    E(BASE); d = E("dealFin()"); pay = E("mortgageCalc().first")
+    check("בסיס: משכנתא נדרשת", 1350000, d["needed"], abs(d["needed"] - 1350000) < 1)
+    check("בסיס: החזר 25 שנה 4.8%", round(ann(1350000, 4.8, 300)), round(pay), abs(pay - ann(1350000, 4.8, 300)) < 1)
+    check("בסיס: אין פער מימון", 0, round(d["gap"]), d["gap"] < 1)
+    # 2 ten years
+    E("S.mix.years=10; persist(); render()"); d = E("dealFin()"); pay = E("mortgageCalc().first"); cap = 12000 / ann(1, 4.8, 120)
+    check("10 שנים: הצורך לא קטן", 1350000, d["needed"], abs(d["needed"] - 1350000) < 1)
+    check("10 שנים: החזר על הצורך", round(ann(1350000, 4.8, 120)), round(pay), abs(pay - ann(1350000, 4.8, 120)) < 1)
+    check("10 שנים: יכולת מימון", round(cap), round(d["capacity"]), abs(d["capacity"] - cap) < 2)
+    check("10 שנים: פער מימון", round(1350000 - cap), round(d["gap"]), abs(d["gap"] - (1350000 - cap)) < 2)
+    t = pg.inner_text("#view"); check("10 שנים: המסך מציג פער", "פער מימון", "מוצג" if "פער מימון" in t else "חסר", "פער מימון" in t)
+    E("S.fin.bankEarly=true"); own10 = E("cashflow().rows.reduce((a,r)=>a+r.pay,0)"); E("S.mix.years=25; persist()"); own25 = E("cashflow().rows.reduce((a,r)=>a+r.pay,0)"); E("S.fin.bankEarly=false; persist()")
+    check("10 שנים: הפער עובר לתזרים", f"תשלום מהכיס גדל ב-{round(1350000 - cap)}", round(own10 - own25), abs((own10 - own25) - (1350000 - cap)) < 2)
+    # equity below the minimum is kept as entered and shows a gap
+    E("S.fin.equity=10000; persist(); go('calc','equity')"); pg.wait_for_timeout(100); d = E("dealFin()"); t = pg.inner_text("#view")
+    check("הון 10,000: נשמר כפי שהוזן + פער", "10000 ופער מוצג", f"{d['equity']} · פער {round(d['gap'])}", d["equity"] == 10000 and d["gap"] > 0 and "פער מימון" in t)
+    E("S.fin.equity=250000; persist()")
+    # 3 zero rate
+    E("S.mix.rFixed=0; persist()"); pay = E("mortgageCalc().first")
+    check("ריבית 0%", 4500, round(pay, 2), abs(pay - 4500) < .01)
+    E("S.mix.rFixed=4.8; persist()")
+    # 4 mix 110%
+    E("S.mix.pFixed=110; persist(); go('calc','mortgage')"); scr = {}
+    for tb, sb in [("calc", "mortgage"), ("calc", "equity"), ("calc", "cash"), ("home", "")]:
+        E(f"go('{tb}', {repr(sb) if sb else 'undefined'})"); pg.wait_for_timeout(100); scr[tb + sb] = pg.inner_text("#view")
+    blocked = all(("לא ניתן לחשב" in v) for v in scr.values()) and "החודש הכי צפוף:" not in scr["calccash"] and "לשים ₪" not in scr["calcequity"]
+    check("תמהיל 110%: אין תוצאה בשום מסך", "חסום בכל המסכים", "חסום" if blocked else {k: ("לא ניתן" in v) for k, v in scr.items()}, blocked)
+    E("S.mix.pFixed=100; persist()")
+    # 5 inflation on a linked track
+    E("Object.assign(S.mix,{pFixed:0,pLinked:100,rLinked:3.29,years:25,infl:0}); S.fin.equity=null; persist()")
+    check("צמודה: החזר בסיסי על 192,000", 939.71, round(192000 * ann(1, 3.29, 300), 2), abs(E("192000*annuity(1,3.29,300)") - 939.71) < .01)
+    c0 = E("(()=>{const c=cashflow(); return [c.rows.map(r=>r.mort), c.end.close]})()"); E("S.mix.infl=10; persist()")
+    c10 = E("(()=>{const c=cashflow(); return [c.rows.map(r=>r.mort), c.end.close]})()")
+    late0, late10 = c0[0][-1], c10[0][-1]
+    check("אינפלציה 0% מול 10%: החזר בסוף שונה", "שונה", f"{late0} מול {late10}", late10 > late0 * 1.05)
+    check("אינפלציה 0% מול 10%: יתרה במסירה שונה", "שונה", f"{round(c0[1])} מול {round(c10[1])}", c10[1] < c0[1] - 1000)
+    E("Object.assign(S.mix,{pFixed:100,pLinked:0,infl:3}); S.fin.equity=250000; persist()")
+    # 6 negative values: price, cost, payment pct
+    E("setupOpen=true; render()"); pg.wait_for_timeout(100); pg.evaluate("document.querySelector('details.card').open=true")
+    pg.fill("#f_price", "-1,600,000"); pg.click("[data-act=saveSetup]"); pg.wait_for_timeout(150)
+    check("מחיר שלילי נחסם", 1600000, E("S.profile.price"), E("S.profile.price") == 1600000 and E("setupOpen"))
+    pg.fill("#f_price", "1,600,000"); pg.fill("#f_linked", "150"); pg.click("[data-act=saveSetup]"); pg.wait_for_timeout(150)
+    check("הצמדה 150% נחסמת", 50, E("S.profile.linkedShare"), E("S.profile.linkedShare") == 50)
+    E("setupOpen=false; go('calc','costs')"); pg.wait_for_timeout(100); E("document.querySelectorAll('details').forEach(x=>x.open=true)")
+    before = E("S.costs.moving"); inp = pg.locator("[data-c='costs.moving']"); inp.fill("-1000"); inp.dispatch_event("input"); pg.wait_for_timeout(100)
+    check("עלות שלילית נחסמת", before, E("S.costs.moving"), E("S.costs.moving") == before and "שלילי" in pg.inner_text("#view"))
+    inp.fill(str(before)); inp.dispatch_event("input"); pg.wait_for_timeout(50)
+    E("go('buy','payments'); payEdit=true; render()"); pg.wait_for_timeout(100)
+    pid = E("[...S.payments].sort((a,b)=>a.date.localeCompare(b.date))[0].id"); pin = pg.locator(f"[data-pf='{pid}:pct']")
+    pin.fill("-7"); pin.dispatch_event("input"); pg.wait_for_timeout(100)
+    check("אחוז פעימה שלילי נחסם", 7, E(f"S.payments.find(x=>x.id==='{pid}').pct"), E(f"S.payments.find(x=>x.id==='{pid}').pct") == 7)
+    pin.fill("7"); pin.dispatch_event("input"); E("payEdit=false; render()")
+    # 7 years 0
+    E("go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("0"); yi.dispatch_event("input"); pg.wait_for_timeout(100)
+    check("תקופה 0 נחסמת", 25, E("S.mix.years"), E("S.mix.years") == 25 and "לפחות 1" in pg.inner_text("#view"))
+    E("go('calc','cash')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    check("ערך לא שמור חוסם תחזית", "לא ניתן לחשב", "חסום" if "לא ניתן לחשב" in t else "מוצג", "לא ניתן לחשב" in t)
+    E("go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("25"); yi.dispatch_event("input")
+    # 8 linked 150 in linkage screen
+    E("go('calc','linkage')"); pg.wait_for_timeout(100); li = pg.locator("[data-c='profile.linkedShare']"); li.fill("150"); li.dispatch_event("input"); pg.wait_for_timeout(100)
+    check("הצמדה 150% במסך הצמדה נחסמת", 50, E("S.profile.linkedShare"), E("S.profile.linkedShare") == 50)
+    li.fill("50"); li.dispatch_event("input")
+    # 9 payment after delivery
+    E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[ps.length-1].date='2031-03-01'; persist(); go('calc','cash')})()"); pg.wait_for_timeout(100)
+    t = pg.inner_text("#view"); c = E("(()=>{const c=cashflow(); return [c.last.m, c.afterDelivery]})()")
+    check("פעימה אחרי המסירה נשארת", "התחייבות מוצגת והתחזית מוארכת", f"{c[0]} · {round(c[1])} · {E('JSON.stringify(dealBlockers(\'cash\'))')}", c[0] == "2031-03" and c[1] > 0 and "לאחר המסירה" in t)
+    E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[ps.length-1].date='2030-10-18'; persist()})()")
+    # 10 schedule 101%
+    E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[0].pct=8; persist(); go('buy','payments')})()"); pg.wait_for_timeout(100)
+    t = pg.inner_text("#view"); E("go('calc','cash')"); pg.wait_for_timeout(100); t2 = pg.inner_text("#view")
+    check("לוח 101%: אזהרת עודף", "גבוה ממחיר הדירה", "מוצג" if "גבוה ממחיר הדירה" in t else "חסר", "גבוה ממחיר הדירה" in t and "לא ניתן לחשב" in t2)
+    E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[0].pct=7; persist()})()")
+    # 11 price change after a paid payment
+    E("go('buy','payments')"); pg.wait_for_timeout(100); pid = E("[...S.payments].sort((a,b)=>a.date.localeCompare(b.date))[0].id"); pg.check(f"[data-paid='{pid}']"); pg.wait_for_timeout(100)
+    paid = E(f"payAmount(S.payments.find(x=>x.id==='{pid}'))"); E("setupOpen=true; render()"); pg.wait_for_timeout(100); E("document.querySelector('details.card').open=true")
+    pg.fill("#f_price", "1,650,000"); pg.click("[data-act=saveSetup]"); pg.wait_for_timeout(150)
+    paid2 = E(f"payAmount(S.payments.find(x=>x.id==='{pid}'))"); E("go('buy','payments')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    check("שינוי מחיר אחרי 'שולם'", f"{round(paid)} קבוע + פער מסומן", f"{round(paid2)}", abs(paid - paid2) < 1 and "חסרים" in t)
+    E("setupOpen=true; render()"); pg.wait_for_timeout(100); E("document.querySelector('details.card').open=true"); pg.fill("#f_price", "1,600,000"); pg.click("[data-act=saveSetup]"); pg.wait_for_timeout(100)
+    pg.uncheck(f"[data-paid='{pid}']") if E("tab")=="buy" else None
+    E(f"(()=>{{const x=S.payments.find(k=>k.id==='{pid}'); x.paid=false; delete x.paidAmt; delete x.paidLink; persist()}})()")
+    # 12 100% at first payment
+    E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps.forEach((x,i)=>x.pct=i?0:100); persist()})()"); c = E("cashflow().low")
+    check("100% בפעימה הראשונה: זיהוי מחסור", "יתרה שלילית", round(c["close"]), c["close"] < 0)
+    E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); const P=[7,13,12,12,12,12,11,11,10]; ps.forEach((x,i)=>x.pct=P[i]); persist()})()")
+    # earlier QA passes
+    E("S.idxRate=0; persist()"); check("מדד 0: אין הצמדה", 0, round(E("linkTotal()")), E("linkTotal()") == 0); E("S.idxRate=3.7; persist()")
+    E("S.offers=[{id:'a',bank:'א',amount:1350000,years:25,first:7700,total:2320638},{id:'b',bank:'ב',amount:1000000,years:20,first:6500,total:1560000}]; persist(); go('calc','offers')"); pg.wait_for_timeout(100)
+    t = pg.inner_text("#view"); check("הצעות לא דומות: אין מנצחת", "אין 'הזולה ביותר'", "אין" if "הזולה ביותר" not in t else "יש", "הזולה ביותר" not in t)
+    before = json.loads(E("JSON.stringify(S)")); pg.reload(); pg.wait_for_timeout(900); after = json.loads(E("JSON.stringify(S)"))
+    dk = [k for k in set(before) | set(after) if json.dumps(before.get(k), sort_keys=True) != json.dumps(after.get(k), sort_keys=True)]
+    check("שמירה אחרי רענון", "זהה", "זהה" if not dk else "שונה: " + ",".join(dk), not dk)
+    # backup and restore
+    data = E("JSON.stringify({app:'maftech', savedAt:new Date().toISOString(), state:S})"); fn = os.path.join(tempfile.mkdtemp(), "b.json"); open(fn, "w").write(data)
+    E("S=exampleState(); persist(); render()"); E("setupOpen=true; render()"); pg.wait_for_timeout(100)
+    pg.set_input_files("#restorefile", fn); pg.wait_for_timeout(500)
+    check("גיבוי ושחזור", "1600000 · הון 250000", f'{E("S.profile.price")} · הון {E("S.fin.equity")}', E("S.profile.price") == 1600000 and E("S.fin.equity") == 250000)
+    # wizard: empty price and delivery before signing
+    E("startWizard()"); pg.click("[data-wz='type:ml']"); pg.fill("[data-wzf='city']", "פתח תקווה"); pg.click("[data-act='wznext']"); pg.click("[data-act='wznext']"); pg.wait_for_timeout(100)
+    check("אשף: מחיר ריק נחסם", "נשאר בשלב המחיר", E("wizSteps()[wiz.i]"), E("wizSteps()[wiz.i]") == "price")
+    pg.locator("[data-wzf='price']").press_sequentially("1600000"); pg.click("[data-act='wznext']"); pg.fill("[data-wzf='sign']", "2026-11-01"); pg.fill("[data-wzf='delivery']", "2026-01-01"); pg.click("[data-act='wznext']"); pg.wait_for_timeout(100)
+    check("אשף: מסירה לפני חתימה נחסמת", "נשאר בשלב התאריכים", E("wizSteps()[wiz.i]"), E("wizSteps()[wiz.i]") == "dates")
+    E("wiz=null; render()")
+    check("שגיאות JavaScript", "אין", errs or "אין", not errs)
+    b.close()
+w = max(len(r[0]) for r in R)
+for r in R: print(f"{r[3]} | {r[0]} | צפוי: {r[1]} | בפועל: {r[2]}")
+print("FAILED" if any(r[3] == "FAIL" for r in R) else "ALL PASS", sum(r[3] == "PASS" for r in R), "/", len(R))
