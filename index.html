@@ -1359,14 +1359,14 @@ function screenHome() {
       ${dealBlockers("costs").length ? `<div class="spread small"><span style="color:var(--warn)">לא ניתן לחשב: ${esc(dealBlockers("costs")[0].msg)}</span>${dealBlockers("costs")[0].tab ? `<button class="link small" data-fixgo="${dealBlockers("costs")[0].tab}:${dealBlockers("costs")[0].sb || ""}">לתיקון</button>` : ""}</div>` : `<div class="grid2"><div class="stat"><span class="v">${ils(cashNeed)}</span><span class="l">הון עצמי${finGap() > 1 ? ", פער מימון" : ""} ועלויות נלוות ${q("equity")}</span></div>
       <div class="stat"><span class="v" style="color:${S.fin.savings ? (gap >= 0 ? "var(--ok)" : "var(--warn)") : "var(--muted)"}">${S.fin.savings ? (gap >= 0 ? "נשאר " : "חסר ") + ils(Math.abs(gap)) : "—"}</span><span class="l">${S.fin.savings ? "מהחסכונות של היום, אחרי הון עצמי ועלויות (בלי חיסכון חודשי)" : "עוד לא הוזנו חסכונות"}</span></div></div>`}
       ${S.fin.income ? (dealBlockers("mortgage").length ? `<div class="spread small"><span style="color:var(--warn)">לא ניתן לחשב החזר: ${esc(dealBlockers("mortgage")[0].msg)}</span><button class="link small" data-fixgo="calc:mortgage">לתיקון</button></div>` : `<div class="spread small"><span>החזר חודשי משוער ${ils(m.first)}${finGap() > 1 ? ` <span class="small muted">(על ${ils(maxLoan())} שהבנק יכול לממן)</span> · <span style="color:var(--warn)">פער מימון ${ils(finGap())}</span>` : ""}</span>${ptiChip(pti(m.first))}</div>`) : ""}
-      ${S.fin.income && S.fin.expenses && S.fin.expTouched && !dealBlockers("mortgage").length ? `<div class="spread small"><span>נשאר בחודש אחרי ההחזר וההוצאות</span><b class="num" style="color:${S.fin.income - m.first - S.fin.expenses < 1000 ? "var(--warn)" : "inherit"}">${ils(S.fin.income - m.first - S.fin.expenses)}</b></div>` : ""}
-      ${(() => { const ce = cashEarly(); if (!S.fin.savings || !ce.early || dealBlockers("costs").length) return "";
+      ${S.fin.income && S.fin.expenses && S.fin.expTouched && !dealBlockers("mortgage").length ? `<div class="spread small"><span>אחרי המסירה: נשאר בחודש, אחרי ההחזר וההוצאות</span><b class="num" style="color:${S.fin.income - m.first - S.fin.expenses < 1000 ? "var(--warn)" : "inherit"}">${ils(S.fin.income - m.first - S.fin.expenses)}</b></div>` : ""}
+      ${(() => { const ce = cashEarly(); if (!S.fin.savings || !ce.early || dealBlockers("costs").length) return ""; const cfOK = S.fin.income && !dealBlockers("cash").length;
         const tight = ce.left < 2 * (S.fin.expenses || 10000);
         return `<div class="small" style="margin-top:6px;display:grid;gap:2px">
-          <div class="spread"><span>עד שהבנק מתחיל לממן ${q("gap")}</span><b class="num" style="color:${ce.gap > 0 ? "var(--warn)" : tight ? "var(--gold)" : "var(--ok)"}">${ce.gap > 0 ? "חסרים " + ils(ce.gap) : "נשארים " + ils(ce.left)}</b></div>
+          ${cfOK ? "" : `<div class="spread"><span>עד שהבנק מתחיל לממן ${q("gap")}</span><b class="num" style="color:${ce.gap > 0 ? "var(--warn)" : tight ? "var(--gold)" : "var(--ok)"}">${ce.gap > 0 ? "חסרים " + ils(ce.gap) : "נשארים " + ils(ce.left)}</b></div>`}
           ${(() => { if (!S.fin.income) return ""; const bl = dealBlockers("cash"); if (bl.length) return `<div class="spread"><span style="color:var(--warn)">לא ניתן לחשב תזרים: ${esc(bl[0].msg)}</span>${bl[0].tab ? `<button class="link small" data-fixgo="${bl[0].tab}:${bl[0].sb || ""}">לתיקון</button>` : ""}</div>`;
             const cf = cashflow(); if (!cf) return ""; const lw = cf.low, rv = (S.fin.expenses || 0) * (S.fin.reserve || 0);
-            return `<div class="spread"><span>החודש הכי צפוף: ${ymLabel(lw.m)} <button class="link small" data-go="calc" data-sub="cash">למה?</button></span><b class="num" style="color:${lw.close < 0 ? "var(--warn)" : rv && lw.close < rv ? "var(--gold)" : "var(--ok)"}">${lw.close < 0 ? "חסרים " + ils(-lw.close) : "יתרה " + ils(lw.close)}</b></div>`; })()}</div>`; })()}</div>
+            return `<div class="spread"><span>החודש הכי קשה: ${ymLabel(lw.m)} <button class="link small" data-go="calc" data-sub="cash">למה?</button></span><b class="num" style="color:${lw.close < 0 ? "var(--warn)" : rv && lw.close < rv ? "var(--gold)" : "var(--ok)"}">${lw.close < 0 ? "חסרים " + ils(-lw.close) : "יישארו בחשבון " + ils(lw.close)}</b></div>`; })()}</div>`; })()}</div>
     ${sale && S.example ? `<div class="card"><div class="spread"><h2>מתי מותר למכור</h2><b>${fmtDate(sale)}</b></div><p class="small muted">5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם.</p></div>` : ""}
     <div class="card"><h2>עוד בשבילכם</h2><div class="list">${more.map(([txt, tb, sb]) => `<button class="laterrow" data-go="${tb}" ${sb ? `data-sub="${sb}"` : ""}><span class="small">${txt}</span><span aria-hidden="true">‹</span></button>`).join("")}</div></div>
   </div>`;
@@ -1783,9 +1783,9 @@ function cashConclusion(c) {
   const notes = [eqNote, c.overdue ? `תשלומים שמועדם עבר ולא סומנו כשולמו (${ils(c.overdue)}) נספרו בחודש הנוכחי.` : "", c.beforeSign ? `ל-${c.beforeSign} תשלומים יש תאריך לפני החתימה. בדקו את לוח התשלומים.` : "", c.afterDelivery ? `נותרה התחייבות של ${ils(c.afterDelivery)} לאחר המסירה, והתחזית הוארכה עד ${ymLabel(c.last.m)}.` : ""].filter(Boolean);
   const html = `<div class="card hero"><span class="small muted">המסקנה · התרחיש ${c.bankEarly ? "שבו הבנק מממן מיום 45" : "הזהיר"}</span>
     ${(() => { const fn = c.rows.find(r => r.close < 0); return fn && fn !== low ? `<h2 style="color:var(--warn)">הכסף נגמר כבר ב${ymLabel(fn.m)}: חסרים ${ils(-fn.close)}</h2><p class="small" style="margin:0">ומשם המצב מחמיר עד ${ymLabel(low.m)}.</p>` : ""; })()}
-    <h2 style="color:${col}">החודש הכי צפוף: ${ymLabel(low.m)}</h2>
+    <h2 style="color:${col}">${bad ? `בחודש הכי קשה, ${ymLabel(low.m)}, חסרים ${ils(-low.close)}` : `לא תהיו במינוס. בחודש הכי קשה, ${ymLabel(low.m)}, יישארו לכם ${ils(low.close)}`}</h2>
     <div class="grid2" style="margin:6px 0"><div class="stat"><span class="v" style="color:${col}">${bad ? "−" + ils(-low.close) : ils(low.close)}</span><span class="l">יתרת חשבון צפויה באותו חודש</span></div>
-      ${reserve ? `<div class="stat"><span class="v" style="color:${low.close >= reserve ? "var(--ok)" : "var(--warn)"}">${low.close >= reserve ? "✓" : ils(reserve - low.close)}</span><span class="l">${low.close >= reserve ? `מעל הרזרבה הרצויה (${ils(reserve)})` : `חסר עד הרזרבה הרצויה (${ils(reserve)})`}</span></div>` : ""}</div>
+      ${reserve ? `<div class="stat"><span class="v" style="color:${low.close >= reserve ? "var(--ok)" : "var(--warn)"}">${low.close >= reserve ? "✓" : ils(reserve - low.close)}</span><span class="l">${low.close >= reserve ? `יותר מכרית הביטחון המומלצת (${f.reserve} חודשי הוצאות, ${ils(reserve)})` : `חסר לכרית ביטחון של ${f.reserve} חודשי הוצאות (${ils(reserve)})`}</span></div>` : ""}</div>
     <p class="small" style="margin:4px 0"><b>למה:</b> ${why.join(" ")}</p>
     ${act.length ? `<p class="small" style="margin:4px 0"><b>מה לבדוק:</b> ${act.slice(0, 2).join(" ")}</p>` : ""}
     <p class="small muted" style="margin:4px 0 0">יתרת חשבון צפויה במסירה (${ymLabel(c.end.m)}): ${ils(c.end.close)}. אלה כיווני בדיקה, לא אישור בנקאי.</p>
@@ -2243,11 +2243,11 @@ function nextSteps() {
   const ds = dataStage(), si = stageIdx(), hi = stageIdx("handover"), early = si <= 2, preHand = hi < 0 || si < hi;
   if (ds) add("stagefix", `נראה שאתם כבר בשלב "${(st.find(s => s[0] === ds) || [])[1]}"`, `לפי התאריכים והתשלומים. השלב קובע אילו משימות ותזכורות תראו.`, "עדכון השלב", "stage:" + ds);
   const np = nextPayment(), dn = np ? daysTo(np.date) : null;
-  const preSign = np && p.sign && np.date === p.sign && daysTo(p.sign) >= 0, payLater = [];
+  const preSign = np && p.sign && np.date === p.sign && daysTo(p.sign) > 0, payLater = [];
   if (np && dn != null && dn <= 21) (preSign ? (...a) => payLater.push(a) : add)("pay", `${esc(np.name)}: ${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + dn + " ימים"}`, `${ils(payAmount(np) + linkageCost(np))}, ${fmtDate(np.date)}. סמנו ✓ כשהתשלום יוצא.`, "לתשלומים", "go:buy:payments", "warn");
   const ceg = cashEarly(); if (ceg.gap > 0 && !dealBlockers("sched").length && p.sign && daysTo(p.sign) > -60) add("gap", `חסרים ${ils(ceg.gap)} לתשלומים הראשונים`, `בחודשיים הראשונים משלמים לקבלן ${ils(ceg.early)}, לפני שהבנק מתחיל לממן. בררו עם יועץ המשכנתאות אם הבנק יממן כבר את התשלום השני, או איך לגשר על הפער.`, "פרטים", "go:calc:equity", "warn");
   const apprTask = S.tasks.find(x => !x.done && /אישור עקרוני/.test(x.text));
-  if (apprTask && p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 60) add("appr", "קבלו אישור עקרוני למשכנתא לפני החתימה", "בלי אישור עקרוני אין ודאות שהבנק יממן, והתשלום השני לקבלן מגיע כ-45 יום אחרי החתימה.", "קיבלנו ✓", "task:" + apprTask.id, "warn");
+  if (apprTask && p.sign && daysTo(p.sign) > 0 && daysTo(p.sign) <= 60) add("appr", "קבלו אישור עקרוני למשכנתא לפני החתימה", "בלי אישור עקרוני אין ודאות שהבנק יממן, והתשלום השני לקבלן מגיע כ-45 יום אחרי החתימה.", "קיבלנו ✓", "task:" + apprTask.id, "warn");
   if (p.sign && daysTo(p.sign) >= 0 && daysTo(p.sign) <= 45 && !fl.lawyer && t.contractor) add("lawyer", "עורך דין שיעבור על החוזה", "לפני החתימה כדאי שעורך דין מטעמכם יבדוק את החוזה, את המפרט ואת לוח התשלומים. במחיר למשתכן יש תקרה בחוק רק לשכר עורך הדין של הקבלן שאתם משלמים. שכר עורך הדין שלכם נקבע בהסכם איתו.", "יש לנו עו\"ד ✓", "seen:lawyer");
   payLater.forEach(a => add(...a));
   const ng = (() => { let cum = 0; return [...S.payments].sort((a, b) => (a.date || "").localeCompare(b.date || "")).filter(x => { const pc = S.payMode === "vouchers" ? payAmount(x) / (p.price || 1) * 100 : Number(x.pct) || 0; cum += pc; return x.paid && !x.guarantee && cum > 7.01; }); })();   /* the law requires security beyond the first 7% */
@@ -2306,13 +2306,13 @@ function calcNext() {
 
 /* ---------- onboarding wizard ---------- */
 let wiz = null;
-function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", size: "", balc: "", stor: "", park: "", disc: true, ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
+function startWizard() { wiz = { i: 0, err: "", d: { type: "", buyer: "first", city: "", price: "", sign: "", delivery: "", lottery: "", savings: "", income: "", rent: "", size: "", balc: "", stor: "", park: "", disc: true, ppsqm: 0, proj: "" } }; render(); window.scrollTo(0, 0); }
 function wizProjs(c) { return officialIn(matchCity(c)).sort((a, b) => b.date.localeCompare(a.date)).filter((o, j, arr) => arr.findIndex(z => z.nb === o.nb && z.name === o.name && z.date === o.date) === j); }
 function wizSteps() { return ["type", ...(wiz.d.type && wiz.d.type !== "ml" ? ["buyer"] : []), "city", "price", "dates", "money"]; }
 function screenWizard() {
   const d = wiz.d, steps = wizSteps(), k = steps[Math.min(wiz.i, steps.length - 1)], n = steps.length, i = steps.indexOf(k);
   const opt = (field, v, title, text) => `<button class="opt ${d[field] === v ? "sel" : ""}" data-wz="${field}:${v}"><b>${title}</b>${text ? `<div class="small muted">${text}</div>` : ""}</button>`;
-  const inp = (field, label, extra = "") => `<label class="f">${label}<input data-wzf="${field}" data-key="wz_${field}" value="${esc(["price", "savings", "income", "expenses", "appraisal"].includes(field) && /^\d+$/.test(String(d[field])) ? fmtIn(+d[field]) : d[field])}" ${extra}></label>`;
+  const inp = (field, label, extra = "") => `<label class="f">${label}<input data-wzf="${field}" data-key="wz_${field}" value="${esc(["price", "savings", "income", "expenses", "rent", "appraisal"].includes(field) && /^\d+$/.test(String(d[field])) ? fmtIn(+d[field]) : d[field])}" ${extra}></label>`;
   let body = "";
   if (k === "type") body = `<h2>איזו דירה אתם קונים?</h2><div class="opts">${opt("type", "ml", "מחיר למשתכן / דירה בהנחה", "זכיתם בהגרלה של משרד השיכון")}${opt("type", "new", "דירה חדשה מקבלן", "בשוק החופשי, על הנייר או בבנייה")}${opt("type", "resale", "דירה יד שנייה", "מבעלים פרטיים")}</div>`;
   if (k === "buyer") body = `<h2>זו הדירה הראשונה שלכם?</h2><p class="small muted">משפיע על מס הרכישה ועל גובה המשכנתא שמותר לקבל.</p><div class="opts">${opt("buyer", "first", "כן, דירה ראשונה", "או שזו הדירה היחידה שתהיה לכם")}${opt("buyer", "upgrade", "משפרי דיור", "יש לנו דירה ונמכור אותה")}${opt("buyer", "additional", "דירה נוספת", "להשקעה או לילדים")}</div>`;
@@ -2333,7 +2333,9 @@ function screenWizard() {
     <p class="small muted">מהתאריכים נבנים לוח התשלומים והתזכורות${d.type === "ml" ? ", וגם המועד שבו מותר למכור" : ""}.</p>`;
   if (k === "money") body = `<h2>כמה כסף יש לכם?</h2><p class="small muted">כדי לחשב כמה משכנתא אפשר לקבל וכמה הון עצמי צריך. אפשר לדלג ולהשלים אחר כך.</p>
     ${inp("savings", "חסכונות נזילים (₪)", 'inputmode="numeric"')}${inp("income", "הכנסה חודשית נטו של הבית (₪)", 'inputmode="numeric"')}
-    <div class="grid2">${inp("expenses", "הוצאות חודשיות, בלי שכר דירה (₪)", 'inputmode="numeric" placeholder="לא חובה"')}${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
+    <div class="grid2">${inp("expenses", "הוצאות חודשיות, בלי שכר דירה (₪)", 'inputmode="numeric" placeholder="למשל 12,000"')}${inp("rent", "שכר דירה עד שתקבלו מפתח (₪)", 'inputmode="numeric" placeholder="0 אם אין"')}</div>
+    <p class="small muted" style="margin:0">בלי ההוצאות לא נוכל להראות את החודש הכי צפוף.</p>
+    <div class="grid2">${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
     ${d.type === "ml" ? inp("appraisal", "שמאות הדירה, אם כבר יש (₪)", 'inputmode="numeric" placeholder="לא חובה"') + `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי הדירה בשוק. בלי שמאות נעריך אותו כמחיר ועוד ההנחה (20% משווי השוק, עד 300 אלף ₪).</p>` : ""}`;
   const last = i === n - 1, canNext = k !== "type" && k !== "buyer";
   return `<div class="screen wizard"><div class="wzhead"><span class="small muted">שאלה ${i + 1}${d.type ? ` מתוך ${n}` : ""}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
@@ -2377,7 +2379,7 @@ function wizFinish() {
   const d = wiz.d, num = v => Number(String(v).replace(/[^\d.]/g, "")) || 0;
   const prof = { type: d.type, buyer: d.type === "ml" ? "first" : d.buyer, city: matchCity(d.city) || d.city.trim(), price: num(d.price), sign: d.sign, delivery: d.delivery, linkedShare: d.type === "resale" ? 0 : 50, lottery: d.lottery, form4: "", stage: "before" };
   S = newState(prof, false); S.fin.savings = num(d.savings); S.fin.savingsAt = ymd(today()); S.fin.income = num(d.income); S.flow = {};
-  if (num(d.expenses)) { S.fin.expenses = num(d.expenses); S.fin.expTouched = true; } if (num(d.age)) S.fin.age = num(d.age); if (num(d.appraisal)) S.fin.appraisal = num(d.appraisal);
+  if (num(d.expenses)) { S.fin.expenses = num(d.expenses); S.fin.expTouched = true; } if (num(d.rent)) S.fin.rent = num(d.rent); if (num(d.age)) S.fin.age = num(d.age); if (num(d.appraisal)) S.fin.appraisal = num(d.appraisal);
   wiz = null; tab = "home"; persist(); render(); window.scrollTo(0, 0); toast("מוכן! למעלה מחכה הצעד הבא שלכם");
 }
 function wizSuggest(q) {
@@ -2501,7 +2503,7 @@ function warrantyEnd() { const d = S.profile.delivery; if (!d) return ""; const 
 function dataStage() {
   const p = S.profile, st = stagesOf().map(s => s[0]), t = T(); let k = null;
   const paidN = S.payments.filter(x => x.paid).length;
-  if (p.sign && daysTo(p.sign) < 0) k = "mortgage";
+  if (p.sign && (daysTo(p.sign) < 0 || (daysTo(p.sign) <= 0 && paidN >= 1))) k = "mortgage";
   if (t.contractor && (paidN >= 2 || (p.sign && daysTo(p.sign) < -90))) k = "build";
   if (p.delivery && daysTo(p.delivery) <= 0) k = "handover";
   if (t.contractor && p.delivery && daysTo(p.delivery) < -30) k = "warranty";
