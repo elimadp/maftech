@@ -1900,6 +1900,17 @@ function pxCard(city) {
     <p class="src">החציון הוא המחיר שחצי מהדירות נמכרו מתחתיו, ופחות מושפע מעסקאות חריגות. מוצגות שכונות עם 5 עסקאות ומעלה. נתוני רשות המסים לא כוללים ממ"ד, מרפסת, חניה או קומה: ממ"ד מוערך לפי שנת הבנייה (חובה בבנייה חדשה מתחילת שנות ה-90), ואין דרך לדעת על מרפסת. לא נכללו עסקאות על חלק מנכס ועסקאות במחיר חריג.</p></div>`;
 }
 let wavesKind = "ml";
+/* CBS: new apartments still unsold (end of May 2026, release 216/2026). Only the cities named in the release text */
+const UNSOLD = { asOf: "סוף מאי 2026", total: 84130, months: 28.9, src: "https://www.cbs.gov.il/he/mediarelease/DocLib/2026/216/04_26_216b.pdf",
+  c: { "ירושלים": 10370, "תל אביב -יפו": 9810, "לוד": 3100, "קריית גת": 2350, "יהוד-מונוסון": 1820, "באר יעקב": 1560, "רעננה": 1450, "רמת השרון": 1430, "נתיבות": 1250, "קריית ביאליק": 1090, "אופקים": 1090, "טבריה": 1000 } };
+function unsoldCard(city) {
+  const k = Object.keys(UNSOLD.c).find(c => sameCity(c, city));
+  return `<div class="card"><h2>דירות חדשות שעוד לא נמכרו</h2>
+    <p>בכל הארץ, ב${UNSOLD.asOf}: <b>${nf.format(UNSOLD.total)}</b> דירות חדשות שטרם נמכרו. בקצב המכירות הנוכחי זה מלאי לכ-<b>${UNSOLD.months}</b> חודשים.</p>
+    ${k ? `<p>ב${esc(city)}: <b>כ-${nf.format(UNSOLD.c[k])}</b> דירות חדשות שטרם נמכרו. זו אחת הערים עם הכי הרבה מלאי לא מכור בארץ, כלומר הקבלנים שם מתחרים על קונים.</p>`
+      : `<p class="small muted">ל${esc(city)} אין נתון בהודעה שפרסמה הלמ"ס. שם מפורטות רק הערים עם הכי הרבה דירות לא מכורות: ${Object.keys(UNSOLD.c).slice(0, 6).join(", ")} ועוד.</p>`}
+    <p class="src">מקור: הלשכה המרכזית לסטטיסטיקה, הודעה 216/2026 (מתעדכן כל רבעון). <a href="${UNSOLD.src}" target="_blank" rel="noopener">מקור</a></p></div>`;
+}
 /* free market: where many NEW apartments are being sold (contractor sales in buildings up to 2 years old), from the deals data.
    A proxy for competition between sellers, not a count of apartments listed for sale right now. */
 function freeSupplyCard(city) {
@@ -1969,7 +1980,7 @@ function screenWaves() {
 
 ` : ""}
     ${(sub.waves || "prices") === "waves" ? `<div class="segs" role="group" aria-label="סוג ההיצע"><button data-wkind="ml" aria-pressed="${wavesKind !== "free"}">מחיר למשתכן</button><button data-wkind="free" aria-pressed="${wavesKind === "free"}">שוק חופשי</button></div>` : ""}
-    ${(sub.waves || "prices") === "waves" && wavesKind === "free" ? freeSupplyCard(city) : ""}
+    ${(sub.waves || "prices") === "waves" && wavesKind === "free" ? unsoldCard(city) + freeSupplyCard(city) : ""}
     ${(sub.waves || "prices") === "waves" && wavesKind !== "free" ? `    <div class="card"><h2>מה זה גל מכירה?</h2><p>${intro}</p>
       <p class="small">כמה זה משפיע? בפסגות אפק שבראש העין קצב העסקאות הוכפל והמחיר למ"ר ירד בכ-18% מהשיא. אבל בבדיקה על ${NAT.backtest.n} גלים שכבר הסתיימו בכל הארץ, קפיצה ברורה במכירות נראתה רק בכ-${Math.round(NAT.backtest.up / NAT.backtest.n * 100)}% מהמקרים, ובמחירים לא נמצאה השפעה עקבית. לכן כדאי להתייחס לזה כלוח זמנים של היצע, לא כתחזית מחיר.</p>
       ${sameCity(city, "ראש העין") ? `<h3>פסגות אפק, ראש העין</h3>${backtestChart()}` : ""}</div>
