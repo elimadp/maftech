@@ -21,7 +21,7 @@
   --bg: #f3f4ef;
   --card: #ffffff;
   --fg: #1c2420;
-  --muted: #5e6a63;
+  --muted: #4b5751;
   --line: #dde1d8; --field-line: #8a948d;
   --accent: #1e5a4a;
   --accent-soft: #dcebe4;
@@ -36,12 +36,12 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #98a59d; --line: #2c3530; --field-line: #5d6a63;
+    --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #a9b5ad; --line: #2c3530; --field-line: #5d6a63;
     --accent: #79c2a6; --accent-soft: #23362e; --gold: #e2b25a; --ok: #6cc28f; --warn: #e89a62; --top: #183a2f; --on-accent: #121714; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #98a59d; --line: #2c3530; --field-line: #5d6a63;
+  --bg: #121714; --card: #1b221e; --fg: #e5ebe6; --muted: #a9b5ad; --line: #2c3530; --field-line: #5d6a63;
   --accent: #79c2a6; --accent-soft: #23362e; --gold: #e2b25a; --ok: #6cc28f; --warn: #e89a62; --top: #183a2f; --on-accent: #121714; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -63,7 +63,7 @@ h2 { font-size: 1.12rem; font-weight: 500; }
 h3 { font-size: 1rem; font-weight: 500; }
 p { margin: 0; }
 .muted { color: var(--muted); }
-.small { font-size: .85rem; }
+.small { font-size: .9rem; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .banner { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -71,7 +71,9 @@ p { margin: 0; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .stat .v { font-family: var(--display); font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.stat .l { font-size: .8rem; color: var(--muted); }
+.stat .l { font-size: .86rem; color: var(--muted); }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
+.grid3 .stat .v { font-size: 1.2rem; }
 .num { font-variant-numeric: tabular-nums; }
 .chip { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 999px; font-size: .76rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
 .chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.gold { color: var(--gold); } .chip.mute { color: var(--muted); }
@@ -133,7 +135,7 @@ details.stagebox[open] > summary::after { content: "▴"; }
 body.listedit .x.ed { display: inline-flex; align-items: center; justify-content: center; color: var(--warn); }
 @media (max-width: 420px) { .tbl th, .tbl td { padding: 6px 4px; font-size: .84rem; } }
 .steps { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 4px; }
-.steps button { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--muted); font-size: .78rem; font-weight: 600; padding: 4px 0; border-bottom: 3px solid var(--line); border-radius: 0; overflow-wrap: anywhere; min-width: 0; }
+.steps button { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--muted); font-size: .82rem; font-weight: 700; white-space: nowrap; padding: 4px 0; border-bottom: 3px solid var(--line); border-radius: 0; overflow-wrap: anywhere; min-width: 0; }
 .steps button .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--fg); font-size: .8rem; }
 .steps button.on { color: var(--fg); border-bottom-color: var(--accent); }
 .steps button.on .n { background: var(--accent); color: var(--on-accent); }
@@ -192,8 +194,8 @@ body.locked { overflow: hidden; }
 .dstep.full { border-bottom: none; } .dstep.full b.num { color: var(--accent); }
 .dash { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .tile { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 3px; text-align: right; color: var(--fg); font: inherit; min-width: 0; }
-.tile .k { font-size: .78rem; color: var(--muted); } .tile .v { font-family: var(--display); font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.tile .s { font-size: .78rem; color: var(--muted); } .tile.warn { border-color: var(--warn); } .tile.warn .v { color: var(--warn); } .tile.ok .v { color: var(--ok); } .tile.wide { grid-column: 1 / -1; }
+.tile .k { font-size: .88rem; font-weight: 600; color: var(--muted); } .tile .v { font-family: var(--display); font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tile .s { font-size: .84rem; color: var(--muted); } .tile.warn { border-color: var(--warn); } .tile.warn .v { color: var(--warn); } .tile.ok .v { color: var(--ok); } .tile.wide { grid-column: 1 / -1; }
 .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
 .kpis > div { background: var(--bg); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .kpis b { font-size: 1.02rem; }
@@ -235,7 +237,7 @@ svg text { font-family: var(--body); }
 .tl { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .tl:last-child { border-bottom: none; }
 .tl .y { font-family: var(--display); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-.src { font-size: .78rem; color: var(--muted); }
+.src { font-size: .84rem; color: var(--muted); }
 .src a { color: var(--accent); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: .9rem; z-index: 9; }
 #report { display: none; }
@@ -255,6 +257,13 @@ html.bigtext .strip { flex-wrap: wrap; row-gap: 4px; }
 html.bigtext th, html.bigtext td { white-space: normal; padding: 6px 4px; }
 html.bigtext .strip .sep { width: 2px; }
 html.bigtext .nav button { font-size: .66rem; }
+.tile .v, .grid3 .stat .v { white-space: nowrap; }
+html.bigtext .dash { grid-template-columns: 1fr; }
+html.bigtext .grid3 { grid-template-columns: 1fr; gap: 6px; }
+html.bigtext .grid3 .stat { flex-direction: row-reverse; justify-content: space-between; align-items: baseline; gap: 10px; }
+html.bigtext .steps { grid-auto-columns: max-content; overflow-x: auto; gap: 14px; scrollbar-width: none; }
+html.bigtext .dstep { flex-direction: column; align-items: stretch; } html.bigtext .dstep .dr { text-align: right; }
+@media (max-width: 340px) { .dash { grid-template-columns: 1fr; } }
 .toast[hidden] { display: block !important; visibility: hidden; }
 .topicon.aa { min-width: 44px; min-height: 44px; justify-content: center; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -1349,11 +1358,11 @@ function dashboardCard() {
   const blK = dealBlockers("costs"), blM = dealBlockers("mortgage"), blC = dealBlockers("cash");
   if (!savKnown()) tile("כמה כסף יש לכם?", "להזנה", "החסכונות קובעים כמה יישאר לכם", ["calc", "costs"]);
   else if (blK.length) tile("מהכיס", "לא ניתן לחשב", esc(blK[0].msg), ["calc", "costs"], "warn");
-  else { const tx = timingExtra(), ml = moneyLeft().left2; tile("יוצא מהכיס, כולל עלויות", ils(ownCash() + costsTotal()), D.gap > 1 ? `כולל פער מימון ${ils(D.gap)}` : `${tx > 1 ? `כולל ${ils(tx)} לפני שהבנק מתחיל · ` : ""}${ml >= 0 ? "נשארים" : "חסרים"} ${ils(Math.abs(ml))}`, ["calc", "costs"], D.gap > 1 || ml < 0 ? "warn" : ""); }
+  else { const tx = timingExtra(), ml = moneyLeft().left2; tile("יוצא מהכיס, כולל עלויות", ils(ownCash() + costsTotal()), D.gap > 1 ? `כולל פער מימון ${ils(D.gap)}` : `${ml >= 0 ? "נשארים" : "חסרים"} ${ils(Math.abs(ml))}${tx > 1 ? ` · כולל ${ils(tx)} לפני מימון הבנק` : ""}`, ["calc", "costs"], D.gap > 1 || ml < 0 ? "warn" : ""); }
   const blD = t.contractor ? drawBlockers() : blM;
   if (blD.length) tile(t.contractor ? "החזר משכנתא היום" : "החזר חודשי", "לא ניתן לחשב", esc(blD[0].msg), blD[0].tab ? [blD[0].tab, blD[0].sb] : ["calc", "mortgage"], "warn");
   else if (t.contractor) { const ds = drawSteps();
-    if (ds && ds.steps.length) tile("החזר משכנתא היום", ils(ds.now), `${!ds.now ? `מתחיל ב-${ils(ds.first)} מ${ymLabel(ds.firstM)}, ` : ""}${ils(ds.full)} אחרי המשיכה האחרונה`, ["calc", "mortgage"]);
+    if (ds && ds.steps.length) tile("החזר משכנתא היום", ils(ds.now), `${!ds.now ? `${ymLabel(ds.firstM)}: ${ils(ds.first)} · ` : ""}בסוף הבנייה: ${ils(ds.full)}`, ["calc", "mortgage"]);
     else tile("החזר משכנתא היום", "לא ניתן לחשב", p.sign ? "חסר לוח תשלומים עם תאריכים" : "חסר תאריך חתימה", p.sign ? ["buy", "payments"] : ["settings"], "warn"); }
   else { const full = mortgageCalc(D.bankFunds).first; tile("החזר חודשי", ils(full), pti(full) != null ? `${pti(full).toFixed(0)}% מההכנסה` : "", ["calc", "mortgage"]); }
   if (p.sign && f.income) { if (blC.length) tile("החודש הכי קשה", "לא ניתן לחשב", esc(blC[0].msg), blC[0].tab ? [blC[0].tab, blC[0].sb] : ["calc", "cash"], "warn");
@@ -1383,6 +1392,7 @@ function screenHome() {
     <div class="spread"><h1>${S.example ? "ברוכים הבאים" : esc(p.city) || "הרכישה שלי"}</h1>${S.example ? "" : `<span class="chip gold">${t.name}</span>`}</div>
     ${S.example ? `<p class="muted">"מפתח" מלווה אתכם מהחתימה ועד המפתח: כמה כסף צריך, איזו משכנתא, מה לשלם ומתי, ומה קורה בשוק. כל צעד מוביל לבא אחריו.</p>` : stageStrip()}
     ${heroCard()}
+    ${S.example ? "" : dashboardCard()}
     ${timelineCard()}
     ${S.example ? `<p class="small muted" style="text-align:center">רוצים להסתכל קודם? למטה ובכל המסכים יש רכישה לדוגמה.<br>כבר יש לכם קובץ גיבוי? <button class="link small" data-act="restore">שחזור מגיבוי</button><br>בן או בת הזוג כבר התחילו? <button class="link small" data-act="joinwelcome">יש לי קוד שיתוף</button></p>` : ""}
     ${S.example || !p.sign ? `    <div class="card">${S.example ? '<span class="chip mute" style="float:left">דוגמה</span>' : ""}
@@ -1394,7 +1404,7 @@ function screenHome() {
       <div class="bar"><i style="width:${Math.min(100, paid / p.price * 100)}%"></i></div>
       ${next && daysTo(next.date) > 21 ? `<p class="small muted">התשלום הבא: ${esc(next.name)}, ${fmtDate(next.date)}, ${ils(payAmount(next) + linkageCost(next))}</p>` : ""}
     </div>` : ""}
-    ${dashboardCard()}
+    ${S.example ? dashboardCard() : ""}
     ${sale && S.example ? `<div class="card"><div class="spread"><h2>מתי מותר למכור</h2><b>${fmtDate(sale)}</b></div><p class="small muted">5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם.</p></div>` : ""}
     <div class="card"><h2>עוד בשבילכם</h2><div class="list">${more.map(([txt, tb, sb]) => `<button class="laterrow" data-go="${tb}" ${sb ? `data-sub="${sb}"` : ""}><span class="small">${txt}</span><span aria-hidden="true">‹</span></button>`).join("")}</div></div>
   </div>`;
@@ -1681,6 +1691,10 @@ function inEquity() {
 /* longer term: compared on the same basis as the headline (draw-based for contractor deals) */
 function yrsNote() { return yrs() < 30 && !(equityClamped() && bindingLimit() === "ltv") ? `<p class="small muted">${(() => { const y = S.mix.years, ds = T().contractor && !drawBlockers().length; let a, b; S.mix.years = 30; try { a = ds ? (drawSteps() || {}).full : mortgageCalc().first; } finally { S.mix.years = y; } b = ds ? (drawSteps() || {}).full : mortgageCalc().first;
         return ds && a ? `ב-30 שנה ההחזר אחרי המשיכה האחרונה יהיה ${ils(a)} במקום ${ils(b)}.` : `ב-30 שנה ההחזר הראשון יהיה ${ils(a)}.`; })()} אפשר לקחת תקופה ארוכה ולפרוע מוקדם את הפריים, בלי קנס.</p>` : ""; }
+/* the answer first: shown above the mortgage form, refreshed with every change */
+function mortHero() { if (dealBlockers("mortgage").length) return ""; return (() => { const d = T().contractor && !drawBlockers().length ? drawSteps() : null; if (!d || !d.steps.length) return ""; const D = dealFin();
+      return `<div class="card hero"><h2>ההחזר החודשי שלכם</h2><div class="grid3"><div class="stat"><span class="v">${ils(d.now)}</span><span class="l">היום</span></div><div class="stat"><span class="v">${ils(d.first)}</span><span class="l">החזר ראשון, מ${ymLabel(d.firstM)}</span></div><div class="stat"><span class="v">${ils(d.full)}</span><span class="l">אחרי המשיכה האחרונה, מ${ymLabel(d.fullM)}</span></div></div>
+        ${yrsNote()}<p class="small muted">משכנתא נדרשת ${ils(D.needed)}${D.gap > 1 ? ` · הבנק יכול לממן ${ils(D.capacity)} · <span style="color:var(--warn)">פער מימון ${ils(D.gap)}</span>` : ""} · נמשך בפועל ${ils(d.drawn)}</p></div>`; })(); }
 function outMortgage() {
   const bl = dealBlockers("mortgage"); if (bl.length) return blockedCard(bl, "את המשכנתא");
   const m = mortgageCalc(), mix = S.mix;
@@ -1693,9 +1707,6 @@ function outMortgage() {
   if (S.fin.age && S.fin.age + yrs() > 75) warns.push(`המשכנתא תסתיים בגיל ${S.fin.age + yrs()}. רוב הבנקים מבקשים לסיים בסביבות גיל 75 עד 80, ועלולים לקצר את התקופה.`);
   if (Math.abs(m.sumP - 100) > .01) return `<div class="card"><p style="color:var(--warn)">סך החלקים הוא ${nf.format(m.sumP)}%. כדי לחשב החזר, החלקים צריכים להסתכם ב-100%.</p></div>`;
   return `${warns.map(w => `<p class="small" style="color:var(--warn)">${w}</p>`).join("")}
-    ${(() => { const d = T().contractor && !drawBlockers().length ? drawSteps() : null; if (!d || !d.steps.length) return ""; const D = dealFin();
-      return `<div class="card hero"><h2>ההחזר החודשי שלכם</h2><div class="grid3"><div class="stat"><span class="v">${ils(d.now)}</span><span class="l">היום</span></div><div class="stat"><span class="v">${ils(d.first)}</span><span class="l">החזר ראשון, מ${ymLabel(d.firstM)}</span></div><div class="stat"><span class="v">${ils(d.full)}</span><span class="l">אחרי המשיכה האחרונה, מ${ymLabel(d.fullM)}</span></div></div>
-        ${yrsNote()}<p class="small muted">משכנתא נדרשת ${ils(D.needed)}${D.gap > 1 ? ` · הבנק יכול לממן ${ils(D.capacity)} · <span style="color:var(--warn)">פער מימון ${ils(D.gap)}</span>` : ""} · נמשך בפועל ${ils(d.drawn)}</p></div>`; })()}
     ${T().contractor && !drawBlockers().length && drawSteps() ? `<details class="card more"><summary>פירוט המסלולים: חישוב תיאורטי על כל המשכנתא בבת אחת</summary>` : `<div class="card">`}<div class="grid2"><div class="stat"><span class="v">${ils(m.first)}</span><span class="l">${T().contractor ? "החזר משוער על כל המשכנתא הנדרשת" : "החזר חודשי ראשון"}</span></div>
       <div class="stat"><span class="v">${ils(m.total)}</span><span class="l">סך הכול לאורך ${yrs()} שנה</span></div></div>
       <div class="tbl"><table><thead><tr><th>מסלול</th><th>קרן</th><th>${T().contractor ? "החזר מלא" : "החזר ראשון"}</th><th>סך הכול</th></tr></thead><tbody>
@@ -1832,8 +1843,8 @@ function drawStepsCard() {
   const e = d.short > 1 && !S.fin.bankEarly ? drawSteps(true) : null, lnk = S.mix.pLinked || S.mix.pVar;
   return `<div class="card"><h2>איך ההחזר יגדל בזמן הבנייה</h2>
     <p class="small muted">הבנק מעביר את הכסף לקבלן בכל תשלום. מהחודש שאחרי, משלמים החזר על מה שהועבר עד אז.</p>
-    <div class="dsteps">${d.steps.map((x, i) => `<div class="dstep${i === d.steps.length - 1 ? " full" : ""}"><div class="dl"><b>${esc(x.name)}</b><span class="small muted">${fmtDate(x.date)}: הבנק מעביר ${ils(x.drawn)} (סה"כ ${ils(x.cum)})</span></div><div class="dr"><span class="small muted">${i === 0 ? "החזר ראשון" : i === d.steps.length - 1 ? "אחרי המשיכה האחרונה" : "ההחזר עולה ל"}, מ${ymLabel(x.chargeM)}</span><b class="num">${ils(x.pay)}</b></div></div>`).join("")}</div>
-    ${lnk ? `<p class="small muted">זה לא תקרה: בחלק הצמוד ההחזר ממשיך לעלות עם האינפלציה (הנחה: ${nf.format(S.mix.infl || 0)}% בשנה) גם אחרי המשיכה האחרונה.</p>` : ""}
+    <div class="dsteps">${d.steps.map((x, i) => `<div class="dstep${i === d.steps.length - 1 ? " full" : ""}"><div class="dl"><b>${esc(x.name)}</b><span class="small muted">${fmtDate(x.date)} · הבנק מעביר ${ils(x.drawn)}</span><span class="small muted">נמשך עד כה: ${ils(x.cum)}</span></div><div class="dr"><span class="small muted">${i === 0 ? "החזר ראשון · " : i === d.steps.length - 1 ? "בסוף · " : ""}מ${ymLabel(x.chargeM)}</span><b class="num">${ils(x.pay)}</b></div></div>`).join("")}</div>
+    ${lnk ? `<p class="small muted">זה לא תקרה: בחלק הצמוד ההחזר ממשיך לעלות עם האינפלציה (הנחה: ${S.mix.infl || 0}% בשנה) גם אחרי המשיכה האחרונה.</p>` : ""}
     ${d.short > 1 ? `<div class="hint small">${ils(d.short)} מהמשכנתא הנדרשת (${ils(dealFin().bankFunds)}) משולמים מהכיס, כי לפי ההנחה הבנק מתחיל לממן רק 60 יום אחרי החתימה. בפועל נמשכים ${ils(d.drawn)}.${e && e.steps.length ? ` אם הבנק יממן כבר את התשלום של יום 45, תימשך כל המשכנתא וההחזר אחרי המשיכה האחרונה יהיה ${ils(e.full)} מ${ymLabel(e.fullM)}.` : ""}</div>` : ""}
     <details class="more"><summary>ההנחות בחישוב</summary><ul class="small muted">
       <li>מועדי המשיכה לפי לוח התשלומים שלכם, והנחת מימון הבנק בלשונית "תזרים" (${S.fin.bankEarly ? "מהתשלום של יום 45" : "60 יום אחרי החתימה"}). זו הנחה, לא כלל של כל הבנקים.</li>
@@ -1900,15 +1911,16 @@ function outCash() {
       <li>לוח התשלומים: ${flow().pay ? '<span class="chip ok">מהחוזה</span> אישרתם שהוא תואם לחוזה.' : '<span class="chip gold">טרם אומת</span> תבנית שעוד לא השוויתם לחוזה.'} ${S.fin.appraisal > 0 ? "" : 'שווי הדירה לבנק: <span class="chip mute">אומדן</span>.'}</li>
       <li>עלויות החתימה בחודש החתימה, ושאר העלויות (ריהוט, הובלה) בחודש המסירה.</li></ul></div>`;
 }
-const CALC = { costs: [inCosts, outCosts], equity: [inEquity, outEquity, advEquity], mortgage: [inMortgage, outMortgage], cash: [inCash, outCash], offers: [inOffers, outOffers], linkage: [inLinkage, outLinkage] };
+const CALC = { costs: [inCosts, outCosts], equity: [inEquity, outEquity, advEquity], mortgage: [inMortgage, outMortgage, null, mortHero], cash: [inCash, outCash], offers: [inOffers, outOffers], linkage: [inLinkage, outLinkage] };
 function screenCalc() {
   const list = calcList(); if (!list.find(x => x[0] === sub.calc)) sub.calc = "costs";
-  const [i, o, a] = CALC[sub.calc];
-  return `<div class="screen">${exampleBanner()}<h1>כסף</h1>${calcSteps()}<div class="livebar" id="livebar" aria-live="polite">${liveBar()}</div>${i()}<div id="out" class="screen">${o()}</div>${a ? a() : ""}${calcNext()}</div>`;
+  const [i, o, a, top] = CALC[sub.calc];
+  return `<div class="screen">${exampleBanner()}<h1>כסף</h1>${calcSteps()}<div class="livebar" id="livebar" aria-live="polite">${liveBar()}</div>${top ? `<div id="outtop">${top()}</div>` : ""}${i()}<div id="out" class="screen">${o()}</div>${a ? a() : ""}${calcNext()}</div>`;
 }
 function refreshOut() {
   if (tab !== "calc") return; const el = document.getElementById("out"); if (el) el.innerHTML = CALC[sub.calc][1]();
   const lb = document.getElementById("livebar"); if (lb) lb.innerHTML = liveBar();
+  const ot = document.getElementById("outtop"), tp = CALC[sub.calc][3]; if (ot && tp) ot.innerHTML = tp();
   const lv = document.getElementById("loanv"); if (lv) lv.textContent = ils(loanAmount());
   const gb = document.getElementById("gapbox"); if (gb) gb.innerHTML = gapBoxHtml();   /* need / capacity / gap follow every change on the screen */
 }
