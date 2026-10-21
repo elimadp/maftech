@@ -948,7 +948,8 @@ function textCard() {
   return `<div class="card"><h2>תצוגה</h2><label class="row" style="gap:10px"><input type="checkbox" data-bigtext ${bigText ? "checked" : ""} style="width:auto">טקסט גדול יותר</label><p class="small muted">מגדיל את כל הטקסט והכפתורים באפליקציה, בטלפון הזה.</p></div>`;
 }
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
-const ENGINE = { v: "2.0", date: "20.10.2026" };
+const ENGINE = { v: "2.1", date: "21.10.2026" };
+const BUILD = "21.10.2026 · 4";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1432,6 +1433,7 @@ function screenHome() {
     ${S.example ? dashboardCard() : ""}
     ${sale && S.example ? `<div class="card"><div class="spread"><h2>מתי מותר למכור</h2><b>${fmtDate(sale)}</b></div><p class="small muted">5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם.</p></div>` : ""}
     <div class="card"><h2>עוד בשבילכם</h2><div class="list">${more.map(([txt, tb, sb]) => `<button class="laterrow" data-go="${tb}" ${sb ? `data-sub="${sb}"` : ""}><span class="small">${txt}</span><span aria-hidden="true">‹</span></button>`).join("")}</div></div>
+    <p class="src" style="text-align:center">גרסה ${BUILD}</p>
   </div>`;
 }
 function screenBuy() {
