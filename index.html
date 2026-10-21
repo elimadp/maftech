@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>מפתח</title><link rel="manifest" href="manifest.webmanifest">
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>דירה בשליטה</title><link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1e5a4a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="מפתח">
+<meta name="apple-mobile-web-app-title" content="דירה בשליטה">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </head><body>
-<title>מפתח</title>
+<title>דירה בשליטה</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#1e5a4a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,7 +52,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px;
   display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { font-family: var(--display); font-weight: 700; font-size: 1.35rem; letter-spacing: .01em; display: flex; align-items: center; gap: 8px; }
-.brand svg { width: 22px; height: 22px; }
+.brand svg { width: 22px; height: 22px; } .brand .logo, .lbrand .logo { border-radius: 7px; flex: none; }
 .sync { font-size: .72rem; opacity: .7; pointer-events: none; }
 .sync.bad { opacity: 1; color: #ffd8b8; font-weight: 600; }
 .topbar > .row { flex-wrap: nowrap; min-width: 0; }
@@ -321,7 +321,7 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; paddi
 <div id="report" dir="rtl" lang="he"></div>
 <div class="app" dir="rtl" lang="he">
   <header class="topbar">
-    <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>מפתח</div>
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="26" height="26" class="logo">דירה בשליטה</div>
     <div class="row" style="gap:8px"><span class="sync" id="sync">נשמר בטלפון</span><button class="topicon aa" data-act="bigtoggle" aria-label="הגדלת הטקסט" aria-pressed="false">א+</button>
       <button class="backbtn" data-act="goback" id="backbtn" hidden aria-label="חזרה למסך הקודם">‹ חזרה</button>
       <button class="topicon" data-act="settings" aria-label="הגדרות, שיתוף ופרטי העסקה"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
@@ -629,7 +629,7 @@ async function pushDisable() {
 }
 function pushCard() {
   if (!pushOK()) return store.remote || !window.claude ? `<div class="card"><h2>תזכורות בטלפון</h2><p class="small muted">כדי לקבל תזכורות לפני כל תשלום, צריך להתקין את האפליקציה במסך הבית:</p>
-    <p class="small">אנדרואיד: בכרום, תפריט ⋮ ← "הוספה למסך הבית" או "התקנת אפליקציה".<br>אייפון: בספארי, כפתור השיתוף ← "הוספה למסך הבית". אחר כך פתחו את "מפתח" מהאייקון.</p></div>` : "";
+    <p class="small">אנדרואיד: בכרום, תפריט ⋮ ← "הוספה למסך הבית" או "התקנת אפליקציה".<br>אייפון: בספארי, כפתור השיתוף ← "הוספה למסך הבית". אחר כך פתחו את "דירה בשליטה" מהאייקון.</p></div>` : "";
   const n = pushEvents().length;
   return `<div class="card"><h2>תזכורות בטלפון</h2><p class="small muted">התראה 3 ימים לפני כל תשלום לקבלן ובבוקר התשלום, יום לפני החלטת ריבית, לפני החתימה ולפני המסירה. מגיעה גם כשהאפליקציה סגורה.</p>
     ${pushOn ? `<p>✓ התזכורות פעילות${n ? ` · ${n} תזכורות מתוכננות` : ""}</p><div class="row"><button class="ghost" data-pk="test">שליחת התראת בדיקה</button><button class="link" data-pk="off">כיבוי</button></div>` : `<button data-pk="on">הפעלת תזכורות</button>`}</div>`;
@@ -952,9 +952,9 @@ function drawLock(shake) {
 function drawLock0(el, shake) {
   if (!lockMode) { el.hidden = true; el.innerHTML = ""; document.body.classList.remove("locked"); return; }
   el.hidden = false; document.body.classList.add("locked");
-  const key = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>`;
+  const key = `<img src="icons/icon-192.png" alt="" width="30" height="30" class="logo">`, keyOld = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>`;
   if (lockMode === "forgot") {
-    el.innerHTML = `<div class="lock-in"><div class="lbrand">${key}מפתח</div><h2>שכחתם את הקוד?</h2>
+    el.innerHTML = `<div class="lock-in"><div class="lbrand">${key}דירה בשליטה</div><h2>שכחתם את הקוד?</h2>
       <p class="small">אי אפשר לפתוח בלי הקוד. אפשר למחוק את הנתונים מהטלפון הזה ולהתחיל מחדש:</p>
       <p class="small muted">אם הרכישה משותפת, מה שכבר סונכרן נשאר אצל מי שמשתף איתכם (שינויים שעוד לא סונכרנו יימחקו). אחרי המחיקה בחרו "יש לי קוד" בהגדרות והקלידו את קוד השיתוף מהטלפון השני. אם שמרתם גיבוי, אפשר גם לשחזר ממנו.</p>
       <button data-lk="wipe" style="background:var(--warn);border-color:var(--warn)">מחיקת הנתונים מהטלפון הזה</button><button class="link" data-lk="back">חזרה להקלדת הקוד</button></div>`;
@@ -962,7 +962,7 @@ function drawLock0(el, shake) {
   }
   const title = lockMode === "unlock" ? "הקלידו את הקוד" : lockMode === "verify" ? "הקלידו את הקוד הנוכחי" : lockMode === "set1" ? "בחרו קוד בן 4 ספרות" : "הקלידו שוב את אותו קוד";
   const bio = lockMode === "unlock" && lockCfg && lockCfg.cred ? `<button class="kf" data-lk="bio" aria-label="פתיחה בטביעת אצבע או בפנים">טביעת<br>אצבע</button>` : "<span></span>";
-  el.innerHTML = `<div class="lock-in" role="dialog" aria-modal="true" aria-label="${title}"><div class="lbrand">${key}מפתח</div><h2>${title}</h2>
+  el.innerHTML = `<div class="lock-in" role="dialog" aria-modal="true" aria-label="${title}"><div class="lbrand">${key}דירה בשליטה</div><h2>${title}</h2>
     <div class="pindots ${shake ? "shake" : ""}" aria-hidden="true">${[0, 1, 2, 3].map(i => `<i class="${i < lockPin.length ? "on" : ""}"></i>`).join("")}</div>
     <p class="sr-only" aria-live="polite">${lockPin.length ? `הוקשו ${lockPin.length} מתוך 4 ספרות` : ""}</p>
     <p class="small" style="color:var(--warn);min-height:1.3em;margin:0" role="alert">${lockErr}</p>
@@ -988,8 +988,8 @@ async function lockDigit(n) {
 }
 async function bioEnable() {
   try {
-    const cred = await navigator.credentials.create({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: "מפתח" },
-      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "maftech", displayName: "מפתח" },
+    const cred = await navigator.credentials.create({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: "דירה בשליטה" },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "maftech", displayName: "דירה בשליטה" },
       pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
       authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" }, timeout: 60000 } });
     lockCfg.cred = b64(cred.rawId); saveLock(); render(); toast("מעכשיו אפשר לפתוח גם בטביעת אצבע");
@@ -1028,10 +1028,10 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 15";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 16";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
-    <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
+    <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
     <p class="small">ליד מספרים מופיעות תוויות: <span class="chip ok">מהחוזה</span> נתון שאישרתם מול החוזה, <span class="chip gold">טרם אומת</span> תבנית שעוד לא נבדקה, <span class="chip mute">אומדן</span> הערכה של האפליקציה, <span class="chip mute">הנחת משתמש</span> הנחה שאתם קובעים (למשל אינפלציה).</p>
     <p class="small muted">מקורות הכללים: הוראה 329 של בנק ישראל, מדרגות מס הרכישה, חוק המכר. פירוט "איך חישבנו" מופיע בכל מסך כסף.</p></details>`;
 }
@@ -1527,7 +1527,7 @@ function screenHome() {
   return `<div class="screen">
     ${S.example ? `<div class="spread"><h1>קניתם דירה. מתי תצטרכו כל שקל?</h1></div>` : dealPicker()}
     ${S.example ? "" : statusLine() + sinceLine() + dealLine()}
-    ${S.example ? `<p class="lead">"מפתח" מחבר את לוח התשלומים לקבלן, את החסכונות ואת המשכנתא, ומראה לכם מה צפוי בכל חודש ומה לעשות עכשיו.</p>` : stageStrip()}
+    ${S.example ? `<p class="lead">"דירה בשליטה" מחברת את לוח התשלומים לקבלן, את החסכונות ואת המשכנתא, ומראה לכם מה צפוי בכל חודש ומה לעשות עכשיו.</p>` : stageStrip()}
     ${S.example ? heroCard() : dashboardCard() + heroCard()}
     ${S.example ? "" : timelineCard()}
     ${S.example ? `<p class="small muted" style="text-align:center">כבר יש לכם קובץ גיבוי? <button class="link small" data-act="restore">שחזור מגיבוי</button><br>בן או בת הזוג כבר התחילו? <button class="link small" data-act="joinwelcome">יש לי קוד שיתוף</button></p>` : ""}
@@ -2916,7 +2916,7 @@ async function exportICS() {
 function reportHTML() {
   const p = S.profile, f = S.fin, t = T(), D = dealFin(), tr = (a, b) => `<tr><td>${a}</td><td>${b}</td></tr>`, sec = (h, body) => `<h2>${h}</h2>${body}`;
   const blM = dealBlockers("mortgage"), blC = dealBlockers("cash"), blK = dealBlockers("costs"), bad = l => `<p class="warn">לא חושב: ${esc(l[0].msg)}</p>`;
-  let h = `<h1>מפתח · סיכום הרכישה</h1><p class="muted">הופק ב-${fmtDate(ymd(today()))}. החישובים מבוססים על הנתונים שהוזנו ועל הנחות גלויות. זה לא ייעוץ ולא אישור משכנתא.</p>`;
+  let h = `<h1>דירה בשליטה · סיכום הרכישה</h1><p class="muted">הופק ב-${fmtDate(ymd(today()))}. החישובים מבוססים על הנתונים שהוזנו ועל הנחות גלויות. זה לא ייעוץ ולא אישור משכנתא.</p>`;
   h += sec("פרטי הרכישה", `<table>${tr("סוג", esc(t.name))}${tr("עיר", esc(p.city || "—"))}${tr("מחיר", ils(p.price))}${tr("חתימה", fmtDate(p.sign) || "—")}${tr(t.contractor ? "מסירה" : "קבלת מפתח", fmtDate(p.delivery) || "—")}${p.type === "ml" && p.lottery ? tr("הגרלה", fmtDate(p.lottery)) : ""}${p.form4 ? tr("טופס 4", fmtDate(p.form4)) : ""}${saleAllowed() ? tr("מותר למכור", fmtDate(saleAllowed()) + (p.form4 ? "" : " (משוער)")) : ""}</table>`);
   h += sec("כסף", blK.length ? bad(blK) : `<table>${tr("חסכונות", ils(f.savings || 0))}${tr("הון עצמי", ils(D.equity))}${D.gap > 1 ? tr("פער מימון", `<span class="warn">${ils(D.gap)}</span>`) : ""}${tr("עלויות נלוות", ils(costsTotal() - linkTotal()))}${t.contractor ? tr("הצמדה משוערת", ils(linkTotal()) + ` (${S.idxRate}% בשנה)`) : ""}${timingExtra() > 1 ? tr("תוספת מעבר להון העצמי, בגלל מועד תחילת המימון", ils(timingExtra())) : ""}${tr("מהכיס בסך הכול", "<b>" + ils(ownCash() + costsTotal()) + "</b>")}${tr("החסכונות אחרי כל ההוצאות, לפני החיסכון החודשי", ils(moneyLeft().left2))}</table>`);
   if (blM.length) h += sec("משכנתא", bad(blM)); else { const m = mortgageCalc(D.bankFunds), r = pti(m.first);
@@ -2936,7 +2936,7 @@ function reportHTML() {
 function exportPDF() {
   if (S.example) { toast("קודם הגדירו את הרכישה שלכם"); return; }
   document.getElementById("report").innerHTML = reportHTML();
-  const old = document.title; document.title = "מפתח - סיכום הרכישה " + ymd(today());
+  const old = document.title; document.title = "דירה בשליטה - סיכום הרכישה " + ymd(today());
   setTimeout(() => { window.print(); document.title = old; }, 50);
   toast("בחלון ההדפסה בחרו \"שמירה כ-PDF\"");
 }
@@ -2956,7 +2956,7 @@ document.getElementById("restorefile").addEventListener("change", e => {
       const prev = S; S = migrate(j.state); S.example = false; setupOpen = false; tab = "home";
       try { render(); } catch (er) { S = prev; render(); throw er; }
       persist(); toast("הנתונים שוחזרו מהגיבוי");
-    } catch (err) { toast("הקובץ הזה הוא לא גיבוי של מפתח"); }
+    } catch (err) { toast("הקובץ הזה הוא לא גיבוי של דירה בשליטה"); }
   };
   rd.readAsText(f);
 });
@@ -3060,8 +3060,8 @@ document.addEventListener("click", e => {
     case "joinopen": joinOpen = true; render(); break;
     case "joincancel": joinOpen = false; render(); break;
     case "join": joinShare(document.getElementById("joincode").value); break;
-    case "sharesend": { const url = location.origin + "/?join=" + store.code, text = `הצטרפו לרכישה המשותפת שלנו באפליקציית מפתח: ${url}\n(קוד השיתוף: ${store.code})`;
-      if (navigator.share) navigator.share({ title: "מפתח", text }).catch(() => {}); else location.href = "https://wa.me/?text=" + encodeURIComponent(text); break; }
+    case "sharesend": { const url = location.origin + "/?join=" + store.code, text = `הצטרפו לרכישה המשותפת שלנו באפליקציית דירה בשליטה: ${url}\n(קוד השיתוף: ${store.code})`;
+      if (navigator.share) navigator.share({ title: "דירה בשליטה", text }).catch(() => {}); else location.href = "https://wa.me/?text=" + encodeURIComponent(text); break; }
     case "leavedel": { const c = store.code; if (!confirm("למחוק את הרכישה המשותפת מהשרת? בטלפון השני היא תפסיק להתעדכן. בטלפון הזה הנתונים יישארו.")) break;
       if (store.shared && store.shared.del) store.shared.del(); else fetch("/api/household?code=" + encodeURIComponent(c), { method: "DELETE" }).catch(() => {});
       if (confirm("למחוק מהשרת גם את קבצי המסמכים? הם יישארו רק אם שמרתם אותם בטלפון.")) { for (const x of S.docs) if (x.url && x.url.startsWith("file:") && store.assets && store.assets.remove) { store.assets.remove(x.assetId); x.url = null; x.assetId = null; x.fkey = null; } persist(); }

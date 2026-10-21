@@ -34,7 +34,7 @@ export default async (req) => {
   }
   if (b.action === "test") {
     if (!cur) return json({ error: "not subscribed" }, 404);
-    await subs.setJSON(id, { ...cur, pending: [...(cur.pending || []), { id: "test", title: "מפתח", body: "התזכורות פועלות ✓ נזכיר לכם לפני כל תשלום וכל החלטת ריבית." }] });
+    await subs.setJSON(id, { ...cur, pending: [...(cur.pending || []), { id: "test", title: "דירה בשליטה", body: "התזכורות פועלות ✓ נזכיר לכם לפני כל תשלום וכל החלטת ריבית." }] });
     const st = await tickle(cur.sub, await getKeys(cfg));
     return json({ ok: st >= 200 && st < 300, status: st });
   }
