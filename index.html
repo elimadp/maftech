@@ -1599,7 +1599,7 @@ function moneyAnswer(c) {
     head: split ? `המחסור מתחיל ב${ymLabel(st.m)}. השפל הגדול ביותר: ${ymLabel(c.low.m)}` : bad ? `המחסור מתחיל ב${ymLabel(c.low.m)}` : `החודש הצפוף ביותר: ${ymLabel(c.low.m)}`,
     val: bad ? `צפוי מחסור של ${ils(-lo)}` : `צפויים להישאר ${ils(lo)}`,
     sub: bad ? (split ? (() => { const i0 = c.rows.indexOf(st), i1 = c.rows.indexOf(c.low), rec = c.rows.slice(i0, i1).some(r => r.close >= 0);
-      return rec ? `המחסור הראשון: ${ymLabel(st.m)}, חסרים ${ils(-st.close)}. אחריו יש חודשים עם יתרה חיובית, ושוב מחסור. השפל הגדול ביותר: ${ils(-lo)} ב${ymLabel(c.low.m)}.` : `ב${ymLabel(st.m)} חסרים ${ils(-st.close)}. המחסור נמשך, והשפל הגדול ביותר: ${ils(-lo)} ב${ymLabel(c.low.m)}.`; })() : "בחודש הזה הכסף בחשבון לא יספיק לתשלומים.") : tight ? `${ils(rv - lo)} פחות מכרית הביטחון שהגדרתם (${f.reserve} חודשי הוצאות). אין מחסור בתשלומים עצמם.` : rv ? `יותר מכרית הביטחון שהגדרתם (${f.reserve} חודשי הוצאות).` : "",
+      return rec ? `המחסור הראשון: ${ymLabel(st.m)}, חסרים ${ils(-st.close)}. אחריו יש חודשים עם יתרה חיובית, ושוב מחסור, עד ${ils(-lo)} בשפל.` : `ב${ymLabel(st.m)} חסרים ${ils(-st.close)}. המחסור נמשך, עד ${ils(-lo)} בשפל.`; })() : "בחודש הזה הכסף בחשבון לא יספיק לתשלומים.") : tight ? `${ils(rv - lo)} פחות מכרית הביטחון שהגדרתם (${f.reserve} חודשי הוצאות). אין מחסור בתשלומים עצמם.` : rv ? `יותר מכרית הביטחון שהגדרתם (${f.reserve} חודשי הוצאות).` : "",
     tone: bad ? "warn" : tight ? "gold" : "ok" };
 }
 function keyMetric() {
