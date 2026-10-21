@@ -298,6 +298,12 @@ with sync_playwright() as p:
         lone = E("[...document.querySelectorAll('#view td, #view b, #view span')].filter(x=>x.offsetParent&&x.getClientRects().length>1&&/−/.test(x.innerText)&&x.innerText.length<16).length")
         check(f"F4 עלויות ב-360 {'טקסט מוגדל' if big else 'רגיל'}: סכומים גלויים, מינוס לא נשבר", "0 / 0", f"{ov} / {lone}", ov == 0 and lone == 0)
     E("document.documentElement.classList.remove('bigtext')"); pg.set_viewport_size({"width": 390, "height": 844})
+    # G: shortage that recovers in between; equity check with a forecast shortage
+    E("S=newState({type:'ml',buyer:'first',city:'ראשון לציון',price:1480000,sign:'2026-12-01',delivery:'2030-03-01',linkedShare:50},false); S.fin.savings=300000; S.fin.savTouched=true; S.fin.income=21000; S.fin.expenses=13000; S.fin.expTouched=true; S.fin.rent=5200; persist()")
+    rec = E("(()=>{const c=cashflow(),A=moneyAnswer(c),st=c.rows.find(r=>r.close<0);const i0=c.rows.indexOf(st),i1=c.rows.indexOf(c.low);return {bad:A.bad,rec:c.rows.slice(i0,i1).some(r=>r.close>=0),sub:A.sub}})()")
+    check("G1 בלי 'המחסור גדל' כשהיתרה חוזרת לחיובית", "אחריו יש חודשים עם יתרה חיובית", rec["sub"][:70], rec["bad"] and (not rec["rec"] or ("גדל" not in rec["sub"] and "יתרה חיובית" in rec["sub"])))
+    E("go('calc','equity')"); pg.wait_for_timeout(100); q = pg.inner_text("#view"); at = E("(()=>{const e=equityTiming();return e.at?e.at.close:null})()")
+    check("G2 הון עצמי: אין ✓ כשעד ההעברה הראשונה צפוי מחסור", "סכום וחודש, בלי ✓", "תקין" if (at is None or at >= 0 or ("✓ ההון העצמי הזמין היום מספיק" not in q and "מחסור של" in q)) else "סתירה", at is None or at >= 0 or ("✓ ההון העצמי הזמין היום מספיק" not in q and "מחסור של" in q))
     check("שגיאות JavaScript", "אין", errs or "אין", not errs)
     b.close()
 w = max(len(r[0]) for r in R)
