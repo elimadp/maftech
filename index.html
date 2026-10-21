@@ -87,6 +87,7 @@ html.bigtext .jrow .jh { flex-wrap: wrap; }
 .lead { font-size: 1.08rem; margin: 0; }
 .since { margin: -4px 0 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 10px; font-size: .92rem; }
 .dealpick { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; color: var(--fg); font: inherit; text-align: right; max-width: 100%; } .dealpick h1 { overflow-wrap: anywhere; } .dealpick span { color: var(--accent); font-size: 1.1rem; }
+.dealsbtn { align-self: flex-start; margin-top: -8px; }
 .dealrow { width: 100%; background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; color: var(--fg); font: inherit; text-align: right; } .dealrow span { color: var(--accent); font-size: 1.2rem; }
 .dealline { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); font-size: .92rem; margin-top: -6px; flex-wrap: wrap; }
 .story .jrow { padding: 0; } .jmain { display: grid; gap: 4px; width: 100%; background: none; border: none; text-align: right; color: var(--fg); font: inherit; padding: 12px 10px 6px; border-radius: 0; }
@@ -1026,7 +1027,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 11";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 12";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1496,7 +1497,7 @@ const agoLabel = ts => { const d = Math.floor((Date.now() - (ts || 0)) / 864e5);
 function dealPicker() {
   const r = dealsReg() || { list: [] }, cur = r.list.find(x => x.id === r.active), list = [...r.list].sort((a, b) => (b.id === r.active) - (a.id === r.active) || b.updated - a.updated);
   return `<button class="dealpick" data-act="dealsopen" aria-expanded="${dealsOpen}"><h1>${esc(cur ? dealName(cur) : dealAutoName(S))}</h1><span aria-hidden="true">${dealsOpen ? "▴" : "▾"}</span></button>
-    ${r.list.length > 1 && !dealsOpen ? `<p class="small muted" style="margin:-8px 0 0">${r.list.length} עסקאות שמורות · לחצו על השם כדי לעבור</p>` : ""}
+    <button class="ghost small dealsbtn" data-act="dealsopen" aria-expanded="${dealsOpen}">${dealsOpen ? "סגירת הרשימה" : `העסקאות שלי${r.list.length > 1 ? ` (${r.list.length})` : ""} · עסקה חדשה`}</button>
     ${dealsOpen ? `<div class="card deals"><h2>העסקאות שלי</h2><div class="list">${list.map(e => e.id === r.active ? `<div class="item"><div class="grow"><b>✓ ${esc(dealName(e))}</b><div class="small muted">פתוחה עכשיו · ${agoLabel(e.updated)}</div></div><button class="link small" data-act="dealrename">שינוי שם</button></div>` : `<button class="item dealrow" data-deal="${e.id}"><div class="grow"><b>${esc(dealName(e))}</b><div class="small muted">${agoLabel(e.updated)}</div></div><span aria-hidden="true">‹</span></button>`).join("")}</div>
       <button class="ghost" data-act="newdeal" style="margin-top:10px">+ עסקה חדשה</button><p class="small muted" style="margin:6px 0 0">כל עסקה נשמרת בנפרד בטלפון הזה, עם כל הנתונים שלה. העסקה הנוכחית לא נמחקת.</p></div>` : ""}`;
 }
