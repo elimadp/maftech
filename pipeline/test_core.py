@@ -308,6 +308,8 @@ with sync_playwright() as p:
     E("S=newState({type:'resale',buyer:'first',city:'חיפה',price:1500000,sign:'2026-12-15',delivery:'2027-03-15',linkedShare:0},false); S.payments.sort((a,b)=>a.date.localeCompare(b.date))[1].date='2027-01-20'; S.fin.savings=500000; S.fin.savTouched=true; S.fin.income=20000; S.fin.expenses=12000; S.fin.expTouched=true; persist()")
     al = E("payAlloc().map(a=>Math.round(a.bank))"); eq = E("dealFin().equity"); first = E("cashflow().rows.find(r=>r.mort)")
     check("H1 יד שנייה: הבנק מממן גם בתוך 60 יום, אחרי ההון העצמי", "תשלום שני ממומן חלקית", al, al[0] == 0 and al[1] > 0 and abs(sum(al) - E("dealFin().bankFunds")) < 1 and first and first["m"] == "2027-02")
+    E("go('calc','cash')"); pg.wait_for_timeout(100); E("document.querySelectorAll('details').forEach(d=>d.open=true)"); pg.wait_for_timeout(50); t = pg.inner_text("#view")
+    check("H2 יד שנייה: הנחות מנוסחות כהנחה, בלי 'קבלן'", "בחישוב מניחים · ייקבע בבנק · בלי לקבלן", "תקין" if ("בחישוב מניחים" in t and "ייקבע בבנק" in t and "לקבלן" not in t) else "חסר", "בחישוב מניחים" in t and "ייקבע בבנק" in t and "לקבלן" not in t)
     check("שגיאות JavaScript", "אין", errs or "אין", not errs)
     b.close()
 w = max(len(r[0]) for r in R)
