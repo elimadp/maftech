@@ -1,8 +1,44 @@
 {
- "updated": "18.10.2026", "updatedISO": "2026-10-18", "nextBoiISO": "2026-10-21",
- "boi": {"rate": 3.25, "date": "1.9.2026", "next": "21.10.2026", "src": "https://www.boi.org.il/media/vuubo40c/הודעת-ריבית-01092026.pdf"},
+ "updated": "21.10.2026",
+ "updatedISO": "2026-10-21",
+ "nextBoiISO": "2026-11-23",
+ "boi": {
+  "rate": 3.25,
+  "date": "21.10.2026",
+  "next": "23.11.2026",
+  "src": "https://www.boi.org.il/"
+ },
  "prime": 4.75,
- "mortgage": {"month": "אוגוסט 2026", "fixedLinked": 3.29, "fixedUnlinked": 4.62, "varLinked": 3.19, "src": "https://simplecalc.co.il/guides/mortgage-rates/"},
- "cpi": {"month": "ספטמבר 2026", "mom": -0.5, "yoy": 1.6, "housingYoy": -1.8, "published": "15.10.2026", "src": "https://www.calcalist.co.il/local_news/article/hjuvbu0ozg"},
- "construction": {"month": "ספטמבר 2026", "mom": 0.1, "ytd": 2.8, "monthly": [0.1,0.2,0.2,1.1,0.6,0.2,-0.1,0.4,0.1], "src": "https://www.kantahome.com/forecasts-and-indexes/construction-index"}
+ "mortgage": {
+  "month": "אוגוסט 2026",
+  "fixedLinked": 3.29,
+  "fixedUnlinked": 4.62,
+  "varLinked": 3.19,
+  "src": "https://simplecalc.co.il/guides/mortgage-rates/"
+ },
+ "cpi": {
+  "month": "ספטמבר 2026",
+  "mom": -0.5,
+  "yoy": 1.6,
+  "housingYoy": -1.8,
+  "published": "15.10.2026",
+  "src": "https://www.calcalist.co.il/local_news/article/hjuvbu0ozg"
+ },
+ "construction": {
+  "month": "ספטמבר 2026",
+  "mom": 0.1,
+  "ytd": 2.8,
+  "monthly": [
+   0.1,
+   0.2,
+   0.2,
+   1.1,
+   0.6,
+   0.2,
+   -0.1,
+   0.4,
+   0.1
+  ],
+  "src": "https://www.kantahome.com/forecasts-and-indexes/construction-index"
+ }
 }
