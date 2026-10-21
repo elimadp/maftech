@@ -2431,7 +2431,7 @@ function doStep(a) {
 }
 function closeSheetQuiet() { const el = document.getElementById("sheet"); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ""; } }
 function heroCard() {
-  const steps = nextSteps(); if (!steps.length) return `<div class="card hero"><h2>הכול מעודכן ✓</h2><p class="small muted">אין משהו דחוף. נעדכן אתכם כשיהיה.</p></div>`;
+  const steps = nextSteps().filter(x => S.example || x.id !== "pay"); if (!steps.length) return `<div class="card hero"><h2>הכול מעודכן ✓</h2><p class="small muted">אין משהו דחוף. נעדכן אתכם כשיהיה.</p></div>`;
   const [h, ...rest] = steps;
   return `<div class="card hero ${h.tone}"><span class="small muted">${S.example ? "הצעד הבא" : "מה לעשות עכשיו"}</span><h2>${h.title}</h2><p>${h.text}</p>
     <div><button data-step="${h.act}">${h.btn} ←</button></div>
