@@ -9,7 +9,7 @@ def ils_(v): return "₪" + f"{round(v):,}"
 def ann(P, r, n): r = r / 1200; return P / n if r == 0 else P * r / (1 - (1 + r) ** -n)
 BASE = """(()=>{ S = newState({type:'ml',buyer:'first',city:'פתח תקווה',price:1600000,sign:'2026-11-01',delivery:'2030-11-01',linkedShare:50,lottery:'2024-02-25',form4:'',stage:'before'}, false);
  S.fin.savings=350000; S.fin.income=24000; S.fin.expenses=12000; S.fin.expTouched=true; S.fin.appraisal=1900000; S.fin.equity=250000;
- Object.assign(S.mix,{years:25,pPrime:0,pFixed:100,pLinked:0,pVar:0,rFixed:4.8}); S.idxRate=3.7; persist(); go('calc','mortgage'); })()"""
+ Object.assign(S.mix,{years:25,pPrime:0,pFixed:100,pLinked:0,pVar:0,rFixed:4.8}); S.idxRate=3.7; persist(); mixOpen=true; go('calc','mortgage'); })()"""
 with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 390, "height": 844}); pg = ctx.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: d.accept())
@@ -38,7 +38,7 @@ with sync_playwright() as p:
     check("ריבית 0%", 4500, round(pay, 2), abs(pay - 4500) < .01)
     E("S.mix.rFixed=4.8; persist()")
     # 4 mix 110%
-    E("S.mix.pFixed=110; persist(); go('calc','mortgage')"); scr = {}
+    E("S.mix.pFixed=110; persist(); mixOpen=true; go('calc','mortgage')"); scr = {}
     for tb, sb in [("calc", "mortgage"), ("calc", "equity"), ("calc", "cash"), ("home", "")]:
         E(f"go('{tb}', {repr(sb) if sb else 'undefined'})"); pg.wait_for_timeout(100); scr[tb + sb] = pg.inner_text("#view")
     blocked = all(("לא ניתן לחשב" in v) for v in scr.values()) and "החודש הכי צפוף:" not in scr["calccash"] and "לשים ₪" not in scr["calcequity"]
@@ -69,11 +69,11 @@ with sync_playwright() as p:
     check("אחוז פעימה שלילי נחסם", 7, E(f"S.payments.find(x=>x.id==='{pid}').pct"), E(f"S.payments.find(x=>x.id==='{pid}').pct") == 7)
     pin.fill("7"); pin.dispatch_event("input"); E("payEdit=false; render()")
     # 7 years 0
-    E("go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("0"); yi.dispatch_event("input"); pg.wait_for_timeout(100)
+    E("mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("0"); yi.dispatch_event("input"); pg.wait_for_timeout(100)
     check("תקופה 0 נחסמת", 25, E("S.mix.years"), E("S.mix.years") == 25 and "לפחות 1" in pg.inner_text("#view"))
     E("go('calc','cash')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
     check("ערך לא שמור חוסם תחזית", "לא ניתן לחשב", "חסום" if "לא ניתן לחשב" in t else "מוצג", "לא ניתן לחשב" in t)
-    E("go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("25"); yi.dispatch_event("input")
+    E("mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("25"); yi.dispatch_event("input")
     # 8 linked 150 in linkage screen
     E("go('calc','linkage')"); pg.wait_for_timeout(100); li = pg.locator("[data-c='profile.linkedShare']"); li.fill("150"); li.dispatch_event("input"); pg.wait_for_timeout(100)
     check("הצמדה 150% במסך הצמדה נחסמת", 50, E("S.profile.linkedShare"), E("S.profile.linkedShare") == 50)
@@ -107,7 +107,7 @@ with sync_playwright() as p:
     E("go('calc','costs')"); pg.wait_for_timeout(100); lb = pg.inner_text("#livebar"); t = pg.inner_text("#view")
     check("F03 כסף מהכיס זהה בכותרת ובפירוט", ils_(own), lb.replace("\n", " ")[:60], ils_(own) in lb and ils_(own) in t)
     check("F05 הון ופער בשורות נפרדות", "הון 0 · פער מוצג", "תקין" if ("₪0" in t and "פער מימון (מעבר" in t) else "לא", "₪0" in t and "פער מימון (מעבר" in t)
-    E("go('calc','equity')"); pg.wait_for_timeout(100); exp = E("S.fin.savings + extraFunds() - dealFin().ownTotal - costsTotal()")
+    E("go('calc','equity')"); pg.wait_for_timeout(100); exp = E("S.fin.savings + extraFunds() - ownCash() - costsTotal()")
     liq = E("equityScenarios().res.find(r=>Math.abs(r.eq-chosenEquity())<1).liquid")
     check("F04 יתרה מהחסכונות מפחיתה את הפער", round(exp), round(liq), abs(exp - liq) < 1)
     E("go('calc','cash')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
@@ -137,7 +137,7 @@ with sync_playwright() as p:
     lo1 = E("cashflow().low.close"); end1 = E("cashflow().end.close"); st1 = E("moneyLeft().left2")
     check("N1 סימון 'שולם' לא מנפח את היתרה", f"{round(lo0)} / {round(end0)} / {round(st0)}", f"{round(lo1)} / {round(end1)} / {round(st1)}", abs(lo0 - lo1) < 1 and abs(end0 - end1) < 1 and abs(st0 - st1) < 1)
     E(f"(()=>{{const x=S.payments.find(k=>k.id==='{pid}'); x.paid=false; delete x.paidAmt; delete x.paidLink; delete x.paidOn; persist()}})()")
-    E("S.mix.years=10; Object.assign(S.mix,{pPrime:0,pFixed:100,pLinked:0,rFixed:4.8}); persist(); go('calc','mortgage')"); pg.wait_for_timeout(100)
+    E("S.mix.years=10; Object.assign(S.mix,{pPrime:0,pFixed:100,pLinked:0,rFixed:4.8}); persist(); mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100)
     ri = pg.locator("[data-c='mix.rFixed']"); ri.fill("5.5"); ri.dispatch_event("input"); pg.wait_for_timeout(100)
     gb = pg.inner_text("#gapbox"); capx = 12000 / ann(1, 5.5, 120)
     check("N2 פער מימון מתעדכן בזמן הקלדה", ils_(capx), gb.replace("\n", " ")[:80], ils_(capx) in gb)
@@ -153,7 +153,7 @@ with sync_playwright() as p:
     E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[0].paid=true; ps[0].paidAmt=112000; S.profile.price=1700000; persist()})()")
     check("N5 לוח שחסרים בו 7,000 חוסם תזרים", "חסום", E("dealBlockers('cash').map(b=>b.msg).join('|')")[:60], any("לוח" in b for b in E("dealBlockers('cash').map(b=>b.msg)")))
     E("(()=>{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[0].paid=false; delete ps[0].paidAmt; S.profile.price=1600000; persist()})()")
-    E("go('calc','mortgage')"); pg.wait_for_timeout(100); bp = E("S.mix.rPrime"); pi_ = pg.locator("[data-c='mix.rPrime']"); pi_.fill(""); pi_.dispatch_event("input"); pg.wait_for_timeout(100)
+    E("mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100); bp = E("S.mix.rPrime"); pi_ = pg.locator("[data-c='mix.rPrime']"); pi_.fill(""); pi_.dispatch_event("input"); pg.wait_for_timeout(100)
     check("N6 ריבית ריקה נחסמת", bp, E("S.mix.rPrime"), E("S.mix.rPrime") == bp and "שדה חובה" in pg.inner_text("#view"))
     pi_.fill(str(bp)); pi_.dispatch_event("input")
     E("S.fin.income=0; persist()"); check("N6 הכנסה ריקה חוסמת תזרים", "חסום", len(E("dealBlockers('cash')")), any("הכנסה" in b for b in E("dealBlockers('cash').map(b=>b.msg)"))); E("S.fin.income=24000; persist()")
@@ -176,7 +176,7 @@ with sync_playwright() as p:
     E("S.mix.pFixed=34; S.mix.years=10; Object.assign(S.mix,{pPrime:0,pFixed:100,pLinked:0,rFixed:5.5}); persist(); go('calc','equity')"); pg.wait_for_timeout(100)
     lb = pg.inner_text("#livebar"); bf = E("dealFin().bankFunds")
     check("Q2 פס הון עצמי: מה שהבנק מממן ופער", ils_(bf), lb.replace("\n", " ")[:80], ils_(bf) in lb and "פער מימון" in lb)
-    E("Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,rFixed:4.62}); persist(); go('calc','mortgage')"); pg.wait_for_timeout(100)
+    E("Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,rFixed:4.62}); persist(); mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100)
     ri = pg.locator("[data-c='mix.rFixed']"); ri.fill(""); ri.dispatch_event("input"); ri.dispatch_event("change"); E("render()"); pg.wait_for_timeout(100)
     v = pg.locator("[data-c='mix.rFixed']").input_value(); t = pg.inner_text("#view")
     check("Q3 שדה שגוי שומר את מה שהוקלד ושם השדה בהודעה", "ריק + 'ריבית קבועה'", f"'{v}'", v == "" and "קבועה" in t.split("שדה חובה")[0][-60:])
@@ -190,13 +190,13 @@ with sync_playwright() as p:
     check("Q6 החודש הראשון שבו הכסף נגמר מוצג", "הכסף נגמר כבר", ("מוצג" if (fn is None or "הכסף נגמר כבר" in t) else "חסר") + f" fn={fn} bl={E('JSON.stringify(dealBlockers(`cash`))')[:120]}", fn is None or "הכסף נגמר כבר" in t)
     E("S.fin.equity=250000; Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,rFixed:4.62}); persist()")
     # ---- QA6 findings ----
-    E("Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,pVar:0,rPrime:4.75,rFixed:4.62,rLinked:3.29,infl:3}); S.fin.equity=250000; persist(); go('calc','mortgage')"); pg.wait_for_timeout(100)
+    E("Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,pVar:0,rPrime:4.75,rFixed:4.62,rLinked:3.29,infl:3}); S.fin.equity=250000; persist(); mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100)
     yi = pg.locator("[data-c='mix.years']"); yi.fill("0"); yi.dispatch_event("input"); yi.dispatch_event("change"); pg.wait_for_timeout(100)
     check("Q6-1 שדה לא תקין מציג את מה שהוקלד אחרי יציאה", "0", pg.locator("[data-c='mix.years']").input_value(), pg.locator("[data-c='mix.years']").input_value() == "0")
     check("Q6-3 אין פער/יכולת במסך המשכנתא בזמן חסימה", "ריק", pg.inner_text("#gapbox")[:30] or "ריק", pg.inner_text("#gapbox").strip() == "")
     E("go('calc','linkage')"); pg.wait_for_timeout(100)
     check("Q6-4 שנים לא תקינות לא חוסמות הצמדה", "הצמדה מוצגת", "חסום" if "לא ניתן לחשב" in pg.inner_text("#view") else "מוצגת", "לא ניתן לחשב" not in pg.inner_text("#view"))
-    E("go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("25"); yi.dispatch_event("input"); yi.dispatch_event("change")
+    E("mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100); yi = pg.locator("[data-c='mix.years']"); yi.fill("25"); yi.dispatch_event("input"); yi.dispatch_event("change")
     E("go('calc','costs')"); pg.wait_for_timeout(100); E("document.querySelectorAll('details').forEach(x=>x.open=true)"); ci = pg.locator("[data-c='costs.moving']"); ci.fill("-5000"); ci.dispatch_event("input"); ci.dispatch_event("change"); pg.wait_for_timeout(100)
     check("Q6-1 עלות שלילית נשארת בשדה", "-5000", ci.input_value(), ci.input_value().startswith("-"))
     check("Q6-4 עלות לא תקינה לא חוסמת משכנתא", 0, len(E("dealBlockers('mortgage')")), not E("dealBlockers('mortgage').length"))
@@ -240,17 +240,18 @@ with sync_playwright() as p:
     own = E("ownCash() + costsTotal()"); left = E("moneyLeft().left2")
     check("D4 מהכיס כולל תשלומים לפני מימון הבנק", 451752, round(own), abs(own - 451752) < 2)
     check("D5 יתרה סטטית מהחסכונות", 248248, round(left), abs(left - 248248) < 2)
-    E("go('calc','mortgage')"); pg.wait_for_timeout(100); lb = pg.inner_text("#livebar")
+    E("mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100); lb = pg.inner_text("#livebar")
     check("D6 הפס העליון במשכנתא לפי המשיכות", "₪7,180", lb.replace("\n", " ")[:70], "₪7,180" in lb and "₪7,912" not in lb)
     E("go('home')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
     check("D7 הבית: מהכיס והחזר עקביים", "₪451,752 · ₪7,180", "תקין" if ("₪451,752" in t and "₪7,180" in t) else t[:80], "₪451,752" in t and "₪7,180" in t)
     E("Object.assign(S.mix,{pPrime:0,pFixed:0,pLinked:100,pVar:0,rLinked:3.29,infl:10}); S.fin.bankEarly=true; S.fin.income=0; persist(); go('home')"); pg.wait_for_timeout(100)
-    tile = E("[...document.querySelectorAll('.tile')].find(x=>/החזר משכנתא/.test(x.innerText)).innerText")
-    check("D8 בלי הכנסה: ההחזר היום לא מוחלף בהחזר מלא", "₪0", tile.replace("\n", " / "), "₪0" in tile.split("\n")[1])
+    tile = E("(()=>{const r=[...document.querySelectorAll('.jrow')].find(x=>/איך המשכנתא/.test(x.innerText)); return r.querySelector('.jv b').innerText+'\\n'+r.querySelector('.jv b').innerText+'\\n'+r.querySelector('.a').innerText})()")
+    exp8 = E("(()=>{const d=drawSteps();return '₪'+(d.now||d.first).toLocaleString('en-US')})()")
+    check("D8 בלי הכנסה: ההחזר לפי המשיכות ולא על כל הקרן", exp8, tile.replace("\n", " / ")[:80], tile.split("\n")[1] == exp8 and "עוד לא התחילה" in tile)
     E("const x=S.payments.find(x=>x.linked&&!x.paid&&x.date>'2028'); x.date=''; persist(); go('home')"); pg.wait_for_timeout(100)
-    tile = E("[...document.querySelectorAll('.tile')].find(x=>/החזר משכנתא/.test(x.innerText)).innerText")
+    tile = E("(()=>{const r=[...document.querySelectorAll('.jrow')].find(x=>/איך המשכנתא/.test(x.innerText)); return r.querySelector('.jv b').innerText+'\\n'+r.querySelector('.jv b').innerText+'\\n'+r.querySelector('.a').innerText})()")
     check("D9 תשלום צמוד בלי תאריך חוסם את ההחזר", "לא ניתן לחשב", tile.split("\n")[1], "לא ניתן לחשב" in tile)
-    E("S=exampleState(); S.example=false; S.mix.years=30; persist()"); y30 = E("drawSteps().full"); E("S.mix.years=25; persist(); go('calc','mortgage')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    E("S=exampleState(); S.example=false; S.mix.years=30; persist()"); y30 = E("drawSteps().full"); E("S.mix.years=25; persist(); mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
     check("D10 המלצת 30 שנה באותו בסיס", f"₪{y30:,}", "מוצג" if f"₪{y30:,}" in t else t[:60], f"₪{y30:,}" in t and "ההחזר הראשון יהיה" not in t)
     E("S.fin.savings=0; S.fin.savTouched=false; persist(); go('calc','cash')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
     check("D11 חסכונות שלא הוזנו: בקשה להזנה ולא 'חסרים'", "חסום עם בקשה", "תקין" if ("חסכונות" in t and "חסרים" not in t) else "מוצג חסר", "חסכונות" in t and "חסרים" not in t)

@@ -72,6 +72,15 @@ p { margin: 0; }
 .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .stat .v { font-family: var(--display); font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stat .l { font-size: .86rem; color: var(--muted); }
+.journey { display: flex; flex-direction: column; margin-top: 4px; }
+.jrow { display: grid; gap: 4px; width: 100%; background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; padding: 12px 0; text-align: right; color: var(--fg); font: inherit; border-inline-start: 4px solid transparent; padding-inline-start: 10px; }
+.jrow:last-child { border-bottom: none; }
+.jrow .jh { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; } .jrow .jq { font-weight: 700; font-family: var(--display); } .jrow .a { font-size: .9rem; color: var(--muted); }
+.jrow .jv { display: flex; align-items: center; gap: 6px; flex: none; } .jrow .jv b { font-family: var(--display); font-size: 1.15rem; white-space: nowrap; } .jrow .jv span { color: var(--accent); font-size: 1.3rem; }
+.jrow.warn { border-inline-start-color: var(--warn); } .jrow.warn .jv b, .jrow .w { color: var(--warn); } .jrow.gold { border-inline-start-color: var(--gold); } .jrow.ok { border-inline-start-color: var(--ok); }
+.status { font-family: var(--display); font-size: 1.1rem; font-weight: 600; margin: -4px 0 0; }
+html.bigtext .jrow .jh { flex-wrap: wrap; }
+.assume { border: 1px dashed var(--field-line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: var(--card); }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
 .grid3 .stat .v { font-size: 1.2rem; }
 .num { font-variant-numeric: tabular-nums; }
@@ -1349,27 +1358,42 @@ function timelineCard() {
     ${p.type === "ml" && t.contractor && !p.form4 && stageIdx() >= stageIdx("build") ? `<p class="small muted" style="margin:8px 0 0">קיבלתם טופס 4? <button class="link small" data-step="act:form4">הזנת התאריך</button></p>` : ""}
     ${fut.length > 4 || past.length > 1 ? `<button class="link small" data-act="tlall">${tlAll ? "פחות" : `כל הציר (${ev.length} אבני דרך)`}</button>` : ""}</div>`;
 }
-/* home: the deal at a glance. Every number comes from the shared engine (dealFin, payAlloc, cashflow, mortgageCalc) */
+/* home: the deal as a story, in the order a couple thinks about it. Every number comes from the shared engine
+   (nextPayment, ownCash, dealFin, drawSteps, cashflow); nothing is computed here. */
+function statusLine() {
+  const p = S.profile, t = T(), np = nextPayment(), ds = p.sign ? daysTo(p.sign) : null, dd = p.delivery ? daysTo(p.delivery) : null, parts = [];
+  if (ds != null && ds > 0) parts.push(`עוד ${nf.format(ds)} ימים לחתימה.`);
+  else if (ds != null && dd != null && dd > 0) parts.push(`חתמתם. עוד ${nf.format(dd)} ימים ${t.contractor ? "למסירה" : "לקבלת המפתח"}.`);
+  else if (dd != null && dd <= 0) parts.push(t.contractor ? "הדירה נמסרה." : "קיבלתם את המפתח.");
+  if (np && np.date !== p.sign) { const n = daysTo(np.date); parts.push(n < 0 ? `התשלום "${esc(np.name)}" עבר את המועד.` : `התשלום הבא בעוד ${nf.format(n)} ימים.`); }
+  return parts.length ? `<p class="status">${parts.join(" ")}</p>` : "";
+}
 function dashboardCard() {
-  const p = S.profile, f = S.fin, t = T(), D = dealFin(), tiles = [];
-  const tile = (k, v, sub, go, tone = "", wide = false) => tiles.push(`<button class="tile ${tone} ${wide ? "wide" : ""}" ${go ? `data-go="${go[0]}" ${go[1] ? `data-sub="${go[1]}"` : ""}` : ""}><span class="k">${k}</span><span class="v">${v}</span>${sub ? `<span class="s">${sub}</span>` : ""}</button>`);
-  const np = nextPayment();
-  if (np) { const dn = daysTo(np.date); tile("התשלום הקרוב", ils(payAmount(np) + (dealBlockers("linkage").length ? 0 : linkageCost(np))), `${esc(np.name)} · ${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים"}`, ["buy", "payments"], dn <= 21 ? "warn" : ""); }
-  const blK = dealBlockers("costs"), blM = dealBlockers("mortgage"), blC = dealBlockers("cash");
-  if (!savKnown()) tile("כמה כסף יש לכם?", "להזנה", "החסכונות קובעים כמה יישאר לכם", ["calc", "costs"]);
-  else if (blK.length) tile("מהכיס", "לא ניתן לחשב", esc(blK[0].msg), ["calc", "costs"], "warn");
-  else { const tx = timingExtra(), ml = moneyLeft().left2; tile("יוצא מהכיס, כולל עלויות", ils(ownCash() + costsTotal()), D.gap > 1 ? `כולל פער מימון ${ils(D.gap)}` : `${ml >= 0 ? "נשארים" : "חסרים"} ${ils(Math.abs(ml))}${tx > 1 ? ` · כולל ${ils(tx)} לפני מימון הבנק` : ""}`, ["calc", "costs"], D.gap > 1 || ml < 0 ? "warn" : ""); }
-  const blD = t.contractor ? drawBlockers() : blM;
-  if (blD.length) tile(t.contractor ? "החזר משכנתא היום" : "החזר חודשי", "לא ניתן לחשב", esc(blD[0].msg), blD[0].tab ? [blD[0].tab, blD[0].sb] : ["calc", "mortgage"], "warn");
+  const p = S.profile, f = S.fin, t = T(), D = dealFin(), rows = [];
+  const row = (q, v, text, go, tone = "") => rows.push(`<button class="jrow ${tone}" data-go="${go[0]}" ${go[1] ? `data-sub="${go[1]}"` : ""}><span class="jh"><span class="jq">${q}</span><span class="jv"><b class="num">${v}</b><span aria-hidden="true">‹</span></span></span><span class="a">${text}</span></button>`);
+  /* 1. what you pay the contractor */
+  const np = nextPayment(), paidN = S.payments.filter(x => x.paid).length;
+  if (np) { const dn = daysTo(np.date); row(t.contractor ? "מה משלמים לקבלן" : "מה משלמים", ils(payAmount(np) + (dealBlockers("linkage").length ? 0 : linkageCost(np))), `הבא: ${esc(np.name)}, ${fmtDate(np.date)} (${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים"}). שולמו ${paidN} מתוך ${S.payments.length} תשלומים.`, ["buy", "payments"], dn <= 21 ? "warn" : ""); }
+  else if (S.payments.length) row("מה משלמים לקבלן", "✓", "כל התשלומים סומנו כשולמו.", ["buy", "payments"], "ok");
+  /* 2. where the money comes from */
+  const blK = dealBlockers("costs");
+  if (!savKnown()) row("מאיפה הכסף מגיע", "להזנה", "הזינו כמה חסכונות יש לכם (גם 0), ונחשב כמה יוצא מהכיס וכמה נשאר.", ["calc", "costs"]);
+  else if (blK.length) row("מאיפה הכסף מגיע", "לא ניתן לחשב", esc(blK[0].msg), blK[0].tab ? [blK[0].tab, blK[0].sb] : ["calc", "costs"], "warn");
+  else { const tx = timingExtra(), ml = moneyLeft().left2;
+    row("מאיפה הכסף מגיע", ils(ownCash() + costsTotal()), `יוצא מהכיס: הון עצמי ${ils(D.equity)}${D.gap > 1 ? `, <span class="w">פער מימון ${ils(D.gap)}</span>` : ""}${tx > 1 ? `, ועוד ${ils(tx)} לפני שהבנק מתחיל` : ""}, ועלויות. השאר, ${ils(D.bankFunds - tx)}, מהמשכנתא. ${ml >= 0 ? `נשארים ${ils(ml)}.` : `<span class="w">חסרים ${ils(-ml)}.</span>`}`, D.gap > 1 ? ["calc", "equity"] : ["calc", "costs"], D.gap > 1 || ml < 0 ? "warn" : ""); }
+  /* 3. how the mortgage comes in */
+  const blD = t.contractor ? drawBlockers() : dealBlockers("mortgage");
+  if (blD.length) row("איך המשכנתא נכנסת", "לא ניתן לחשב", esc(blD[0].msg), blD[0].tab ? [blD[0].tab, blD[0].sb] : ["calc", "mortgage"], "warn");
   else if (t.contractor) { const ds = drawSteps();
-    if (ds && ds.steps.length) tile("החזר משכנתא היום", ils(ds.now), `${!ds.now ? `${ymLabel(ds.firstM)}: ${ils(ds.first)} · ` : ""}בסוף הבנייה: ${ils(ds.full)}`, ["calc", "mortgage"]);
-    else tile("החזר משכנתא היום", "לא ניתן לחשב", p.sign ? "חסר לוח תשלומים עם תאריכים" : "חסר תאריך חתימה", p.sign ? ["buy", "payments"] : ["settings"], "warn"); }
-  else { const full = mortgageCalc(D.bankFunds).first; tile("החזר חודשי", ils(full), pti(full) != null ? `${pti(full).toFixed(0)}% מההכנסה` : "", ["calc", "mortgage"]); }
-  if (p.sign && f.income) { if (blC.length) tile("החודש הכי קשה", "לא ניתן לחשב", esc(blC[0].msg), blC[0].tab ? [blC[0].tab, blC[0].sb] : ["calc", "cash"], "warn");
-    else { const c = cashflow(); if (c) { const rv = (f.expenses || 0) * (f.reserve || 0); tile("החודש הכי קשה", c.low.close < 0 ? "חסרים " + ils(-c.low.close) : ils(c.low.close), `${ymLabel(c.low.m)} · ${c.low.close < 0 ? "הכסף נגמר" : rv && c.low.close < rv ? "מתחת לכרית הביטחון" : "יש מרווח"}`, ["calc", "cash"], c.low.close < 0 ? "warn" : rv && c.low.close < rv ? "" : "ok"); } } }
-  else if (p.sign) tile("החודש הכי קשה", "להזנה", "הזינו הכנסה והוצאות", ["calc", "cash"]);
-  if (D.gap > 1 && !blM.length) tile("פער מימון", ils(D.gap), bindingLimit() === "income" ? "ההחזר גבוה מהמגבלה לפי ההכנסה" : "המשכנתא גבוהה מהמותר לפי שווי הדירה", ["calc", "mortgage"], "warn", true);
-  return `<div class="card"><div class="spread"><h2>העסקה במבט אחד</h2><button class="link small" data-act="pdf">סיכום ל-PDF</button></div><div class="dash">${tiles.join("")}</div></div>`;
+    if (ds && ds.steps.length) row("איך המשכנתא נכנסת", ils(ds.now || ds.first), ds.now ? `זה ההחזר היום. הוא עולה עם כל העברה של הבנק לקבלן, עד כ-${ils(ds.full)} מ${ymLabel(ds.fullM)}.` : `המשכנתא עוד לא התחילה. ההחזר הראשון צפוי מ${ymLabel(ds.firstM)}, והוא עולה עם כל העברה של הבנק לקבלן, עד כ-${ils(ds.full)} אחרי המשיכה האחרונה.`, ["calc", "mortgage"]);
+    else row("איך המשכנתא נכנסת", "לא ניתן לחשב", p.sign ? "חסר לוח תשלומים עם תאריכים." : "חסר תאריך חתימה.", p.sign ? ["buy", "payments"] : ["settings"], "warn"); }
+  else { const full = mortgageCalc(D.bankFunds).first; row("המשכנתא", ils(full), `החזר חודשי ראשון${pti(full) != null ? `, ${pti(full).toFixed(0)}% מההכנסה` : ""}.`, ["calc", "mortgage"]); }
+  /* 4. is the money enough */
+  if (p.sign) { const blC = dealBlockers("cash");
+    if (blC.length) row("האם הכסף מספיק", "להשלמה", esc(blC[0].msg), blC[0].tab ? [blC[0].tab, blC[0].sb] : ["calc", "cash"]);
+    else { const c = cashflow(); if (c) { const rv = (f.expenses || 0) * (f.reserve || 0), lo = c.low.close, bad = lo < 0, tight = !bad && rv && lo < rv;
+      row("האם הכסף מספיק", bad ? "חסרים " + ils(-lo) : ils(lo), bad ? `<span class="w">בחודש הצפוף, ${ymLabel(c.low.m)}, הכסף נגמר.</span>` : `החודש הצפוף: ${ymLabel(c.low.m)}. ${tight ? `<span class="w">נשארים ${ils(lo)}, ${ils(rv - lo)} פחות מכרית הביטחון (${f.reserve} חודשי הוצאות).</span>` : `נשארים ${ils(lo)}${rv ? `, יותר מכרית הביטחון (${f.reserve} חודשי הוצאות)` : ""}.`}`, ["calc", "cash"], bad ? "warn" : tight ? "gold" : "ok"); } } }
+  return `<div class="card"><div class="spread"><h2>העסקה שלכם, צעד אחר צעד</h2><button class="link small" data-act="pdf">PDF</button></div><div class="journey">${rows.join("")}</div></div>`;
 }
 function screenHome() {
   const p = S.profile, t = T();
@@ -1390,6 +1414,7 @@ function screenHome() {
   if (wCity) more.push([`${esc(wCity)}: מחירים לפי שכונה${wUp.length ? ` · ${wUp.length} פרויקטים שיכולים למכור בשנים הקרובות` : ""}`, "waves", ""]);
   return `<div class="screen">
     <div class="spread"><h1>${S.example ? "ברוכים הבאים" : esc(p.city) || "הרכישה שלי"}</h1>${S.example ? "" : `<span class="chip gold">${t.name}</span>`}</div>
+    ${S.example ? "" : statusLine()}
     ${S.example ? `<p class="muted">"מפתח" מלווה אתכם מהחתימה ועד המפתח: כמה כסף צריך, איזו משכנתא, מה לשלם ומתי, ומה קורה בשוק. כל צעד מוביל לבא אחריו.</p>` : stageStrip()}
     ${heroCard()}
     ${S.example ? "" : dashboardCard()}
@@ -1576,9 +1601,13 @@ function equityScenarios() {
   if (f.equity != null && f.eqCustom && !opts.some(o => Math.abs(o[1] - cur) < 1)) opts.push(["הסכום שבחרתם", cur]);
   const mc1 = mortgageCalc(1), unit1 = mc1.first * 100 / (mc1.sumP || 100);   /* first monthly payment per shekel of the user's mix, so every screen shows the same number */
   const g = Math.pow(1 + f.ret / 100, f.horizon), rm = f.ret / 1200, nM = f.horizon * 12, fv = x => rm === 0 ? x * nM : x * (Math.pow(1 + rm, nM) - 1) / rm;
+  const cashOk = !dealBlockers("cash").length, drawOk = T().contractor && !drawBlockers().length, keepEq = f.equity;
   const res = opts.map(([name, eq]) => {
-    const loan = Math.max(0, p.price - grantOf() - eq), gapE = Math.max(0, loan - maxLoan()), a = amort(Math.min(loan, maxLoan()), mortgageRate(), yrs() * 12, f.horizon * 12), fd = fundEquity(eq + gapE);   /* a financing gap comes out of savings too, whenever the bank starts paying */
-    return { name, eq, loan, gap: gapE, pay: unit1 * Math.min(loan, maxLoan()), liquid: fd.liquid, fromSrc: fd.fromSrc, offBank: fd.loanMonthly, months: fd.liquid / f.expenses, interest: a.interest,
+    /* each option is evaluated in the real payment timing: what leaves your pocket before the bank starts, and the tightest month of the forecast */
+    let extra = 0, low = null, full = null; f.equity = eq;
+    try { extra = timingExtra(); if (cashOk) { const c = cashflow(); if (c) low = c.low; } if (drawOk) { const d = drawSteps(); if (d && d.steps.length) full = d.full; } } finally { f.equity = keepEq; }
+    const loan = Math.max(0, p.price - grantOf() - eq), gapE = Math.max(0, loan - maxLoan()), a = amort(Math.min(loan, maxLoan()), mortgageRate(), yrs() * 12, f.horizon * 12), fd = fundEquity(eq + gapE + extra);   /* gap and early payments come out of savings too; they never overlap (see timingExtra) */
+    return { name, eq, loan, gap: gapE, extra, low, full, pay: unit1 * Math.min(loan, maxLoan()), liquid: fd.liquid, fromSrc: fd.fromSrc, offBank: fd.loanMonthly, months: fd.liquid / f.expenses, interest: a.interest,
       net: fd.liquid * g - a.balance - fd.loanLeft - fv(fd.loanMonthly) };
   });
   res.forEach(r => { r.net += fv(res[0].pay - r.pay); r.adv = r.net - res[0].net; });
@@ -1616,8 +1645,10 @@ function outEquity() {
     return `<button class="opt ${sel ? "sel" : ""}" data-pickeq="${Math.round(r.eq)}" aria-pressed="${sel}">
       <div class="spread"><span class="small muted">${r.name}${sel ? " · נבחר ✓" : ""}</span>${i && Math.abs(r.adv) >= 1000 ? `<span class="chip ${r.adv > 0 ? "ok" : "warn"}">${r.adv > 0 ? "+" : "−"}${ils(Math.abs(r.adv))} ב-${f.horizon} שנים</span>` : ""}</div>
       <div class="big num">${ils(r.eq)} <span class="small muted">הון עצמי</span></div>
-      <div class="small">החזר <b>${ils(r.pay)}</b> בחודש${x != null ? ` · ${x.toFixed(0)}% מההכנסה` : ""}${r.offBank ? ` · ועוד ${ils(r.offBank)} הלוואה` : ""}</div>
-      ${r.gap > 1 ? `<div class="small" style="color:var(--warn)">כולל פער מימון של ${ils(r.gap)}</div>` : ""}<div class="small muted">יתרה מהחסכונות ${ils(r.liquid)}${r.fromSrc ? ` · ${ils(r.fromSrc)} מהמקורות הנוספים` : ""}</div>
+      ${r.gap > 1 ? `<div class="small" style="color:var(--warn)">ועוד פער מימון של ${ils(r.gap)} מהכיס</div>` : ""}
+      ${r.extra > 1 ? `<div class="small" style="color:var(--gold)">ועוד ${ils(r.extra)} מהכיס לפני שהבנק מתחיל לממן</div>` : ""}
+      ${r.low ? `<div class="small">בחודש הכי צפוף (${ymLabel(r.low.m)}): ${r.low.close < 0 ? `<b style="color:var(--warn)">חסרים ${ils(-r.low.close)}</b>` : `נשארים <b>${ils(r.low.close)}</b>`}</div>` : `<div class="small">יתרה מהחסכונות בסוף: <b>${ils(r.liquid)}</b></div>`}
+      <div class="small muted">החזר ${r.full != null ? `אחרי המשיכה האחרונה ${ils(r.full)}` : `${ils(r.pay)} בחודש`}${x != null && r.full == null ? ` · ${x.toFixed(0)}% מההכנסה` : ""}${r.offBank ? ` · ועוד ${ils(r.offBank)} הלוואה` : ""}${r.fromSrc ? ` · ${ils(r.fromSrc)} מהמקורות הנוספים` : ""}</div>
     </button>`; };
   const spread = Math.max(...res.slice(0, 3).map(r => r.eq)) - Math.min(...res.slice(0, 3).map(r => r.eq));
   const tip = spread < 20000
@@ -1636,13 +1667,13 @@ function outEquity() {
     ${equityClamped() ? `<p class="small" style="color:var(--warn);margin:0">זה פחות מהמינימום (${ils(need)}): העסקה צריכה משכנתא של ${ils(loanAmount())} ואפשר לקבל עד כ-${ils(maxLoan())}, אז נשאר <b>פער מימון של ${ils(finGap())}</b>.</p>` : ""}
     ${!f.expenses ? `<p class="small muted" style="margin:0">הזינו הוצאות חודשיות כדי לבדוק אם נשארת רזרבה.</p>` : ""}
     ${f.expenses && f.reserve && chosen.liquid < f.expenses * f.reserve ? `<p class="small" style="color:var(--gold);margin:0">יישאר פחות מהרזרבה שהגדרתם: ${f.reserve} חודשי הוצאות = ${ils(f.expenses * f.reserve)}.</p>` : ""}
-    <p style="margin:4px 0">החזר חודשי <b class="num">${ils(chosen.pay)}</b> · יתרה מהחסכונות אחרי הון ועלויות <b class="num">${ils(chosen.liquid)}</b>${ce.early > chosen.eq + 1 ? ` <span class="small muted">(אם הבנק מממן כבר את התשלום של יום 45)</span>` : ""}</p>
-    ${ce.early > chosen.eq + 1 ? `<p class="small" style="margin:0 0 4px">אם הבנק לא יספיק לממן את התשלום השני: תשלמו לקבלן מהכיס ${ils(ce.early)}, המשכנתא תקטן לכ-${ils(Math.max(0, S.profile.price - ce.early))}, ויישארו לכם בצד ${ils(Math.max(0, ce.left))}, עוד לפני העלויות של הכניסה לדירה. כדאי לסגור אישור עקרוני ושמאות לפני החתימה, ולוודא שהבנק יעביר את התשלום של יום 45 ישירות לחשבון הליווי.</p>` : ""}
+    ${chosen.extra > 1 ? `<p class="small" style="margin:4px 0;color:var(--gold)">ועוד <b class="num">${ils(chosen.extra)}</b> מהכיס לפני שהבנק מתחיל לממן${S.fin.bankEarly ? "" : " (לפי ההנחה הזהירה: הבנק מתחיל 60 יום אחרי החתימה)"}. כדאי לברר עם הבנק מתי בדיוק יעביר את הכסף הראשון.</p>` : ""}
+    <p style="margin:4px 0">${chosen.low ? `בחודש הכי צפוף (${ymLabel(chosen.low.m)}): ${chosen.low.close < 0 ? `<b class="num" style="color:var(--warn)">חסרים ${ils(-chosen.low.close)}</b>` : `נשארים <b class="num">${ils(chosen.low.close)}</b>`}${f.expenses && f.reserve && chosen.low.close >= 0 && chosen.low.close < f.expenses * f.reserve ? ` <span class="small" style="color:var(--gold)">(${ils(f.expenses * f.reserve - chosen.low.close)} מתחת לרזרבה)</span>` : ""}` : `יתרה מהחסכונות אחרי הכול <b class="num">${ils(chosen.liquid)}</b>`} · החזר ${chosen.full != null ? `אחרי המשיכה האחרונה <b class="num">${ils(chosen.full)}</b>` : `חודשי <b class="num">${ils(chosen.pay)}</b>`}</p>
     ${!savKnown() ? `<p class="small muted" style="margin:0">עוד לא הזנתם חסכונות, אז אי אפשר לבדוק אם יש מספיק. <button class="link small" data-go="calc" data-sub="costs">הזנת חסכונות</button></p>` : ce.gap > 0 ? `<p class="small" style="margin:0;color:var(--warn)">⚠ ההון העצמי מספיק, אבל בחודשיים הראשונים משלמים לקבלן ${ils(ce.early)} לפני שהבנק מתחיל לממן. יש לכם עד אז ${ils(Math.max(0, ce.avail))}, אז חסרים ${ils(ce.gap)}. בררו עם הבנק אם הוא יממן כבר את התשלום השני.</p>`
       : ce.early > chosen.eq + 1 ? ""
       : ce.early > need + 1 ? `<p class="small" style="margin:0;color:${ce.left < 2 * (f.expenses || 10000) ? "var(--gold)" : "var(--ok)"}">${ce.left < 2 * (f.expenses || 10000) ? "⚠ מספיק, אבל בקושי:" : "✓ יש לכם מספיק,"} גם לתשלומים של החודשיים הראשונים (${ils(ce.early)}). אחריהם יישארו לכם כ-${ils(Math.max(0, ce.left))} עד שהבנק מתחיל לממן.</p>`
       : `<p class="small" style="margin:0;color:var(--ok)">✓ יש לכם מספיק: צריך מהכיס לפחות ${ils(need)}, ויש לכם ${ils(avail)} אחרי העלויות הנלוות.</p>`}
-    ${apprNote}</div>`;
+    ${apprNote}${chosen.extra > 1 || S.fin.bankEarly ? bankTimingCtl() : ""}</div>`;
   const how = `<details class="card" ${warnEarly ? "open" : ""}><summary><b>איך חישבנו</b> <span class="small muted">· כמה הבנק מממן וכמה צריך מהכיס</span></summary>${summary.replace('<div class="card"><h2>התמונה בקצרה</h2>', '<div style="margin-top:8px">')}</details>`;
   return `${answer}<div class="card"><h2>רוצים לשנות? ${q("equity")}</h2>
     <p class="small muted">יותר מהכיס = משכנתא והחזר קטנים יותר, אבל פחות כסף בצד. בחרו אפשרות, או הזינו סכום משלכם בהנחות למטה.</p>
@@ -1709,9 +1740,9 @@ function outMortgage() {
   return `${warns.map(w => `<p class="small" style="color:var(--warn)">${w}</p>`).join("")}
     ${T().contractor && !drawBlockers().length && drawSteps() ? `<details class="card more"><summary>פירוט המסלולים: חישוב תיאורטי על כל המשכנתא בבת אחת</summary>` : `<div class="card">`}<div class="grid2"><div class="stat"><span class="v">${ils(m.first)}</span><span class="l">${T().contractor ? "החזר משוער על כל המשכנתא הנדרשת" : "החזר חודשי ראשון"}</span></div>
       <div class="stat"><span class="v">${ils(m.total)}</span><span class="l">סך הכול לאורך ${yrs()} שנה</span></div></div>
-      <div class="tbl"><table><thead><tr><th>מסלול</th><th>קרן</th><th>${T().contractor ? "החזר מלא" : "החזר ראשון"}</th><th>סך הכול</th></tr></thead><tbody>
+      <div class="tbl"><table><thead><tr><th>מסלול</th><th>סכום</th><th>${T().contractor ? "החזר מלא" : "החזר ראשון"}</th><th>סך הכול</th></tr></thead><tbody>
       ${m.rows.map(r => `<tr><td style="white-space:normal">${r.name}</td><td>${ilsK(r.P)}</td><td>${ils(r.pay)}</td><td>${ilsK(r.tot)}</td></tr>`).join("")}</tbody></table></div>
-      <p class="small muted">חישוב בשיטת שפיצר. הפריים מחושב לפי הריבית של היום, וההחזר בפועל ישתנה עם ריבית בנק ישראל.${mix.pVar ? " במסלול המשתנה הריבית מתעדכנת כל 5 שנים, אז ההחזר אחרי 5 שנים לא ידוע מראש." : ""}</p>
+      <p class="small muted">חישוב בשיטת שפיצר (החזר חודשי קבוע, בהתחלה רובו ריבית). הפריים מחושב לפי הריבית של היום, וההחזר בפועל ישתנה עם ריבית בנק ישראל.${mix.pVar ? " במסלול המשתנה הריבית מתעדכנת כל 5 שנים, אז ההחזר אחרי 5 שנים לא ידוע מראש." : ""}</p>
       <p class="small muted">לא כלול בהחזר: ביטוח חיים וביטוח מבנה, שהבנק דורש כתנאי למשכנתא. בדרך כלל עוד כמה מאות ₪ בחודש. כדאי להשוות הצעה של חברת ביטוח מול הביטוח של הבנק.</p>
       ${T().contractor && !drawBlockers().length && drawSteps() ? "" : yrsNote()}${T().contractor && !drawBlockers().length && drawSteps() ? "</details>" : "</div>"}
     ${drawStepsCard()}
@@ -1721,11 +1752,15 @@ function outMortgage() {
 function gapBoxHtml() { if (dealBlockers("mortgage").length) return ""; return equityClamped() ? (() => { const d = dealFin();
       return `<div class="grid2" style="margin:6px 0"><div class="stat"><span class="v">${ils(d.needed)}</span><span class="l">משכנתא נדרשת</span></div><div class="stat"><span class="v">${ils(d.capacity)}</span><span class="l">יכולת מימון לפי ההנחות</span></div></div>
       <p class="small" style="color:var(--warn);margin:4px 0"><b>פער מימון: ${ils(d.gap)}</b>. ${bindingLimit() === "income" ? "ההחזר על המשכנתא הנדרשת גבוה מהמגבלה לפי ההכנסה." : "המשכנתא הנדרשת גבוהה מהמותר לפי שווי הדירה."} הפער נכלל בתזרים כסכום שצריך להשלים מהכיס. ${bindingLimit() === "income" ? "תקופה ארוכה יותר מקטינה את ההחזר ומעלה את יכולת המימון." : ""}</p>`; })() : ""; }
+let mixOpen = false;   /* the mix form is folded once filled; stays open while the user works on it */
+document.addEventListener("toggle", e => { if (e.target.classList && e.target.classList.contains("mixd")) mixOpen = e.target.open; }, true);
 function inMortgage() {
   const mix = S.mix;
   return `<div class="card"><div class="spread"><h2>משכנתא</h2><button class="link small" data-go="calc" data-sub="equity">שינוי הון עצמי</button></div>
     <div class="stat"><span class="v" id="loanv">${ils(loanAmount())}</span><span class="l">משכנתא נדרשת: מחיר הדירה פחות ההון העצמי${grantOf() ? " והמענק" : ""}</span></div>
     <div id="gapbox">${gapBoxHtml()}</div>
+    ${(() => { const m = S.mix, parts = [["פריים", m.pPrime], ["קבועה", m.pFixed], ["צמודה", m.pLinked], ["משתנה", m.pVar || 0]].filter(x => x[1] > 0).map(x => `${nf.format(x[1])}% ${x[0]}`).join(" · ");
+      return `<details class="mixd" ${mixOpen || dealBlockers("mortgage").length ? "open" : ""}><summary>${yrs()} שנה · ${parts} <span class="small muted">(שינוי)</span></summary>`; })()}
     <div class="grid2">${numIn("mix.years", "שנים (עד 30)", 'title="יותר שנים = החזר חודשי נמוך יותר, אבל יותר ריבית בסך הכול"')}${numIn("fin.age", "גיל הלווה המבוגר", 'placeholder="למשל 35"')}</div>
     <p class="small muted" style="margin:0">יותר שנים = החזר חודשי נמוך יותר, אבל יותר ריבית בסך הכול. תמהיל = איך מחלקים את המשכנתא בין סוגי ריבית. כל שורה היא חלק מהמשכנתא.</p>
     <div class="tbl"><table><thead><tr><th>מסלול ${q("mix")}</th><th>חלק (%)</th><th>ריבית (%)</th></tr></thead><tbody>
@@ -1734,6 +1769,7 @@ function inMortgage() {
     </tbody></table></div>
     <p class="small muted" style="margin:0">ריבית הפריים היום ${MARKET.prime}%. הצעה של "פריים מינוס 0.5" = ${(MARKET.prime - 0.5).toFixed(2)}%. במחיר למשתכן ובחלק מהבנקים יש הנחה על הפריים, אז הזינו את הריבית שהוצעה לכם.</p>
     ${numIn("mix.infl", "אינפלציה שנתית משוערת למסלולים הצמודים (%)")}
+    </details>
     <p class="src">ריביות ברירת המחדל: ממוצעי בנק ישראל ל${MARKET.mortgage.month}, ופריים ${MARKET.prime}%. ההצעה שתקבלו יכולה להיות שונה.</p></div>`;
 }
 function outOffers() {
@@ -1838,6 +1874,13 @@ function drawSteps(bankEarly = !!S.fin.bankEarly) {
 }
 /* the draw-based numbers can be shown only when the mix and the dated schedule are valid; income is not needed for them */
 const drawBlockers = () => [...dealBlockers("mortgage"), ...dealBlockers("sched")];
+/* when the bank starts paying the contractor: there is no fixed rule, so it is a visible assumption the user sets, the same one on every screen */
+function bankTimingCtl() {
+  if (!T().contractor) return "";
+  return `<div class="assume"><div class="spread"><b class="small">מתי הבנק יתחיל להעביר כסף לקבלן?</b><span class="chip ${S.fin.bankEarly ? "mute" : "gold"}">${S.fin.bankEarly ? "הנחת משתמש" : "הנחה זהירה"}</span></div>
+    <label class="row" style="gap:8px;margin-top:4px"><input type="checkbox" data-bankearly ${S.fin.bankEarly ? "checked" : ""}>הבנק יממן כבר את התשלום השני (של יום 45)</label>
+    <p class="small muted" style="margin:2px 0 0">אין כלל קבוע: זה תלוי באישור המשכנתא, בשמאות ובחשבון הליווי של הקבלן. עד שתדעו, השאירו לא מסומן, והאפליקציה תניח שהבנק מתחיל רק 60 יום אחרי החתימה. את המועד בפועל בררו עם הבנק או עם יועץ המשכנתאות.</p></div>`;
+}
 function drawStepsCard() {
   const d = drawBlockers().length ? null : drawSteps(); if (!d || !d.steps.length) return "";
   const e = d.short > 1 && !S.fin.bankEarly ? drawSteps(true) : null, lnk = S.mix.pLinked || S.mix.pVar;
@@ -1846,9 +1889,10 @@ function drawStepsCard() {
     <div class="dsteps">${d.steps.map((x, i) => `<div class="dstep${i === d.steps.length - 1 ? " full" : ""}"><div class="dl"><b>${esc(x.name)}</b><span class="small muted">${fmtDate(x.date)} · הבנק מעביר ${ils(x.drawn)}</span><span class="small muted">נמשך עד כה: ${ils(x.cum)}</span></div><div class="dr"><span class="small muted">${i === 0 ? "החזר ראשון · " : i === d.steps.length - 1 ? "בסוף · " : ""}מ${ymLabel(x.chargeM)}</span><b class="num">${ils(x.pay)}</b></div></div>`).join("")}</div>
     ${lnk ? `<p class="small muted">זה לא תקרה: בחלק הצמוד ההחזר ממשיך לעלות עם האינפלציה (הנחה: ${S.mix.infl || 0}% בשנה) גם אחרי המשיכה האחרונה.</p>` : ""}
     ${d.short > 1 ? `<div class="hint small">${ils(d.short)} מהמשכנתא הנדרשת (${ils(dealFin().bankFunds)}) משולמים מהכיס, כי לפי ההנחה הבנק מתחיל לממן רק 60 יום אחרי החתימה. בפועל נמשכים ${ils(d.drawn)}.${e && e.steps.length ? ` אם הבנק יממן כבר את התשלום של יום 45, תימשך כל המשכנתא וההחזר אחרי המשיכה האחרונה יהיה ${ils(e.full)} מ${ymLabel(e.fullM)}.` : ""}</div>` : ""}
+    ${bankTimingCtl()}
     <details class="more"><summary>ההנחות בחישוב</summary><ul class="small muted">
-      <li>מועדי המשיכה לפי לוח התשלומים שלכם, והנחת מימון הבנק בלשונית "תזרים" (${S.fin.bankEarly ? "מהתשלום של יום 45" : "60 יום אחרי החתימה"}). זו הנחה, לא כלל של כל הבנקים.</li>
-      <li>כל משיכה מחושבת בשפיצר לפי הריביות של היום. הריבית על משיכות עתידיות תיקבע ביום המשיכה.</li>
+      <li>מועדי המשיכה לפי לוח התשלומים שלכם, וההנחה למטה על מועד תחילת המימון.</li>
+      <li>כל משיכה מחושבת בשפיצר (החזר חודשי קבוע) לפי הריביות של היום. הריבית על משיכות עתידיות תיקבע ביום המשיכה.</li>
       <li>"מהחודש שאחרי" הוא קירוב. מועד וסכום החיוב הראשון ייקבעו בבנק.</li>
       <li>החישוב בלי גרייס. יש בנקים שמאפשרים לשלם רק ריבית עד המסירה: ההחזר נמוך יותר עכשיו, אבל הקרן נדחית וההחזר אחר כך גבוה יותר. האפליקציה לא מחשבת את האפשרות הזו.</li></ul></details></div>`;
 }
@@ -1882,8 +1926,7 @@ function inCash() {
     <p class="small muted">חודש אחרי חודש: כמה כסף יהיה לכם בחשבון, אחרי תשלומים לקבלן, הצמדה, עלויות, החזרי משכנתא על מה שהבנק כבר העביר, ומה שאתם חוסכים כל חודש.</p>
     <div class="grid2">${numIn("fin.rent", "שכר דירה בחודש עד המסירה (₪)", 'placeholder="0 אם אין"')}${numIn("fin.income", "הכנסה חודשית נטו (₪)")}</div>
     ${numIn("fin.expenses", "הוצאות חודשיות, בלי שכר דירה (₪)")}
-    ${T().contractor ? `<label class="row" style="gap:8px;margin-top:6px"><input type="checkbox" data-bankearly ${f.bankEarly ? "checked" : ""}>הבנק מממן כבר את התשלום של יום 45</label>
-    <p class="small muted" style="margin:2px 0 0">לא בטוחים? השאירו לא מסומן. זה התרחיש הזהיר.</p>` : ""}</div>`;
+    ${bankTimingCtl()}</div>`;
 }
 function outCash() {
   const bl = dealBlockers("cash"); if (bl.length) return blockedCard(bl);
@@ -2399,7 +2442,7 @@ function screenWizard() {
   const opt = (field, v, title, text) => `<button class="opt ${d[field] === v ? "sel" : ""}" data-wz="${field}:${v}"><b>${title}</b>${text ? `<div class="small muted">${text}</div>` : ""}</button>`;
   const inp = (field, label, extra = "") => `<label class="f">${label}<input data-wzf="${field}" data-key="wz_${field}" value="${esc(["price", "savings", "income", "expenses", "rent", "appraisal"].includes(field) && /^\d+$/.test(String(d[field])) ? fmtIn(+d[field]) : d[field])}" ${extra}></label>`;
   let body = "";
-  if (k === "type") body = `<h2>איזו דירה אתם קונים?</h2><div class="opts">${opt("type", "ml", "מחיר למשתכן / דירה בהנחה", "זכיתם בהגרלה של משרד השיכון")}${opt("type", "new", "דירה חדשה מקבלן", "בשוק החופשי, על הנייר או בבנייה")}${opt("type", "resale", "דירה יד שנייה", "מבעלים פרטיים")}</div>`;
+  if (k === "type") body = `<h2>איזו דירה אתם קונים?</h2><p class="small muted">5 עד 6 שאלות קצרות. כדאי שיהיו לידכם החוזה (או מכתב הזכייה) וההכנסה החודשית. מה שלא יודעים, אפשר לדלג ולהשלים אחר כך.</p><div class="opts">${opt("type", "ml", "מחיר למשתכן / דירה בהנחה", "זכיתם בהגרלה של משרד השיכון")}${opt("type", "new", "דירה חדשה מקבלן", "בשוק החופשי, על הנייר או בבנייה")}${opt("type", "resale", "דירה יד שנייה", "מבעלים פרטיים")}</div>`;
   if (k === "buyer") body = `<h2>זו הדירה הראשונה שלכם?</h2><p class="small muted">משפיע על מס הרכישה ועל גובה המשכנתא שמותר לקבל.</p><div class="opts">${opt("buyer", "first", "כן, דירה ראשונה", "או שזו הדירה היחידה שתהיה לכם")}${opt("buyer", "upgrade", "משפרי דיור", "יש לנו דירה ונמכור אותה")}${opt("buyer", "additional", "דירה נוספת", "להשקעה או לילדים")}</div>`;
   if (k === "city") {
     const projs = d.type === "ml" && matchCity(d.city) ? wizProjs(d.city) : [];
@@ -2409,7 +2452,7 @@ function screenWizard() {
         <p class="small muted">אם תבחרו, נמלא בשבילכם את תאריך ההגרלה ואת המחיר למ"ר מהרשימה הרשמית.</p>` : ""}`;
   }
   if (k === "price") {
-    body = `<h2>כמה עולה הדירה?</h2>${inp("price", "מחיר הדירה (₪)", 'inputmode="numeric" placeholder="למשל 1,650,000"')}
+    body = `<h2>כמה עולה הדירה?</h2>${inp("price", "מחיר הדירה (₪)", 'inputmode="numeric" placeholder="למשל 1,650,000"')}<p class="small muted">המחיר הכולל מע"מ, כמו שכתוב בחוזה${d.type === "ml" ? " או בטופס בחירת הדירה" : ""}.</p>
       ${d.ppsqm ? `<div class="hint"><p class="small">בפרויקט שבחרתם: <b>${nf.format(d.ppsqm)} ₪ למ"ר</b> לפני מע"מ. לא בטוחים במחיר? מלאו את השטחים מהחוזה ונחשב:</p>
         <div class="grid2">${inp("size", 'דירה נטו (מ"ר)', 'inputmode="decimal" placeholder="למשל 95"')}${inp("balc", 'מרפסת (מ"ר)', 'inputmode="decimal" placeholder="0"')}${inp("stor", 'מחסן (מ"ר)', 'inputmode="decimal" placeholder="0"')}${inp("park", "מספר חניות", 'inputmode="numeric" placeholder="0"')}</div>
         <div id="wzcalc">${wizCalcHtml()}</div></div>` : ""}`;
@@ -2417,7 +2460,7 @@ function screenWizard() {
   if (k === "dates") body = `<h2>מתי?</h2>${inp("sign", "חתימת החוזה (או מועד משוער)", 'type="date"')}${d.type === "resale" ? "" : inp("delivery", "מסירה צפויה (אפשר להשאיר ריק)", 'type="date"')}${d.type === "ml" ? inp("lottery", "תאריך ההגרלה", 'type="date"') : ""}
     <p class="small muted">מהתאריכים נבנים לוח התשלומים והתזכורות${d.type === "ml" ? ", וגם המועד שבו מותר למכור" : ""}.</p>`;
   if (k === "money") body = `<h2>כמה כסף יש לכם?</h2><p class="small muted">כדי לחשב כמה משכנתא אפשר לקבל וכמה הון עצמי צריך. אפשר לדלג ולהשלים אחר כך.</p>
-    ${inp("savings", "חסכונות נזילים (₪)", 'inputmode="numeric"')}${inp("income", "הכנסה חודשית נטו של הבית (₪)", 'inputmode="numeric"')}
+    ${inp("savings", "חסכונות נזילים (₪)", 'inputmode="numeric"')}<p class="small muted" style="margin:0">כסף בעו"ש, בפיקדונות ובחסכונות שאפשר למשוך עכשיו. 0 זו תשובה טובה.</p>${inp("income", "הכנסה חודשית נטו של הבית (₪)", 'inputmode="numeric"')}<p class="small muted" style="margin:0">מה שנכנס לחשבון בפועל כל חודש, משני בני הזוג (לפי התלוש, "נטו לתשלום").</p>
     <div class="grid2">${inp("expenses", "הוצאות חודשיות, בלי שכר דירה (₪)", 'inputmode="numeric" placeholder="למשל 12,000"')}${inp("rent", "שכר דירה עד שתקבלו מפתח (₪)", 'inputmode="numeric" placeholder="0 אם אין"')}</div>
     <p class="small muted" style="margin:0">בלי ההוצאות לא נוכל להראות את החודש הכי צפוף.</p>
     <div class="grid2">${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
@@ -2523,7 +2566,7 @@ function liveBar() {
   if ((s === "mortgage" || s === "equity") && dealBlockers(s).length) return `<div><span>${s === "mortgage" ? "משכנתא" : "הון עצמי"}</span><b class="num" style="color:var(--warn)">לא ניתן לחשב עד לתיקון</b></div>`;
   const it = (l, v, st = "") => `<div><span>${l}</span><b class="num" style="${st}">${v}</b></div>`;
   if (s === "costs") { if (dealBlockers("costs").length) return `<div><span>עלויות</span><b class="num" style="color:var(--warn)">לא ניתן לחשב</b></div>`; } if (s === "costs") return it("מהכיס בסך הכול", ils(ownCash() + costsTotal())) + it("יתרה מהחסכונות", ils(ml.left2), `color:${ml.left2 >= 0 ? "var(--ok)" : "var(--warn)"}`);
-  if (s === "equity") { const D = dealFin(), mb = mortgageCalc(D.bankFunds); return it("הון עצמי", ils(D.equity)) + it(D.gap > 1 ? "הבנק מממן" : "משכנתא", ils(D.bankFunds)) + (D.gap > 1 ? it("פער מימון", ils(D.gap), "color:var(--warn)") : it("החזר", ils(mb.first))); }
+  if (s === "equity") { const D = dealFin(), mb = mortgageCalc(D.bankFunds); return it("הון עצמי", ils(D.equity)) + it(D.gap > 1 ? "הבנק מממן" : "משכנתא", ils(D.bankFunds)) + (D.gap > 1 ? it("פער מימון", ils(D.gap), "color:var(--warn)") : (() => { const d = T().contractor && !drawBlockers().length ? drawSteps() : null; return d && d.steps.length ? it("החזר בסוף הבנייה", ils(d.full)) : it("החזר", ils(mb.first)); })()); }
   if (s === "mortgage") { const d = T().contractor && !drawBlockers().length ? drawSteps() : null; if (d && d.steps.length) return it("היום", ils(d.now)) + it("אחרי המשיכה האחרונה", ils(d.full)) + (pti(d.full) != null ? it("מההכנסה", Math.round(pti(d.full)) + "%") : ""); }
   if (s === "mortgage") return it("החזר ראשון", ils(m.first)) + (r != null ? it("מההכנסה", Math.round(r) + "%", `color:${r > 50 ? "var(--warn)" : r > 40 ? "var(--gold)" : "var(--ok)"}`) : "") + it("סך הכול", kils(Math.round(m.total / 1000)));
   if (s === "offers") { const b = [...S.offers].filter(o => o.total > 0).sort((a, b) => a.total - b.total)[0]; return b ? it("ההצעה הזולה", esc(b.bank || "ללא שם")) + it("סך הכול", kils(Math.round(b.total / 1000))) : it("הצעות", S.offers.length ? S.offers.length + " הוזנו" : "עוד אין"); }
