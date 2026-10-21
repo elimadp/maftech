@@ -89,6 +89,7 @@ html.bigtext .jrow .jh { flex-wrap: wrap; }
 .dealpick { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; color: var(--fg); font: inherit; text-align: right; max-width: 100%; } .dealpick h1 { overflow-wrap: anywhere; } .dealpick span { color: var(--accent); font-size: 1.1rem; }
 .dealsbtn { align-self: flex-start; margin-top: -8px; }
 .dealrow { width: 100%; background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; color: var(--fg); font: inherit; text-align: right; } .dealrow span { color: var(--accent); font-size: 1.2rem; }
+.editdeal { width: 100%; margin-top: -4px; font-weight: 700; }
 .dealline { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); font-size: .92rem; margin-top: -6px; flex-wrap: wrap; }
 .story .jrow { padding: 0; } .jmain { display: grid; gap: 4px; width: 100%; background: none; border: none; text-align: right; color: var(--fg); font: inherit; padding: 12px 10px 6px; border-radius: 0; }
 .jrow .cta { align-self: start; margin: 0 10px 10px; font-size: .92rem; font-weight: 600; }
@@ -1027,7 +1028,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 13";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 14";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1366,7 +1367,7 @@ function screenSetup() {
       <label class="f">מחיר הדירה (₪)<input id="f_price" data-key="f_price" inputmode="numeric" value="${esc(p.price ? fmtIn(p.price) : "")}" placeholder="1,650,000"></label>
       <div class="grid2">
         <label class="f">חתימת חוזה<input id="f_sign" data-key="f_sign" type="date" value="${esc(p.sign)}"></label>
-        <label class="f" id="l_deliv">${p.type === "resale" ? "קבלת מפתח" : "מסירה צפויה"}<input id="f_delivery" data-key="f_delivery" type="date" value="${esc(p.delivery)}"></label>
+        <label class="f" id="l_deliv">${p.type === "resale" ? "קבלת מפתח" : "מסירה צפויה"}<input id="f_delivery" data-key="f_delivery" type="date" value="${esc(p.delivery)}" min="${p.sign ? esc(addDays(p.sign, 1)) : ""}"></label>
       </div>
       <div class="contractor-only" ${p.type === "resale" ? "hidden" : ""}>
         <label class="f">כמה מכל תשלום צמוד למדד תשומות הבנייה (%, לפי החוק עד 50)<input id="f_linked" data-key="f_linked" inputmode="decimal" value="${esc(p.linkedShare)}"></label>
@@ -1490,7 +1491,7 @@ function dashboardCard() {
 /* the deal itself, editable where you see it */
 function dealLine() {
   const p = S.profile, t = T();
-  return `<div class="dealline"><span>${ils(p.price)} · חתימה ${p.sign ? fmtDate(p.sign) : "—"}${t.contractor || p.delivery ? ` · ${t.contractor ? "מסירה" : "מפתח"} ${p.delivery ? fmtDate(p.delivery) : "—"}` : ""}</span><button class="link small" data-act="editdeal">עריכה</button></div>`;
+  return `<div class="dealline"><span>${ils(p.price)} · חתימה ${p.sign ? fmtDate(p.sign) : "—"}${t.contractor || p.delivery ? ` · ${t.contractor ? "מסירה" : "מפתח"} ${p.delivery ? fmtDate(p.delivery) : "—"}` : ""}</span></div><button class="ghost editdeal" data-act="editdeal">✎ עריכת פרטי העסקה</button>`;
 }
 /* which deal am I working on: its name at the top of home; tap to switch or add one */
 const agoLabel = ts => { const d = Math.floor((Date.now() - (ts || 0)) / 864e5); return d <= 0 ? "עודכן היום" : d === 1 ? "עודכן אתמול" : `עודכן לפני ${d} ימים`; };
@@ -2673,7 +2674,7 @@ function screenWizard() {
         <div class="grid2">${inp("size", 'דירה נטו (מ"ר)', 'inputmode="decimal" placeholder="למשל 95"')}${inp("balc", 'מרפסת (מ"ר)', 'inputmode="decimal" placeholder="0"')}${inp("stor", 'מחסן (מ"ר)', 'inputmode="decimal" placeholder="0"')}${inp("park", "מספר חניות", 'inputmode="numeric" placeholder="0"')}</div>
         <div id="wzcalc">${wizCalcHtml()}</div></div>` : ""}`;
   }
-  if (k === "dates") body = `<h2>מתי?</h2>${inp("sign", "חתימת החוזה (או מועד משוער)", 'type="date"')}${d.type === "resale" ? "" : inp("delivery", "מסירה צפויה (אפשר להשאיר ריק)", 'type="date"')}${d.type === "ml" ? inp("lottery", "תאריך ההגרלה", 'type="date"') : ""}
+  if (k === "dates") body = `<h2>מתי?</h2>${inp("sign", "חתימת החוזה (או מועד משוער)", 'type="date"')}${d.type === "resale" ? "" : inp("delivery", "מסירה צפויה (אפשר להשאיר ריק)", `type="date"${d.sign ? ` min="${addDays(d.sign, 1)}"` : ""}`)}${d.type === "ml" ? inp("lottery", "תאריך ההגרלה", 'type="date"') : ""}
     <p class="small muted">מהתאריכים נבנים לוח התשלומים והתזכורות${d.type === "ml" ? ", וגם המועד שבו מותר למכור" : ""}.</p>`;
   if (k === "money") body = `<h2>כמה כסף יש לכם?</h2><p class="small muted">כדי לחשב כמה משכנתא אפשר לקבל וכמה הון עצמי צריך. אפשר לדלג ולהשלים אחר כך.</p>
     ${inp("savings", "חסכונות נזילים (₪)", 'inputmode="numeric"')}<p class="small muted" style="margin:0">כסף בעו"ש, בפיקדונות ובחסכונות שאפשר למשוך עכשיו. 0 זו תשובה טובה.</p>${inp("income", "הכנסה חודשית נטו של הבית (₪)", 'inputmode="numeric"')}<p class="small muted" style="margin:0">מה שנכנס לחשבון בפועל כל חודש, משני בני הזוג (לפי התלוש, "נטו לתשלום").</p>
@@ -2716,7 +2717,7 @@ function wizValidate(k) {
   if (k === "city" && !d.city.trim()) return "כתבו את שם העיר.";
   if (k === "money") for (const [f, l] of [["savings", "חסכונות"], ["income", "הכנסה"]]) if (/^\s*[-−]/.test(String(d[f] || ""))) return `${l}: לא יכול להיות מספר שלילי.`;
   if (k === "price") { if (/^\s*[-−]/.test(String(d.price))) return "מחיר הדירה לא יכול להיות שלילי."; const p = num(d.price); if (!p) return "כתבו את מחיר הדירה."; if (p < 200000 || p > 50000000) return "המחיר נראה לא סביר. בדקו את המספר."; }
-  if (k === "dates") { if (!d.sign) return "צריך תאריך חתימה, גם משוער."; if (d.delivery && d.delivery < d.sign) return "המסירה צריכה להיות אחרי החתימה."; if (d.lottery && d.lottery > d.sign) return "ההגרלה צריכה להיות לפני החתימה."; }
+  if (k === "dates") { if (!d.sign) return "צריך תאריך חתימה, גם משוער."; if (d.delivery && d.delivery <= d.sign) return "המסירה צריכה להיות אחרי החתימה."; if (d.lottery && d.lottery > d.sign) return "ההגרלה צריכה להיות לפני החתימה."; }
   return "";
 }
 function wizFinish() {
@@ -2867,7 +2868,11 @@ function editDeal() { setupOpen = true; dealOnly = true; joinOpen = false; rende
 /* a typed date is easy to get wrong (day/month order): show it back in words */
 function decorateDates() { document.querySelectorAll('#view input[type="date"]').forEach(dateHint); }
 function dateHint(el) { let h = el.nextElementSibling; if (!h || !h.classList.contains("datehint")) { h = document.createElement("span"); h.className = "datehint"; h.setAttribute("aria-live", "polite"); el.after(h); } h.textContent = el.value ? "נבחר: " + fmtDate(el.value) : ""; }
-document.addEventListener("input", e => { if (e.target.matches && e.target.matches('input[type="date"]')) dateHint(e.target); });
+document.addEventListener("input", e => { if (!(e.target.matches && e.target.matches('input[type="date"]'))) return; dateHint(e.target);
+  /* the delivery picker never offers a day before signing */
+  const pair = { f_sign: "f_delivery" }[e.target.id] || (e.target.dataset.wzf === "sign" ? "[data-wzf=delivery]" : null);
+  if (pair) { const d = pair.startsWith("[") ? document.querySelector(pair) : document.getElementById(pair); if (d) { d.min = e.target.value ? addDays(e.target.value, 1) : ""; if (d.value && e.target.value && d.value <= e.target.value) { d.setCustomValidity("מועד המסירה צריך להיות אחרי החתימה"); d.reportValidity(); } else d.setCustomValidity(""); } }
+  if ((e.target.id === "f_delivery" || e.target.dataset.wzf === "delivery") && e.target.min) e.target.setCustomValidity(e.target.value && e.target.value < e.target.min ? "מועד המסירה צריך להיות אחרי החתימה" : ""); });
 function go(t, s) { dealOnly = false; if (t === "market") { t = "waves"; s = "market"; } tab = t; setupOpen = false; if (s) sub[t] = s; render(); window.scrollTo(0, 0); }
 function warrantyEnd() { const d = S.profile.delivery; if (!d) return ""; const x = dt(d); x.setFullYear(x.getFullYear() + 1); return ymd(x); }
 /* the stage the data says you are in (only ever suggests moving forward) */
@@ -3033,7 +3038,7 @@ document.addEventListener("click", e => {
       if (!prof.price || !prof.sign) { setupErr(!prof.price ? "f_price" : "f_sign", "צריך למלא מחיר ותאריך חתימה."); return; }
       if (prof.price < 200000 || prof.price > 50000000) { setupErr("f_price", "מחיר הדירה נראה לא סביר. בדקו את המספר."); return; }
       if (prof.type === "ml" && prof.buyer !== "first") { toast("במחיר למשתכן הקונה צריך להיות חסר דירה. בחרו \"דירה ראשונה\"."); return; }
-      if (prof.delivery && prof.delivery < prof.sign) { setupErr("f_delivery", "מועד המסירה צריך להיות אחרי החתימה."); return; }
+      if (prof.delivery && prof.delivery <= prof.sign) { setupErr("f_delivery", "מועד המסירה צריך להיות אחרי החתימה."); return; }
       if (prof.lottery && prof.lottery > prof.sign) { toast("תאריך ההגרלה צריך להיות לפני החתימה"); return; }
       if (prof.form4 && prof.form4 < prof.sign) { toast("טופס 4 צריך להיות אחרי החתימה"); return; }
       if (S.example) S = newState(prof, false);
