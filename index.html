@@ -86,6 +86,8 @@ p { margin: 0; }
 html.bigtext .jrow .jh { flex-wrap: wrap; }
 .lead { font-size: 1.08rem; margin: 0; }
 .since { margin: -4px 0 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 10px; font-size: .92rem; }
+.dealpick { display: flex; align-items: center; gap: 8px; background: none; border: none; padding: 0; color: var(--fg); font: inherit; text-align: right; max-width: 100%; } .dealpick h1 { overflow-wrap: anywhere; } .dealpick span { color: var(--accent); font-size: 1.1rem; }
+.dealrow { width: 100%; background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; color: var(--fg); font: inherit; text-align: right; } .dealrow span { color: var(--accent); font-size: 1.2rem; }
 .dealline { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); font-size: .92rem; margin-top: -6px; flex-wrap: wrap; }
 .story .jrow { padding: 0; } .jmain { display: grid; gap: 4px; width: 100%; background: none; border: none; text-align: right; color: var(--fg); font: inherit; padding: 12px 10px 6px; border-radius: 0; }
 .jrow .cta { align-self: start; margin: 0 10px 10px; font-size: .92rem; font-weight: 600; }
@@ -633,10 +635,49 @@ function pushCard() {
 document.addEventListener("click", e => { const b = e.target.closest("[data-pk]"); if (!b) return; const k = b.dataset.pk; if (k === "on") pushEnable(); else if (k === "off") pushDisable(); else if (k === "test") pushTest(false); });
 
 function loadLocal() { try { const r = localStorage.getItem(LS); if (r) return migrate(JSON.parse(r)); } catch (e) {} return null; }
-function saveLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(() => toast("הזיכרון בטלפון מלא. השינויים האחרונים לא נשמרו בטלפון"), 0); } } }
+function saveLocal() { try { localStorage.setItem(LS, JSON.stringify(S)); touchDeal(); } catch (e) { if (!saveLocal.warned) { saveLocal.warned = true; setTimeout(() => toast("הזיכרון בטלפון מלא. השינויים האחרונים לא נשמרו בטלפון"), 0); } } }
 let saveTimer = null, saving = false, dirty = false, lastSent = "", base = null, retryMs = 0;
 /* changes not yet confirmed by the server survive a reload or going offline: the "pending" flag and the last agreed version (base) are kept on the phone */
 const PEND = "maftech.pending", BASEK = "maftech.base";
+/* ---------- several saved deals ----------
+   The ACTIVE deal lives in the usual keys (state, share binding, sync flags, last visit), so the engine and sync code are unchanged.
+   Other deals are parked as a snapshot of exactly those keys under maftech.deal.<id>. Switching parks the active one, restores the
+   target and reloads, so sharing and sync re-attach cleanly to the right deal. Global (per phone): name, big text, app lock, push. */
+const DEALS = "maftech.deals", DEAL_KEYS = ["maftech.state.v1", "maftech.priv", "maftech.pending", "maftech.base", "maftech.seen"];
+function dealsReg() { try { const r = JSON.parse(localStorage.getItem(DEALS)); if (r && Array.isArray(r.list)) return r; } catch (e) {} return null; }
+function saveReg(r) { try { localStorage.setItem(DEALS, JSON.stringify(r)); } catch (e) {} }
+function dealAutoName(st) { const p = (st && st.profile) || {}; return [p.city, TYPES[p.type] ? TYPES[p.type].name : ""].filter(Boolean).join(" · ") || "העסקה שלי"; }
+function parkDeal(id) { const snap = {}; DEAL_KEYS.forEach(k => { try { snap[k] = localStorage.getItem(k); } catch (e) {} }); try { localStorage.setItem("maftech.deal." + id, JSON.stringify(snap)); } catch (e) { return false; } return true; }
+function clearActiveKeys() { DEAL_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} }); }
+function unparkDeal(id) { let snap = {}; try { snap = JSON.parse(localStorage.getItem("maftech.deal." + id)) || {}; } catch (e) {} clearActiveKeys(); DEAL_KEYS.forEach(k => { if (snap[k] != null) try { localStorage.setItem(k, snap[k]); } catch (e) {} }); try { localStorage.removeItem("maftech.deal." + id); } catch (e) {} }
+/* migration: an existing single purchase becomes the first saved deal; nothing is moved or rewritten */
+function ensureDeals() {
+  let r = dealsReg(); if (r) return r;
+  r = { v: 1, active: null, list: [] };
+  try { const raw = localStorage.getItem("maftech.state.v1"); const st = raw ? JSON.parse(raw) : null;
+    if (st && !st.example) { const id = "d" + uid(); r.active = id; r.list.push({ id, name: "", auto: dealAutoName(st), updated: Date.now() }); } } catch (e) {}
+  saveReg(r); return r;
+}
+function touchDeal() { const r = dealsReg(); if (!r || !r.active || S.example) return; const e = r.list.find(x => x.id === r.active); if (!e) return; e.updated = Date.now(); e.auto = dealAutoName(S); saveReg(r); }
+const dealName = e => (e && (e.name || e.auto)) || "העסקה שלי";
+function switchDeal(id) {
+  const r = dealsReg(); if (!r || id === r.active || !r.list.some(x => x.id === id)) return;
+  clearTimeout(saveTimer); saveLocal();
+  if (r.active && !parkDeal(r.active)) { toast("אין מספיק מקום בטלפון כדי לשמור את העסקה. לא עברנו."); return; }
+  unparkDeal(id); r.active = id; saveReg(r); location.reload();
+}
+/* a new deal starts from the wizard; the current one is parked only when the wizard is finished (cancel changes nothing) */
+function newDeal() { dealsOpen = false; startWizard(); wiz.newDeal = !S.example; render(); }
+function deleteDeal(id) {
+  const r = dealsReg(); if (!r) return; const e = r.list.find(x => x.id === id); if (!e) return;
+  if (!confirm(`למחוק את "${dealName(e)}" מהטלפון הזה? אי אפשר לבטל.${id === r.active && store.shared ? " העסקה משותפת: אצל מי שמשתף איתכם היא תישאר." : ""}`)) return;
+  r.list = r.list.filter(x => x.id !== id);
+  if (id !== r.active) { try { localStorage.removeItem("maftech.deal." + id); } catch (er) {} saveReg(r); render(); toast("העסקה נמחקה"); return; }
+  const next = [...r.list].sort((a, b) => b.updated - a.updated)[0];
+  if (next) { unparkDeal(next.id); r.active = next.id; } else { clearActiveKeys(); r.active = null; }
+  saveReg(r); location.reload();
+}
+let dealsOpen = false;
 function setPending(on) { try { if (on) localStorage.setItem(PEND, "1"); else localStorage.removeItem(PEND); } catch (e) {} }
 const isPending = () => { try { return localStorage.getItem(PEND) === "1"; } catch (e) { return false; } };
 function setBase(b) { base = b; try { localStorage.setItem(BASEK, JSON.stringify(b)); } catch (e) {} }
@@ -776,6 +817,7 @@ async function initRemote() {
     try { const h = await store.db.doc("households/" + invite.code).get(); if (h.exists) { const st = JSON.parse(h.data().state); invite.city = st.profile && st.profile.city; invite.type = st.profile && TYPES[st.profile.type] ? TYPES[st.profile.type].name : ""; } else invite.missing = true; } catch (e) { invite.missing = true; } render(); }
 }
 async function initStore() {
+  ensureDeals();
   setTimeout(pushSync, 3000);
   const local = loadLocal(); if (local) { S = local; render(); }
   if (!window.claude || !window.claude.use) { initRemote(); return; }
@@ -814,6 +856,8 @@ async function joinShare(code) {
   try {
     const h = await store.db.doc("households/" + code).get();
     if (!h.exists) { toast("לא נמצאה רכישה עם הקוד הזה"); return; }
+    { const r = ensureDeals(); if (r.active && !S.example) { clearTimeout(saveTimer); dirty = false; saveLocal(); if (!parkDeal(r.active)) { toast("אין מספיק מקום בטלפון לעסקה נוספת"); return; } clearActiveKeys(); }
+      const st = JSON.parse(h.data().state), id = "d" + uid(); r.list.push({ id, name: "", auto: dealAutoName(st), updated: Date.now() }); r.active = id; saveReg(r); }
     await store.priv.set({ household: code });
     S = migrate(JSON.parse(h.data().state)); setBase(clone(S)); setPending(false); saveLocal(); attachShared(code); joinOpen = false; setupOpen = false; tab = "home"; render(); window.scrollTo(0, 0); toast("הצטרפתם לרכישה המשותפת");
   } catch (e) { toast("ההצטרפות לא הצליחה. נסו שוב."); }
@@ -982,7 +1026,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 10";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 11";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1340,8 +1384,8 @@ function screenSetup() {
       <p class="small muted">שמרו עותק של כל הנתונים בקובץ. אפשר לשחזר ממנו בכל מכשיר, וגם במעבר לגרסה הבאה של האפליקציה.</p>
       <p class="small muted">קובץ הגיבוי פותח גם את המסמכים שצירפתם. שמרו אותו במקום פרטי, ואל תשלחו אותו בצ'אט.</p>
       <div class="row"><button data-act="pdf">סיכום ל-PDF</button><button class="ghost" data-act="backup">שמירת גיבוי</button><button class="ghost" data-act="restore">שחזור מגיבוי</button></div>
-      ${confirmReset ? `<p style="color:var(--warn)">כל הנתונים יימחקו, כולל משימות, תשלומים ומסמכים. אי אפשר לבטל.</p><div class="row"><button data-act="resetyes" style="background:var(--warn);border-color:var(--warn)">כן, למחוק הכול</button><button class="ghost" data-act="resetno">ביטול</button></div>`
-        : `<div><button class="link" data-act="reset" style="color:var(--warn)">התחלה מחדש</button></div>`}</div>`}
+      ${confirmReset ? `<p style="color:var(--warn)">כל הנתונים של "${esc(dealName((dealsReg() || { list: [] }).list.find(x => x.id === (dealsReg() || {}).active)) || "העסקה")}" יימחקו, כולל משימות, תשלומים ומסמכים. עסקאות אחרות לא ייפגעו. אי אפשר לבטל.</p><div class="row"><button data-act="resetyes" style="background:var(--warn);border-color:var(--warn)">כן, למחוק הכול</button><button class="ghost" data-act="resetno">ביטול</button></div>`
+        : `<div class="row" style="flex-wrap:wrap"><button class="link" data-act="reset" style="color:var(--warn)">איפוס העסקה הנוכחית</button>${(dealsReg() || { list: [] }).list.length ? `<button class="link" data-act="deldeal" style="color:var(--warn)">מחיקת העסקה</button>` : ""}</div><p class="small muted">איפוס מתחיל את העסקה הזו מחדש. מחיקה מסירה אותה מהרשימה. עסקאות אחרות לא משתנות.</p>`}</div>`}
     </div>`;
 }
 function setPayMode(mode) {
@@ -1447,6 +1491,15 @@ function dealLine() {
   const p = S.profile, t = T();
   return `<div class="dealline"><span>${ils(p.price)} · חתימה ${p.sign ? fmtDate(p.sign) : "—"}${t.contractor || p.delivery ? ` · ${t.contractor ? "מסירה" : "מפתח"} ${p.delivery ? fmtDate(p.delivery) : "—"}` : ""}</span><button class="link small" data-act="editdeal">עריכה</button></div>`;
 }
+/* which deal am I working on: its name at the top of home; tap to switch or add one */
+const agoLabel = ts => { const d = Math.floor((Date.now() - (ts || 0)) / 864e5); return d <= 0 ? "עודכן היום" : d === 1 ? "עודכן אתמול" : `עודכן לפני ${d} ימים`; };
+function dealPicker() {
+  const r = dealsReg() || { list: [] }, cur = r.list.find(x => x.id === r.active), list = [...r.list].sort((a, b) => (b.id === r.active) - (a.id === r.active) || b.updated - a.updated);
+  return `<button class="dealpick" data-act="dealsopen" aria-expanded="${dealsOpen}"><h1>${esc(cur ? dealName(cur) : dealAutoName(S))}</h1><span aria-hidden="true">${dealsOpen ? "▴" : "▾"}</span></button>
+    ${r.list.length > 1 && !dealsOpen ? `<p class="small muted" style="margin:-8px 0 0">${r.list.length} עסקאות שמורות · לחצו על השם כדי לעבור</p>` : ""}
+    ${dealsOpen ? `<div class="card deals"><h2>העסקאות שלי</h2><div class="list">${list.map(e => e.id === r.active ? `<div class="item"><div class="grow"><b>✓ ${esc(dealName(e))}</b><div class="small muted">פתוחה עכשיו · ${agoLabel(e.updated)}</div></div><button class="link small" data-act="dealrename">שינוי שם</button></div>` : `<button class="item dealrow" data-deal="${e.id}"><div class="grow"><b>${esc(dealName(e))}</b><div class="small muted">${agoLabel(e.updated)}</div></div><span aria-hidden="true">‹</span></button>`).join("")}</div>
+      <button class="ghost" data-act="newdeal" style="margin-top:10px">+ עסקה חדשה</button><p class="small muted" style="margin:6px 0 0">כל עסקה נשמרת בנפרד בטלפון הזה, עם כל הנתונים שלה. העסקה הנוכחית לא נמחקת.</p></div>` : ""}`;
+}
 function screenHome() {
   const p = S.profile, t = T();
   const pays = S.payments, paid = pays.filter(x => x.paid).reduce((s, x) => s + payAmount(x), 0);
@@ -1466,7 +1519,7 @@ function screenHome() {
   if (!S.example) more.push(["סיכום של כל העסקה ל-PDF, להדפסה או לשליחה", "act:pdf", ""]);
   if (wCity) more.push([`${esc(wCity)}: מחירים לפי שכונה${wUp.length ? ` · ${wUp.length} פרויקטים שיכולים למכור בשנים הקרובות` : ""}`, "waves", ""]);
   return `<div class="screen">
-    <div class="spread"><h1>${S.example ? "קניתם דירה. מתי תצטרכו כל שקל?" : esc(p.city) || "הרכישה שלי"}</h1>${S.example ? "" : `<span class="chip gold">${t.name}</span>`}</div>
+    ${S.example ? `<div class="spread"><h1>קניתם דירה. מתי תצטרכו כל שקל?</h1></div>` : dealPicker()}
     ${S.example ? "" : statusLine() + sinceLine() + dealLine()}
     ${S.example ? `<p class="lead">"מפתח" מחבר את לוח התשלומים לקבלן, את החסכונות ואת המשכנתא, ומראה לכם מה צפוי בכל חודש ומה לעשות עכשיו.</p>` : stageStrip()}
     ${S.example ? heroCard() : dashboardCard() + heroCard()}
@@ -2626,7 +2679,7 @@ function screenWizard() {
     <div class="grid2">${inp("age", "גיל הלווה המבוגר", 'inputmode="numeric" placeholder="לא חובה"')}</div>
     ${d.type === "ml" ? inp("appraisal", "שמאות הדירה, אם כבר יש (₪)", 'inputmode="numeric" placeholder="לא חובה"') + `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי הדירה בשוק. בלי שמאות נעריך אותו כמחיר ועוד ההנחה (20% משווי השוק, עד 300 אלף ₪).</p>` : ""}`;
   const last = i === n - 1, canNext = k !== "type" && k !== "buyer";
-  return `<div class="screen wizard"><div class="wzhead"><span class="small muted">שאלה ${i + 1}${d.type ? ` מתוך ${n}` : ""}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
+  return `<div class="screen wizard">${wiz.newDeal ? `<p class="hint small" style="margin:0">עסקה חדשה. העסקה הקודמת נשמרת, ואפשר לחזור אליה מהשם בראש הבית.</p>` : ""}<div class="wzhead"><span class="small muted">שאלה ${i + 1}${d.type ? ` מתוך ${n}` : ""}</span><div class="dots">${steps.map((_, j) => `<i class="${j <= i ? "on" : ""}"></i>`).join("")}</div></div>
     <div class="card">${body}${wiz.err ? `<p class="small wzerr" role="alert" style="color:var(--warn)">${wiz.err}</p>` : ""}</div>
     <div class="row wznav">${canNext ? `<button data-act="wznext">${last ? "סיום ←" : "המשך ←"}</button>` : ""}${k === "money" ? `<button class="ghost" data-act="wzfinish">דלג וסיים</button>` : ""}${i > 0 ? `<button class="link" data-act="wzback">חזרה</button>` : `<button class="link" data-act="wzcancel">ביטול</button>`}</div></div>`;
 }
@@ -2669,6 +2722,14 @@ function wizFinish() {
   const prof = { type: d.type, buyer: d.type === "ml" ? "first" : d.buyer, city: matchCity(d.city) || d.city.trim(), price: num(d.price), sign: d.sign, delivery: d.delivery, linkedShare: d.type === "resale" ? 0 : 50, lottery: d.lottery, form4: "", stage: "before" };
   S = newState(prof, false); S.fin.savings = num(d.savings); S.fin.savingsAt = ymd(today()); if (String(d.savings).trim() !== "") S.fin.savTouched = true; S.fin.income = num(d.income); S.flow = {};
   if (num(d.expenses)) { S.fin.expenses = num(d.expenses); S.fin.expTouched = true; } if (num(d.rent)) S.fin.rent = num(d.rent); if (num(d.age)) S.fin.age = num(d.age); if (num(d.appraisal)) S.fin.appraisal = num(d.appraisal);
+  const r = ensureDeals();
+  if (wiz.newDeal && r.active) {   /* park the current deal, start the new one in clean keys, reload so no share/sync stays attached */
+    clearTimeout(saveTimer); dirty = false; const fresh = S;
+    S = loadLocal() || S; if (!parkDeal(r.active)) { S = fresh; toast("אין מספיק מקום בטלפון לעסקה נוספת"); return; }
+    clearActiveKeys(); S = fresh; const id = "d" + uid(); r.list.push({ id, name: "", auto: dealAutoName(S), updated: Date.now() }); r.active = id; saveReg(r);
+    try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} wiz = null; location.reload(); return;
+  }
+  if (!r.active) { const id = "d" + uid(); r.list.push({ id, name: "", auto: dealAutoName(S), updated: Date.now() }); r.active = id; saveReg(r); }
   wiz = null; tab = "home"; persist(); render(); window.scrollTo(0, 0);
 }
 function wizSuggest(q) {
@@ -2909,6 +2970,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const d = b.dataset;
   if (d.tab) { if (d.tab === "calc") sub.calc = "overview"; return go(d.tab); }
+  if (d.deal) return switchDeal(d.deal);
   if (d.go === "deal") return editDeal();
   if (d.go) { if (d.focus === "fin.savings") { editOpen.eqmoney = true; editOpen.costs = true; } if (d.focus === "mix.years") mixOpen = true; go(d.go, d.sub); if (d.focus) focusOn(d.focus); return; }
   if (d.sub) { sub[tab] = d.sub; render(); return; }
@@ -3028,8 +3090,12 @@ document.addEventListener("click", e => {
     case "restore": document.getElementById("restorefile").click(); break;
     case "reset": confirmReset = true; render(); break;
     case "resetno": confirmReset = false; render(); break;
+    case "deldeal": { const r = dealsReg(); if (r && r.active) { if (store.shared) leaveShare(); deleteDeal(r.active); } break; }
+    case "newdeal": newDeal(); break;
+    case "dealsopen": dealsOpen = !dealsOpen; render(); break;
+    case "dealrename": { const r = dealsReg(), e = r && r.list.find(x => x.id === r.active); if (!e) break; const v = prompt("שם לעסקה (ריק = שם אוטומטי)", e.name || dealName(e)); if (v == null) break; e.name = v.trim().slice(0, 40); saveReg(r); render(); break; }
     case "resetyes": { if (store.shared) { if (!confirm("הרכישה משותפת. התחלה מחדש תנתק את הטלפון הזה מהשיתוף, ואצל מי שמשתף איתכם הנתונים יישארו. להמשיך?")) break; leaveShare(); }
-      S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("הנתונים נמחקו. מתחילים מחדש"); break; }
+      S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("נתוני העסקה הזו נמחקו. מתחילים אותה מחדש"); break; }
   }
 });
 document.addEventListener("click", e => { if (e.target.id === "sheet") { e.target.hidden = true; e.target.innerHTML = ""; } });
