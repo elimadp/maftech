@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>דירה בשליטה</title><link rel="manifest" href="manifest.webmanifest">
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>דירה בשליטה</title><link rel="manifest" href="manifest.webmanifest?v=16">
 <meta name="theme-color" content="#1e5a4a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="דירה בשליטה">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=16">
+<link rel="icon" type="image/png" href="icons/icon-192.png?v=16">
 <script>if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
 </head><body>
 <title>דירה בשליטה</title>
@@ -1028,7 +1028,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 16";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 17";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
