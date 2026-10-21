@@ -304,6 +304,10 @@ with sync_playwright() as p:
     check("G1 בלי 'המחסור גדל' כשהיתרה חוזרת לחיובית", "אחריו יש חודשים עם יתרה חיובית", rec["sub"][:70], rec["bad"] and (not rec["rec"] or ("גדל" not in rec["sub"] and "יתרה חיובית" in rec["sub"])))
     E("go('calc','equity')"); pg.wait_for_timeout(100); q = pg.inner_text("#view"); at = E("(()=>{const e=equityTiming();return e.at?e.at.close:null})()")
     check("G2 הון עצמי: אין ✓ כשעד ההעברה הראשונה צפוי מחסור", "סכום וחודש, בלי ✓", "תקין" if (at is None or at >= 0 or ("✓ ההון העצמי הזמין היום מספיק" not in q and "מחסור של" in q)) else "סתירה", at is None or at >= 0 or ("✓ ההון העצמי הזמין היום מספיק" not in q and "מחסור של" in q))
+    # H: second-hand: no 60-day rule; equity first, then the mortgage pays the seller; repayments start after each transfer
+    E("S=newState({type:'resale',buyer:'first',city:'חיפה',price:1500000,sign:'2026-12-15',delivery:'2027-03-15',linkedShare:0},false); S.payments.sort((a,b)=>a.date.localeCompare(b.date))[1].date='2027-01-20'; S.fin.savings=500000; S.fin.savTouched=true; S.fin.income=20000; S.fin.expenses=12000; S.fin.expTouched=true; persist()")
+    al = E("payAlloc().map(a=>Math.round(a.bank))"); eq = E("dealFin().equity"); first = E("cashflow().rows.find(r=>r.mort)")
+    check("H1 יד שנייה: הבנק מממן גם בתוך 60 יום, אחרי ההון העצמי", "תשלום שני ממומן חלקית", al, al[0] == 0 and al[1] > 0 and abs(sum(al) - E("dealFin().bankFunds")) < 1 and first and first["m"] == "2027-02")
     check("שגיאות JavaScript", "אין", errs or "אין", not errs)
     b.close()
 w = max(len(r[0]) for r in R)

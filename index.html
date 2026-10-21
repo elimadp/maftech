@@ -1028,7 +1028,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 14";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 15";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1250,7 +1250,9 @@ function costsTotal() { const c = S.costs; return purchaseTax(S.profile.price, S
 /* who pays each contractor payment: your equity (plus any financing gap) first, the bank after it. Before the bank starts
    (60 days after signing, unless you said it funds day 45) everything is yours. Paid payments are included, so every screen agrees. */
 function payAlloc(bankEarly = !!S.fin.bankEarly) {
-  const p = S.profile, D = dealFin(), lim = p.sign ? addDays(p.sign, 60) : "";
+  /* the "bank starts ~60 days after signing" assumption belongs to contractor deals (building permit, accompanying bank, vouchers);
+     in a second-hand deal the mortgage is approved before signing and paid to the seller on the agreed payment dates */
+  const p = S.profile, D = dealFin(), lim = p.sign && T().contractor ? addDays(p.sign, 60) : "";
   let ownLeft = D.ownTotal, bankLeft = D.bankFunds; const out = [];
   for (const x of [...S.payments].filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date))) {
     const base = payAmount(x), link = linkageCost(x); let own = Math.min(base, ownLeft);
