@@ -187,7 +187,8 @@ with sync_playwright() as p:
     E(f"(()=>{{const ps=[...S.payments].sort((a,b)=>a.date.localeCompare(b.date)); ps[0].pct={p0}; persist()}})()")
     E("S.fin.equity=0; S.mix.years=10; Object.assign(S.mix,{pPrime:0,pFixed:100,pLinked:0,rFixed:4.8}); persist(); go('calc','cash')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
     fn = E("(()=>{const c=cashflow(); const f=c.rows.find(r=>r.close<0); return f && f!==c.low ? f.m : null})()")
-    check("Q6 החודש הראשון שבו הכסף נגמר מוצג", "המינוס מתחיל כבר", ("מוצג" if (fn is None or "המינוס מתחיל כבר" in t) else "חסר") + f" fn={fn} bl={E('JSON.stringify(dealBlockers(`cash`))')[:120]}", fn is None or "המינוס מתחיל כבר" in t)
+    fnl = E(f"ymLabel('{fn}')") if fn else ""
+    check("Q6 החודש הראשון שבו הכסף נגמר מוצג", f"המחסור מתחיל ב{fnl}", ("מוצג" if (fn is None or f"המחסור מתחיל ב{fnl}" in t) else "חסר") + f" fn={fn}", fn is None or f"המחסור מתחיל ב{fnl}" in t)
     E("S.fin.equity=250000; Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,rFixed:4.62}); persist()")
     # ---- QA6 findings ----
     E("Object.assign(S.mix,{years:25,pPrime:33,pFixed:34,pLinked:33,pVar:0,rPrime:4.75,rFixed:4.62,rLinked:3.29,infl:3}); S.fin.equity=250000; persist(); mixOpen=true; go('calc','mortgage')"); pg.wait_for_timeout(100)
@@ -261,6 +262,24 @@ with sync_playwright() as p:
     ov = E("[...document.querySelectorAll('.ov .ovbig')].map(x=>x.innerText)")
     exp = E("(()=>{const d=drawSteps(),c=cashflow(),f=n=>'₪'+Math.round(n).toLocaleString('en-US');return [f(fundsTotal()),f(ownCash()+costsTotal()),f(dealFin().needed),f(d.now||d.first),f(c.low.close)]})()")
     check("D13 התמונה הכוללת = מנוע החישוב", " · ".join(exp), " · ".join(ov), len(ov) == len(exp) and all(e in o for e, o in zip(exp, ov)))
+    # E: blockers from the persona re-test
+    E("S=exampleState(); S.example=false; persist(); go('calc','overview')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    check("E1 כרטיס משכנתא אחד, בלי 'חסר לוח'", "1", E("document.querySelectorAll('[id=ov-mort]').length"), E("document.querySelectorAll('[id=ov-mort]').length") == 1 and "חסר לוח תשלומים" not in t)
+    for name, setup in [("מחסור", "S.fin.savings=280000; S.fin.expenses=16000; S.fin.expTouched=true"), ("מתחת לכרית", "S.fin.savings=400000")]:
+        E("S=exampleState(); S.example=false; S.fin.savTouched=true; " + setup + "; persist()")
+        A = E("(()=>{const A=moneyAnswer(cashflow());return {h:A.head,v:A.val,bad:A.bad}})()")
+        txt = {}
+        for k, sb in [("home", ""), ("ov", "overview"), ("cash", "cash"), ("eq", "equity")]:
+            E("go('home')" if k == "home" else f"go('calc','{sb}')"); pg.wait_for_timeout(100); txt[k] = pg.inner_text("#view")
+        same = all(A["h"] in x and A["v"] in x for x in txt.values())
+        contra = ("יש לכם מספיק" in txt["eq"]) if A["bad"] else any("צפוי מחסור" in x or "המחסור מתחיל" in x for x in txt.values())
+        check(f"E2 תשובה אחת בכל המסכים ({name})", A["h"] + " · " + A["v"], "זהה" if same else "שונה", same and not contra)
+    E("S=exampleState(); S.example=false; persist(); go('buy','payments')"); pg.wait_for_timeout(100); t = pg.inner_text("#view")
+    a = E("(()=>{const a=payAlloc().find(z=>z.bank>1);return {b:'₪'+Math.round(a.bank).toLocaleString('en-US'),o:'₪'+Math.round(a.own+a.link).toLocaleString('en-US'),sum:Math.abs(a.bank+a.own+a.link-(payAmount(a.x)+a.link))<1}})()")
+    check("E3 הצמדה אינה 'מהמשכנתא'", f"{a['b']} מהמשכנתא · {a['o']} מהכסף שלכם", "תקין" if f"{a['b']} מהמשכנתא · {a['o']} מהכסף שלכם" in t else t[:60], f"{a['b']} מהמשכנתא · {a['o']} מהכסף שלכם" in t and a["sum"])
+    E("go('home')"); pg.wait_for_timeout(100); t = pg.inner_text("#view"); bf = E("fmtDate(bankFirstPay().date)")
+    check("E4 הסבר מתי הבנק מתחיל, עם התאריך מהלוח", bf, "מוצג" if ("ההעברה הראשונה מהבנק צפויה" in t and bf in t) else "חסר", "ההעברה הראשונה מהבנק צפויה" in t and bf in t)
+    check("E5 נקודה בתפריט כסף נעלמת כשהנתונים מלאים", "אין", E("JSON.stringify(navDots())"), not E("navDots().calc"))
     check("שגיאות JavaScript", "אין", errs or "אין", not errs)
     b.close()
 w = max(len(r[0]) for r in R)
