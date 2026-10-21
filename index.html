@@ -54,6 +54,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .brand { font-family: var(--display); font-weight: 700; font-size: 1.35rem; letter-spacing: .01em; display: flex; align-items: center; gap: 8px; }
 .brand svg { width: 22px; height: 22px; }
 .sync { font-size: .72rem; opacity: .7; pointer-events: none; }
+.sync.bad { opacity: 1; color: #ffd8b8; font-weight: 600; }
+.topbar > .row { flex-wrap: nowrap; min-width: 0; }
+/* narrow phones: logo and actions stay on one line; the "saved" note shows only when something is wrong */
+@media (max-width: 420px) { .sync:not(.bad) { display: none; } .sync.bad { max-width: 92px; line-height: 1.2; } .topbar { gap: 6px; } }
 .topicon.aa { font-weight: 800; font-size: .95rem; width: auto; padding: 0 8px; }
 main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; }
 .screen { display: flex; flex-direction: column; gap: 14px; }
@@ -80,11 +84,19 @@ p { margin: 0; }
 .jrow.warn { border-inline-start-color: var(--warn); } .jrow.warn .jv b, .jrow .w { color: var(--warn); } .jrow.gold { border-inline-start-color: var(--gold); } .jrow.ok { border-inline-start-color: var(--ok); }
 .status { font-family: var(--display); font-size: 1.1rem; font-weight: 600; margin: -4px 0 0; }
 html.bigtext .jrow .jh { flex-wrap: wrap; }
+.lead { font-size: 1.08rem; margin: 0; }
+.dealline { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--muted); font-size: .92rem; margin-top: -6px; flex-wrap: wrap; }
+.story .jrow { padding: 0; } .jmain { display: grid; gap: 4px; width: 100%; background: none; border: none; text-align: right; color: var(--fg); font: inherit; padding: 12px 10px 6px; border-radius: 0; }
+.jrow .cta { align-self: start; margin: 0 10px 10px; font-size: .92rem; font-weight: 600; }
+.jrow { display: grid; } 
+.flash { animation: flash 1.6s ease-out; } @keyframes flash { 0%, 40% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; outline: 3px solid var(--accent); } }
 .assume { border: 1px dashed var(--field-line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: var(--card); }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 6px; }
 .grid3 .stat .v { font-size: 1.2rem; }
 .num { font-variant-numeric: tabular-nums; }
-.chip { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 999px; font-size: .76rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; padding: 1px 9px; border-radius: 999px; font-size: .76rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; max-width: 100%; }
+html.bigtext .chip { white-space: normal; text-align: right; line-height: 1.25; }
 .chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); } .chip.gold { color: var(--gold); } .chip.mute { color: var(--muted); }
 .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
@@ -231,7 +243,7 @@ tr.best td { background: var(--accent-soft); }
 .nav { position: fixed; inset: auto 0 0 0; z-index: 6; background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
 .nav .in { max-width: 560px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); min-height: var(--nav-h); }
-.nav button { background: none; border: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .74rem; font-weight: 600; padding: 4px 2px; border-radius: 0; }
+.nav button { background: none; border: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: .74rem; text-align: center; line-height: 1.15; font-weight: 600; padding: 4px 2px; border-radius: 0; }
 .nav button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .nav button[aria-current="page"] { color: var(--accent); }
 svg text { font-family: var(--body); }
@@ -289,7 +301,7 @@ details summary { cursor: pointer; color: var(--accent); font-weight: 600; paddi
     <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>מפתח</div>
     <div class="row" style="gap:8px"><span class="sync" id="sync">נשמר בטלפון</span><button class="topicon aa" data-act="bigtoggle" aria-label="הגדלת הטקסט" aria-pressed="false">א+</button>
       <button class="backbtn" data-act="goback" id="backbtn" hidden aria-label="חזרה למסך הקודם">‹ חזרה</button>
-      <button class="topicon" data-act="settings" aria-label="הגדרות ושיתוף"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+      <button class="topicon" data-act="settings" aria-label="הגדרות, שיתוף ופרטי העסקה"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </header>
   <main id="view"></main>
   <nav class="nav" aria-label="ניווט"><div class="in" id="nav"></div></nav>
@@ -540,6 +552,7 @@ function migrate0(x) {
 let S = exampleState();
 const openStages = new Set();
 let payEdit = false, listEdit = false, advOpen = false;
+let dealOnly = false;   /* settings opened from "עריכה" on the deal: show only the deal form */
 let tab = "home", setupOpen = false, joinOpen = false, confirmReset = false, invite = null;
 const sub = { buy: "tasks", calc: "costs", waves: "prices" };
 const LS = "maftech.state.v1";
@@ -660,7 +673,7 @@ async function flush() {
       saving = false; clearTimeout(saveTimer); saveTimer = setTimeout(flush, retryMs); return; } }
   saving = false; if (dirty) flush();
 }
-function setSync(t) { document.getElementById("sync").textContent = t; }
+function setSync(t) { const el = document.getElementById("sync"); el.textContent = t; el.classList.toggle("bad", /לא |אין|בלבד/.test(t)); }
 function attachShared(code) {
   if (store.unsub) store.unsub();
   store.code = code; store.shared = store.db.doc("households/" + code);
@@ -949,7 +962,7 @@ function textCard() {
 }
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 4";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "21.10.2026 · 5";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"מפתח" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1233,7 +1246,7 @@ const IC = {
   market: '<path d="M4 19h16"/><path d="M6 15l4-5 3 3 5-7"/>',
   waves: '<path d="M4 19h16"/><path d="M6 15l4-5 3 3 5-7"/>'
 };
-const TABS = [["home", "בית"], ["buy", "הרכישה"], ["calc", "כסף"], ["waves", "שוק ואזורים"]];
+const TABS = [["home", "בית"], ["buy", "תשלומים ומשימות"], ["calc", "כסף ומשכנתא"], ["waves", "שוק ואזורים"]];
 function renderNav() {
   document.getElementById("nav").style.display = wiz ? "none" : "";
   const dots = navDots();
@@ -1274,9 +1287,9 @@ function screenSetup() {
         <div class="row"><button data-act="join">הצטרפות</button><button class="ghost" data-act="joincancel">ביטול</button></div>`
     : `<div class="row"><button data-act="share">יצירת קוד שיתוף</button><button class="ghost" data-act="joinopen">יש לי קוד</button></div>`;
   return `<div class="screen">
-    <h1>${S.example ? "הגדרת הרכישה" : "הגדרות"}</h1>
-    ${S.example ? "" : `<h2 style="margin:4px 0 0">הטלפון שלי</h2>${pushCard()}${lockCard()}${textCard()}<h2 style="margin:8px 0 0">הרכישה המשותפת</h2>${shareCard0()}`}
-    ${S.example ? `<div class="card">` : `<details class="card"><summary><b>פרטי הרכישה</b> <span class="small muted">· עיר, מחיר, תאריכים. משותף לשניכם</span></summary><div style="margin-top:10px">`}
+    <h1>${S.example ? "הגדרת הרכישה" : dealOnly ? "פרטי העסקה" : "פרטי העסקה והגדרות"}</h1>
+    ${S.example || dealOnly ? "" : `<h2 style="margin:4px 0 0">הטלפון שלי</h2>${pushCard()}${lockCard()}${textCard()}<h2 style="margin:8px 0 0">הרכישה המשותפת</h2>${shareCard0()}`}
+    ${S.example ? `<div class="card">` : `<details class="card" id="dealform" ${dealOnly ? "open" : ""}><summary><b>פרטי הרכישה</b> <span class="small muted">· עיר, מחיר, תאריכים. משותף לשניכם</span></summary><div style="margin-top:10px">`}
       <label class="f">סוג הרכישה<select id="f_type" data-key="f_type">
         ${Object.entries(TYPES).map(([k, t]) => `<option value="${k}" ${p.type === k ? "selected" : ""}>${t.name}</option>`).join("")}</select></label>
       <label class="f">הקונה<select id="f_buyer" data-key="f_buyer">
@@ -1301,9 +1314,8 @@ function screenSetup() {
       <div class="row"><button data-act="saveSetup">שמירה</button>${S.example ? "" : `<button class="ghost" data-act="cancelSetup">ביטול</button>`}</div>
     ${S.example ? "</div>" + lockCard() + textCard() : "</div></details>"}
     ${S.example ? shareCard0() : ""}
-    ${privacyCard()}
-    ${aboutCard()}
-    ${S.example ? "" : `<div class="card"><h2>גיבוי</h2>
+    ${dealOnly ? "" : privacyCard() + aboutCard()}
+    ${S.example || dealOnly ? "" : `<div class="card"><h2>גיבוי</h2>
       <p class="small muted">שמרו עותק של כל הנתונים בקובץ. אפשר לשחזר ממנו בכל מכשיר, וגם במעבר לגרסה הבאה של האפליקציה.</p>
       <p class="small muted">קובץ הגיבוי פותח גם את המסמכים שצירפתם. שמרו אותו במקום פרטי, ואל תשלחו אותו בצ'אט.</p>
       <div class="row"><button data-act="pdf">סיכום ל-PDF</button><button class="ghost" data-act="backup">שמירת גיבוי</button><button class="ghost" data-act="restore">שחזור מגיבוי</button></div>
@@ -1370,31 +1382,37 @@ function statusLine() {
   return parts.length ? `<p class="status">${parts.join(" ")}</p>` : "";
 }
 function dashboardCard() {
-  const p = S.profile, f = S.fin, t = T(), D = dealFin(), rows = [];
-  const row = (q, v, text, go, tone = "") => rows.push(`<button class="jrow ${tone}" data-go="${go[0]}" ${go[1] ? `data-sub="${go[1]}"` : ""}><span class="jh"><span class="jq">${q}</span><span class="jv"><b class="num">${v}</b><span aria-hidden="true">‹</span></span></span><span class="a">${text}</span></button>`);
-  /* 1. what you pay the contractor */
-  const np = nextPayment(), paidN = S.payments.filter(x => x.paid).length;
-  if (np) { const dn = daysTo(np.date); row(t.contractor ? "מה משלמים לקבלן" : "מה משלמים", ils(payAmount(np) + (dealBlockers("linkage").length ? 0 : linkageCost(np))), `הבא: ${esc(np.name)}, ${fmtDate(np.date)} (${dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים"}). שולמו ${paidN} מתוך ${S.payments.length} תשלומים.`, ["buy", "payments"], dn <= 21 ? "warn" : ""); }
-  else if (S.payments.length) row("מה משלמים לקבלן", "✓", "כל התשלומים סומנו כשולמו.", ["buy", "payments"], "ok");
-  /* 2. where the money comes from */
-  const blK = dealBlockers("costs");
-  if (!savKnown()) row("מאיפה הכסף מגיע", "להזנה", "הזינו כמה חסכונות יש לכם (גם 0), ונחשב כמה יוצא מהכיס וכמה נשאר.", ["calc", "costs"]);
-  else if (blK.length) row("מאיפה הכסף מגיע", "לא ניתן לחשב", esc(blK[0].msg), blK[0].tab ? [blK[0].tab, blK[0].sb] : ["calc", "costs"], "warn");
-  else { const tx = timingExtra(), ml = moneyLeft().left2;
-    row("מאיפה הכסף מגיע", ils(ownCash() + costsTotal()), `יוצא מהכיס: הון עצמי ${ils(D.equity)}${D.gap > 1 ? `, <span class="w">פער מימון ${ils(D.gap)}</span>` : ""}${tx > 1 ? `, ועוד ${ils(tx)} לפני שהבנק מתחיל` : ""}, ועלויות. השאר, ${ils(D.bankFunds - tx)}, מהמשכנתא. ${ml >= 0 ? `נשארים ${ils(ml)}.` : `<span class="w">חסרים ${ils(-ml)}.</span>`}`, D.gap > 1 ? ["calc", "equity"] : ["calc", "costs"], D.gap > 1 || ml < 0 ? "warn" : ""); }
-  /* 3. how the mortgage comes in */
+  const p = S.profile, f = S.fin, t = T(), D = dealFin(), secs = [];
+  /* a section: the answer (title, amount, one sentence) opens the place where it is explained; one optional next action */
+  const sec = (k, q, v, text, go, tone = "", cta = null) => secs.push(`<div class="jrow ${tone}" data-k="${k}"><button class="jmain" data-go="${go[0]}" ${go[1] ? `data-sub="${go[1]}"` : ""} ${go[2] ? `data-focus="${go[2]}"` : ""}><span class="jh"><span class="jq">${q}</span><span class="jv"><b class="num">${v}</b></span></span><span class="a">${text}</span></button>${cta ? `<button class="cta link" data-go="${cta[1]}" ${cta[2] ? `data-sub="${cta[2]}"` : ""} ${cta[3] ? `data-focus="${cta[3]}"` : ""}>${cta[0]} ←</button>` : ""}</div>`);
+  /* 1. the next thing you pay */
+  const open = [...S.payments].filter(x => x.date && !x.paid).sort((a, b) => a.date.localeCompare(b.date)), np = open[0], after = open[1];
+  const amt = x => ils(payAmount(x) + (dealBlockers("linkage").length ? 0 : linkageCost(x)));
+  if (np) { const dn = daysTo(np.date), when = dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים";
+    sec("pay", "הדבר הבא: תשלום לקבלן", amt(np), `${esc(np.name)}, ${fmtDate(np.date)} (${when}).${after ? ` אחר כך: ${esc(after.name)}, ${amt(after)} ב-${fmtDate(after.date)}.` : ""}`, ["buy", "payments", "pay_" + np.id], dn <= 21 ? "warn" : "", savKnown() ? ["מאיפה הכסף מגיע", "calc", "costs", "out"] : ["כמה כסף יש לכם?", "calc", "costs", "fin.savings"]); }
+  else if (S.payments.length) sec("pay", "תשלומים לקבלן", "✓", "כל התשלומים סומנו כשולמו.", ["buy", "payments"], "ok");
+  /* 2. the mortgage */
   const blD = t.contractor ? drawBlockers() : dealBlockers("mortgage");
-  if (blD.length) row("איך המשכנתא נכנסת", "לא ניתן לחשב", esc(blD[0].msg), blD[0].tab ? [blD[0].tab, blD[0].sb] : ["calc", "mortgage"], "warn");
+  if (blD.length) sec("mort", "המשכנתא", "לא ניתן לחשב", esc(blD[0].msg), blD[0].tab ? [blD[0].tab, blD[0].sb] : ["calc", "mortgage"], "warn");
   else if (t.contractor) { const ds = drawSteps();
-    if (ds && ds.steps.length) row("איך המשכנתא נכנסת", ils(ds.now || ds.first), ds.now ? `זה ההחזר היום. הוא עולה עם כל העברה של הבנק לקבלן, עד כ-${ils(ds.full)} מ${ymLabel(ds.fullM)}.` : `המשכנתא עוד לא התחילה. ההחזר הראשון צפוי מ${ymLabel(ds.firstM)}, והוא עולה עם כל העברה של הבנק לקבלן, עד כ-${ils(ds.full)} אחרי המשיכה האחרונה.`, ["calc", "mortgage"]);
-    else row("איך המשכנתא נכנסת", "לא ניתן לחשב", p.sign ? "חסר לוח תשלומים עם תאריכים." : "חסר תאריך חתימה.", p.sign ? ["buy", "payments"] : ["settings"], "warn"); }
-  else { const full = mortgageCalc(D.bankFunds).first; row("המשכנתא", ils(full), `החזר חודשי ראשון${pti(full) != null ? `, ${pti(full).toFixed(0)}% מההכנסה` : ""}.`, ["calc", "mortgage"]); }
-  /* 4. is the money enough */
-  if (p.sign) { const blC = dealBlockers("cash");
-    if (blC.length) row("האם הכסף מספיק", "להשלמה", esc(blC[0].msg), blC[0].tab ? [blC[0].tab, blC[0].sb] : ["calc", "cash"]);
-    else { const c = cashflow(); if (c) { const rv = (f.expenses || 0) * (f.reserve || 0), lo = c.low.close, bad = lo < 0, tight = !bad && rv && lo < rv;
-      row("האם הכסף מספיק", bad ? "חסרים " + ils(-lo) : ils(lo), bad ? `<span class="w">בחודש הצפוף, ${ymLabel(c.low.m)}, הכסף נגמר.</span>` : `החודש הצפוף: ${ymLabel(c.low.m)}. ${tight ? `<span class="w">נשארים ${ils(lo)}, ${ils(rv - lo)} פחות מכרית הביטחון (${f.reserve} חודשי הוצאות).</span>` : `נשארים ${ils(lo)}${rv ? `, יותר מכרית הביטחון (${f.reserve} חודשי הוצאות)` : ""}.`}`, ["calc", "cash"], bad ? "warn" : tight ? "gold" : "ok"); } } }
-  return `<div class="card"><div class="spread"><h2>העסקה שלכם, צעד אחר צעד</h2><button class="link small" data-act="pdf">PDF</button></div><div class="journey">${rows.join("")}</div></div>`;
+    if (ds && ds.steps.length) sec("mort", "המשכנתא", ils(ds.now || ds.first), ds.now ? `זה ההחזר היום. הוא עולה עם כל העברה של הבנק לקבלן, עד כ-${ils(ds.full)} מ${ymLabel(ds.fullM)}.` : `עוד לא התחילה. ההחזר הראשון צפוי מ${ymLabel(ds.firstM)}, והוא עולה עם כל העברה של הבנק לקבלן, עד כ-${ils(ds.full)} אחרי המשיכה האחרונה.`, ["calc", "mortgage", "outtop"], "", ["ראו איך ההחזר גדל", "calc", "mortgage", "drawcard"]);
+    else sec("mort", "המשכנתא", "לא ניתן לחשב", p.sign ? "חסר לוח תשלומים עם תאריכים." : "חסר תאריך חתימה.", p.sign ? ["buy", "payments"] : ["deal"], "warn"); }
+  else { const full = mortgageCalc(D.bankFunds).first; sec("mort", "המשכנתא", ils(full), `החזר חודשי ראשון${pti(full) != null ? `, ${pti(full).toFixed(0)}% מההכנסה` : ""}.`, ["calc", "mortgage"]); }
+  /* 3. is the money enough */
+  const blK = dealBlockers("costs"), blC = p.sign ? dealBlockers("cash") : [];
+  if (!savKnown()) sec("money", "האם הכסף מספיק?", "להזנה", "הזינו כמה חסכונות יש לכם (גם 0), ונראה כמה יוצא מהכיס ואם יש מספיק.", ["calc", "costs", "fin.savings"]);
+  else if (blK.length) sec("money", "האם הכסף מספיק?", "לא ניתן לחשב", esc(blK[0].msg), blK[0].tab ? [blK[0].tab, blK[0].sb] : ["calc", "costs"], "warn");
+  else { const tx = timingExtra(), out = `יוצא מהכיס בסך הכול ${ils(ownCash() + costsTotal())}${D.gap > 1 ? `, כולל <span class="w">פער מימון ${ils(D.gap)}</span>` : ""}${tx > 1 ? `, כולל ${ils(tx)} לפני שהבנק מתחיל לממן` : ""}.`;
+    const c = p.sign && !blC.length ? cashflow() : null;
+    if (c) { const rv = (f.expenses || 0) * (f.reserve || 0), lo = c.low.close, bad = lo < 0, tight = !bad && rv && lo < rv;
+      sec("money", "האם הכסף מספיק?", bad ? "חסרים " + ils(-lo) : ils(lo), `${out} ${bad ? `<span class="w">בחודש הצפוף, ${ymLabel(c.low.m)}, הכסף נגמר.</span>` : `החודש הצפוף: ${ymLabel(c.low.m)}, ${tight ? `<span class="w">נשארים ${ils(lo)}, ${ils(rv - lo)} פחות מכרית הביטחון (${f.reserve} חודשי הוצאות).</span>` : `נשארים ${ils(lo)}${rv ? `, יותר מכרית הביטחון (${f.reserve} חודשי הוצאות)` : ""}.`}`}`, ["calc", "cash"], bad ? "warn" : tight ? "gold" : "ok", ["הבינו למה", "calc", "cash"]); }
+    else { const ml = moneyLeft().left2; sec("money", "האם הכסף מספיק?", ml >= 0 ? ils(ml) : "חסרים " + ils(-ml), `${out} ${ml >= 0 ? `נשארים ${ils(ml)} (בלי החיסכון החודשי).` : `<span class="w">חסרים ${ils(-ml)}.</span>`} ${blC.length ? esc(blC[0].msg) : ""}`, ["calc", "costs"], ml < 0 || D.gap > 1 ? "warn" : "", blC.length && blC[0].tab ? ["להשלמה", blC[0].tab, blC[0].sb] : null); } }
+  return `<div class="card story"><div class="journey">${secs.join("")}</div></div>`;
+}
+/* the deal itself, editable where you see it */
+function dealLine() {
+  const p = S.profile, t = T();
+  return `<div class="dealline"><span>${ils(p.price)} · חתימה ${p.sign ? fmtDate(p.sign) : "—"}${t.contractor || p.delivery ? ` · ${t.contractor ? "מסירה" : "מפתח"} ${p.delivery ? fmtDate(p.delivery) : "—"}` : ""}</span><button class="link small" data-act="editdeal">עריכה</button></div>`;
 }
 function screenHome() {
   const p = S.profile, t = T();
@@ -1412,16 +1430,16 @@ function screenHome() {
   const more = [];
   if (linkTot > 0 && !dealBlockers("linkage").length) more.push([`הצמדה צפויה: <b>${ils(linkTot)}</b> על התשלומים שנותרו`, "calc", "linkage"]);
   more.push([`${marketStale().length ? `<span style="color:var(--warn)">${marketStale()[0]}</span>` : new Date() < new Date(MARKET.nextBoiISO + "T18:00:00") ? `החלטת ריבית ב-<b>${MARKET.boi.next}</b>${primeP > 0 && !dealBlockers("mortgage").length ? `. הורדה של 0.25% תחסוך לכם כ-${ils(cutDelta)} בחודש` : ""}` : `ריבית בנק ישראל: ${MARKET.boi.rate}%`}`, "market", ""]);
+  if (!S.example) more.push(["סיכום של כל העסקה ל-PDF, להדפסה או לשליחה", "act:pdf", ""]);
   if (wCity) more.push([`${esc(wCity)}: מחירים לפי שכונה${wUp.length ? ` · ${wUp.length} פרויקטים שיכולים למכור בשנים הקרובות` : ""}`, "waves", ""]);
   return `<div class="screen">
-    <div class="spread"><h1>${S.example ? "ברוכים הבאים" : esc(p.city) || "הרכישה שלי"}</h1>${S.example ? "" : `<span class="chip gold">${t.name}</span>`}</div>
-    ${S.example ? "" : statusLine()}
-    ${S.example ? `<p class="muted">"מפתח" מלווה אתכם מהחתימה ועד המפתח: כמה כסף צריך, איזו משכנתא, מה לשלם ומתי, ומה קורה בשוק. כל צעד מוביל לבא אחריו.</p>` : stageStrip()}
-    ${heroCard()}
-    ${S.example ? "" : dashboardCard()}
-    ${timelineCard()}
-    ${S.example ? `<p class="small muted" style="text-align:center">רוצים להסתכל קודם? למטה ובכל המסכים יש רכישה לדוגמה.<br>כבר יש לכם קובץ גיבוי? <button class="link small" data-act="restore">שחזור מגיבוי</button><br>בן או בת הזוג כבר התחילו? <button class="link small" data-act="joinwelcome">יש לי קוד שיתוף</button></p>` : ""}
-    ${S.example || !p.sign ? `    <div class="card">${S.example ? '<span class="chip mute" style="float:left">דוגמה</span>' : ""}
+    <div class="spread"><h1>${S.example ? "קניתם דירה. מתי תצטרכו כל שקל?" : esc(p.city) || "הרכישה שלי"}</h1>${S.example ? "" : `<span class="chip gold">${t.name}</span>`}</div>
+    ${S.example ? "" : statusLine() + dealLine()}
+    ${S.example ? `<p class="lead">"מפתח" מחבר את לוח התשלומים לקבלן, את החסכונות ואת המשכנתא, ומראה לכם מה צפוי בכל חודש ומה לעשות עכשיו.</p>` : stageStrip()}
+    ${S.example ? heroCard() : dashboardCard() + heroCard()}
+    ${S.example ? "" : timelineCard()}
+    ${S.example ? `<p class="small muted" style="text-align:center">כבר יש לכם קובץ גיבוי? <button class="link small" data-act="restore">שחזור מגיבוי</button><br>בן או בת הזוג כבר התחילו? <button class="link small" data-act="joinwelcome">יש לי קוד שיתוף</button></p>` : ""}
+    ${!S.example && !p.sign ? `    <div class="card">
       <div class="grid2">
         <div class="stat"><span class="v">${ils(p.price)}</span><span class="l">מחיר הדירה</span></div>
         <div class="stat"><span class="v">${deliv === null ? "—" : deliv > 0 ? nf.format(deliv) + " ימים" : t.contractor ? "נמסרה" : "התקבל"}</span><span class="l">${t.contractor ? "עד המסירה" : "עד קבלת המפתח"}</span></div>
@@ -1430,9 +1448,9 @@ function screenHome() {
       <div class="bar"><i style="width:${Math.min(100, paid / p.price * 100)}%"></i></div>
       ${next && daysTo(next.date) > 21 ? `<p class="small muted">התשלום הבא: ${esc(next.name)}, ${fmtDate(next.date)}, ${ils(payAmount(next) + linkageCost(next))}</p>` : ""}
     </div>` : ""}
-    ${S.example ? dashboardCard() : ""}
+    ${S.example ? `<h2 style="margin-top:6px">כך זה נראה, ברכישה לדוגמה</h2>${dashboardCard()}` : ""}
     ${sale && S.example ? `<div class="card"><div class="spread"><h2>מתי מותר למכור</h2><b>${fmtDate(sale)}</b></div><p class="small muted">5 שנים מטופס 4 או 7 שנים מההגרלה, המוקדם מביניהם.</p></div>` : ""}
-    <div class="card"><h2>עוד בשבילכם</h2><div class="list">${more.map(([txt, tb, sb]) => `<button class="laterrow" data-go="${tb}" ${sb ? `data-sub="${sb}"` : ""}><span class="small">${txt}</span><span aria-hidden="true">‹</span></button>`).join("")}</div></div>
+    <div class="card"><h2>עוד בשבילכם</h2><div class="list">${more.map(([txt, tb, sb]) => `<button class="laterrow" ${tb.startsWith("act:") ? `data-act="${tb.slice(4)}"` : `data-go="${tb}"`} ${sb ? `data-sub="${sb}"` : ""}><span class="small">${txt}</span><span aria-hidden="true">‹</span></button>`).join("")}</div></div>
     <p class="src" style="text-align:center">גרסה ${BUILD}</p>
   </div>`;
 }
@@ -1465,7 +1483,7 @@ function screenBuy() {
         return [bs.length ? `ל-${bs.length} תשלומים יש תאריך לפני החתימה.` : "", ad.length ? `נותרה התחייבות של ${ils(ad.reduce((a, x) => a + payAmount(x) + linkageCost(x), 0))} לאחר המסירה.` : "", nd.length ? `ל-${nd.length} תשלומים אין תאריך, ולכן התזרים לא יכול לחשב.` : ""].filter(Boolean).map(t => `<p class="small" style="color:var(--warn)">${t} <button class="link small" data-act="payedit">לתיקון</button></p>`).join(""); })()}
       ${t.contractor ? (flow().pay ? '<span class="chip ok">מהחוזה</span>' : '<span class="chip gold">טרם אומת מול החוזה</span>') : ""}
       ${t.contractor ? `<p class="small muted">"מהכיס" = מההון העצמי שלכם. "מהמשכנתא" = הבנק מעביר ישירות לקבלן. ההצמדה מחושבת בהערכה.</p>` : ""}
-      <div class="list" style="margin-top:8px">${pays.map(x => `<div class="item paysum ${x.paid ? "done" : ""} ${x === next ? "next" : ""}">
+      <div class="list" style="margin-top:8px">${pays.map(x => `<div class="item paysum ${x.paid ? "done" : ""} ${x === next ? "next" : ""}" id="pay_${x.id}">
         <label class="paybox"><input type="checkbox" data-paid="${x.id}" ${x.paid ? "checked" : ""} aria-label="שולם: ${esc(x.name)}"><span>שולם</span></label>
         <div class="grow"><div><b>${esc(x.name)}</b>${x === next ? ' <span class="chip gold">הבא</span>' : ""}</div><div class="small muted">${x.date ? fmtDate(x.date) : "בלי תאריך"}${vm ? "" : ` · ${nf.format(x.pct)}%`}${linkageCost(x) > 0 ? ` · בסיס ${ils(payAmount(x))} + הצמדה משוערת ${ils(linkageCost(x))}` : x.linked && t.contractor ? " · צמוד" : ""}</div>
         ${src[x.id] ? `<span class="chip ${src[x.id] === "own" ? "gold" : src[x.id] === "bank" ? "mute" : ""}">${src[x.id] === "own" ? "מהכיס" : src[x.id] === "bank" ? (early45(x) ? "מהמשכנתא, אם הבנק יספיק עד אז" : "מהמשכנתא") : early45(x) ? "חלק מהכיס, חלק מהמשכנתא (אם הבנק יספיק)" : "חלק מהכיס, חלק מהמשכנתא"}</span>` : ""}
@@ -1519,7 +1537,7 @@ function screenBuy() {
       <div style="text-align:left"><button class="link small" data-act="listedit">${listEdit ? "סיום מחיקה" : "מחיקת מסמכים מהרשימה"}</button></div>
       ${can ? `<p class="src">${store.remote ? "הקבצים מוצפנים בטלפון לפני שהם עולים לשרת. רק מי שיש לו את הרכישה (אתם ומי שמשתף איתכם) יכול לפתוח אותם. מומלץ לשמור עותק גם במקום נוסף." : "קבצים מצורפים נגישים לכל מי שיש לו גישה לעמוד הזה."}</p>` : ""}</div>`;
   }
-  return `<div class="screen">${exampleBanner()}<h1>הרכישה</h1>${segs("buy", list)}${body}</div>`;
+  return `<div class="screen">${exampleBanner()}<h1>תשלומים ומשימות</h1>${segs("buy", list)}${body}</div>`;
 }
 
 /* ---- money screens: inputs render once, results live in #out ---- */
@@ -1886,7 +1904,7 @@ function bankTimingCtl() {
 function drawStepsCard() {
   const d = drawBlockers().length ? null : drawSteps(); if (!d || !d.steps.length) return "";
   const e = d.short > 1 && !S.fin.bankEarly ? drawSteps(true) : null, lnk = S.mix.pLinked || S.mix.pVar;
-  return `<div class="card"><h2>איך ההחזר יגדל בזמן הבנייה</h2>
+  return `<div class="card" id="drawcard"><h2>איך ההחזר יגדל בזמן הבנייה</h2>
     <p class="small muted">הבנק מעביר את הכסף לקבלן בכל תשלום. מהחודש שאחרי, משלמים החזר על מה שהועבר עד אז.</p>
     <div class="dsteps">${d.steps.map((x, i) => `<div class="dstep${i === d.steps.length - 1 ? " full" : ""}"><div class="dl"><b>${esc(x.name)}</b><span class="small muted">${fmtDate(x.date)} · הבנק מעביר ${ils(x.drawn)}</span><span class="small muted">נמשך עד כה: ${ils(x.cum)}</span></div><div class="dr"><span class="small muted">${i === 0 ? "החזר ראשון · " : i === d.steps.length - 1 ? "בסוף · " : ""}מ${ymLabel(x.chargeM)}</span><b class="num">${ils(x.pay)}</b></div></div>`).join("")}</div>
     ${lnk ? `<p class="small muted">זה לא תקרה: בחלק הצמוד ההחזר ממשיך לעלות עם האינפלציה (הנחה: ${S.mix.infl || 0}% בשנה) גם אחרי המשיכה האחרונה.</p>` : ""}
@@ -1960,7 +1978,7 @@ const CALC = { costs: [inCosts, outCosts], equity: [inEquity, outEquity, advEqui
 function screenCalc() {
   const list = calcList(); if (!list.find(x => x[0] === sub.calc)) sub.calc = "costs";
   const [i, o, a, top] = CALC[sub.calc];
-  return `<div class="screen">${exampleBanner()}<h1>כסף</h1>${calcSteps()}<div class="livebar" id="livebar" aria-live="polite">${liveBar()}</div>${top ? `<div id="outtop">${top()}</div>` : ""}${i()}<div id="out" class="screen">${o()}</div>${a ? a() : ""}${calcNext()}</div>`;
+  return `<div class="screen">${exampleBanner()}<h1>כסף ומשכנתא</h1>${calcSteps()}<div class="livebar" id="livebar" aria-live="polite">${liveBar()}</div>${top ? `<div id="outtop">${top()}</div>` : ""}${i()}<div id="out" class="screen">${o()}</div>${a ? a() : ""}${calcNext()}</div>`;
 }
 function refreshOut() {
   if (tab !== "calc") return; const el = document.getElementById("out"); if (el) el.innerHTML = CALC[sub.calc][1]();
@@ -2415,7 +2433,7 @@ function closeSheetQuiet() { const el = document.getElementById("sheet"); if (el
 function heroCard() {
   const steps = nextSteps(); if (!steps.length) return `<div class="card hero"><h2>הכול מעודכן ✓</h2><p class="small muted">אין משהו דחוף. נעדכן אתכם כשיהיה.</p></div>`;
   const [h, ...rest] = steps;
-  return `<div class="card hero ${h.tone}"><span class="small muted">הצעד הבא</span><h2>${h.title}</h2><p>${h.text}</p>
+  return `<div class="card hero ${h.tone}"><span class="small muted">${S.example ? "הצעד הבא" : "מה לעשות עכשיו"}</span><h2>${h.title}</h2><p>${h.text}</p>
     <div><button data-step="${h.act}">${h.btn} ←</button></div>
     ${rest.length ? `<div class="later"><span class="small muted">ואחר כך</span>${rest.slice(0, 3).map(s => `<button class="laterrow" data-${/^(task|seen):/.test(s.act) ? "stepinfo" : "step"}="${/^(task|seen):/.test(s.act) ? s.id : s.act}"><span>${s.title}</span><span aria-hidden="true">‹</span></button>`).join("")}</div>` : ""}</div>`;
 }
@@ -2628,7 +2646,18 @@ addEventListener("popstate", e => {
   const n = e.state && e.state.nav; if (!n || wiz || lockMode) return;
   navPop = true; tab = n.tab; Object.assign(sub, n.sub); setupOpen = n.setupOpen; navPush.last = JSON.stringify(n); render(); window.scrollTo(0, 0); navPop = false;
 });
-function go(t, s) { if (t === "market") { t = "waves"; s = "market"; } tab = t; setupOpen = false; if (s) sub[t] = s; render(); window.scrollTo(0, 0); }
+/* contextual navigation: after opening a screen, bring the exact thing into view (an id, or a field by its data-c key) */
+function focusOn(key) {
+  setTimeout(() => {
+    const el = document.getElementById(key) || document.querySelector(`[data-c="${key}"]`); if (!el) return;
+    for (let d = el.closest("details"); d; d = d.parentElement && d.parentElement.closest("details")) d.open = true;
+    el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800);
+    if (el.matches("input")) el.focus({ preventScroll: true });
+  }, 60);
+}
+/* the deal's core data (price, dates, type) is edited from where it is shown, not by guessing it is under settings */
+function editDeal() { setupOpen = true; dealOnly = true; joinOpen = false; render(); window.scrollTo(0, 0); }
+function go(t, s) { dealOnly = false; if (t === "market") { t = "waves"; s = "market"; } tab = t; setupOpen = false; if (s) sub[t] = s; render(); window.scrollTo(0, 0); }
 function warrantyEnd() { const d = S.profile.delivery; if (!d) return ""; const x = dt(d); x.setFullYear(x.getFullYear() + 1); return ymd(x); }
 /* the stage the data says you are in (only ever suggests moving forward) */
 function dataStage() {
@@ -2733,7 +2762,8 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   const d = b.dataset;
   if (d.tab) return go(d.tab);
-  if (d.go) return go(d.go, d.sub);
+  if (d.go === "deal") return editDeal();
+  if (d.go) { go(d.go, d.sub); if (d.focus) focusOn(d.focus); return; }
   if (d.sub) { sub[tab] = d.sub; render(); return; }
   if (d.pxper) { pxPer = +d.pxper; render(); return; }
   if (d.step) { if (d.closesheet) closeSheetQuiet(); doStep(d.step); return; }
@@ -2771,7 +2801,8 @@ document.addEventListener("click", e => {
     case "bigtoggle": bigText = !bigText; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (e) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH(); toast(bigText ? "הטקסט הוגדל" : "גודל טקסט רגיל"); if (setupOpen) render(); break;
     case "tlall": tlAll = !tlAll; render(); break;
     case "listedit": listEdit = !listEdit; document.body.classList.toggle("listedit", listEdit); render(); break;
-    case "settings": setupOpen = true; joinOpen = false; render(); window.scrollTo(0, 0); break;
+    case "settings": setupOpen = true; dealOnly = false; joinOpen = false; render(); window.scrollTo(0, 0); break;
+    case "editdeal": editDeal(); break;
     case "wznext": { const steps = wizSteps(), k = steps[wiz.i]; wiz.err = wizValidate(k); if (wiz.err) { render(); break; } if (wiz.i >= steps.length - 1) wizFinish(); else { wiz.i++; render(); window.scrollTo(0, 0); } break; }
     case "wzback": wiz.i = Math.max(0, wiz.i - 1); wiz.err = ""; render(); break;
     case "wzcancel": wiz = null; render(); break;
