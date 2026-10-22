@@ -1075,7 +1075,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 20";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 21";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1259,11 +1259,11 @@ function dealBlockers(scope) {
   if (scope !== "mortgage") {   /* the payment schedule feeds linkage, the early-cash check, costs and the forecast, in every deal type */
     const noDate = S.payments.filter(x => !x.paid && !x.date), tot = S.payments.reduce((a, x) => a + payAmount(x), 0);
     if (noDate.length && !out.some(o => /אין תאריך/.test(o.msg))) add(`${noDate.length === 1 ? "לתשלום אחד" : `ל-${noDate.length} תשלומים`} אין תאריך (${ils(noDate.reduce((a, x) => a + payAmount(x), 0))}), אז אי אפשר לדעת מתי הם יוצאים.`, "buy", "payments");
-    if (p.price > 0 && Math.abs(tot - p.price) > 100) add("לוח התשלומים: " + payDiffText(), "buy", "payments");
+    if (p.price > 0 && Math.abs(tot - p.price) >= 1) add("לוח התשלומים: " + payDiffText(), "buy", "payments");
   }
   /* values that the screens never accept can still arrive from an old backup or another phone: they block instead of being used */
-  const f = S.fin, money = ["savings", "income", "expenses", "rent", "otherLoans", "grant", "appraisal"].filter(k => f[k] != null && !(Number(f[k]) >= 0));
-  if (money.length) add("יש סכום שלילי או לא תקין בנתונים (אולי משחזור גיבוי). בדקו את ההכנסה, ההוצאות והחסכונות.", "calc", "equity");
+  const f = S.fin;
+  for (const s of stateIssues()) add(`ערך לא תקין בנתונים (אולי משחזור גיבוי): ${s.what}. התוצאות חסומות עד שתתקנו אותו.`, s.tab, s.sb);
   if (f.equity != null && !(f.equity >= 0 && f.equity <= (p.price || 0))) add("ההון העצמי שנשמר לא תקין (שלילי או גבוה מהמחיר). הזינו אותו מחדש.", "calc", "equity");
   if (scope !== "mortgage" && p.sign && p.delivery && p.delivery <= p.sign) add("מועד המסירה לא יכול להיות לפני החתימה או באותו יום.", "settings");
   if (scope === "cash" && p.sign && ymCount(ymd(today()), cashEndDate()) > CASH_MAX_MONTHS) add(`התזרים מחושב עד ${CASH_MAX_MONTHS / 12} שנה קדימה, והעסקה נמשכת אחרי זה (עד ${fmtDate(cashEndDate())}). בדקו את מועד המסירה ואת תאריכי התשלומים.`, "settings");
@@ -1273,6 +1273,22 @@ function dealBlockers(scope) {
     if (!(S.fin.expenses > 0) && !S.fin.expTouched) add("כדי לחשב תזרים צריך הוצאות חודשיות (בלי שכר דירה).", "calc", "cash");
   }
   return out;
+}
+/* the same ranges the input fields use, applied to everything stored, so a value that could never be typed cannot produce a result */
+const COST_LABEL = { lawyer: "עורך דין", advisor: "יועץ משכנתאות", broker: "תיווך", appraiser: "שמאי", bankfees: "עמלות בנק", moving: "הובלה", renovation: "מיזוג, מטבח, ריהוט ושיפוץ", other: "אחר" };
+function stateIssues() {
+  const out = [], f = S.fin, m = S.mix, bad = (v, r) => v != null && v !== "" && !(typeof v === "number" || typeof v === "string") ? true : v != null && v !== "" && !(isFinite(Number(v)) && Number(v) >= r[0] && Number(v) <= r[1]);
+  const chk = (v, r, what, tab, sb) => { if (bad(v, r)) out.push({ what, tab, sb }); };
+  for (const [k, l] of [["savings", "חסכונות"], ["income", "הכנסה"], ["expenses", "הוצאות"], ["rent", "שכר דירה"], ["otherLoans", "החזרי הלוואות אחרות"], ["grant", "מענק"], ["appraisal", "שמאות"], ["age", "גיל"], ["reserve", "כרית ביטחון"], ["ret", "תשואה"], ["horizon", "אופק"]])
+    chk(f[k], RANGES["fin." + k], l, "calc", k === "reserve" || k === "ret" || k === "horizon" ? "equity" : k === "age" ? "mortgage" : "equity");
+  for (const [k, v] of Object.entries(S.costs || {})) chk(v, RANGES.money, "עלות: " + (COST_LABEL[k] || k), "calc", "costs");
+  for (const k of ["pPrime", "pFixed", "pLinked", "pVar"]) chk(m[k], RANGES.pct, "חלק מסלול בתמהיל", "calc", "mortgage");
+  for (const k of ["rPrime", "rFixed", "rLinked", "rVar"]) chk(m[k], RANGES.rate, "ריבית בתמהיל", "calc", "mortgage");
+  chk(m.infl, RANGES["mix.infl"], "אינפלציה", "calc", "mortgage"); chk(S.idxRate, RANGES.idxRate, "קצב מדד תשומות הבנייה", "calc", "linkage");
+  chk(S.profile.linkedShare, RANGES["profile.linkedShare"], "אחוז הצמדה", "settings");
+  for (const x of S.payments) { chk(x.pct, RANGES.pct, "אחוז תשלום", "buy", "payments"); chk(x.amount, RANGES.money, "סכום תשלום", "buy", "payments"); chk(x.paidAmt, RANGES.money, "סכום ששולם", "buy", "payments"); }
+  for (const x of srcList()) { chk(x.amount, RANGES.money, "סכום מקור נוסף", "calc", "equity"); chk(x.monthly, RANGES.money, "החזר חודשי של מקור נוסף", "calc", "equity"); chk(x.now, RANGES.money, "שווי מקור נוסף היום", "calc", "equity"); }
+  const seen = new Set(); return out.filter(o => !seen.has(o.what) && seen.add(o.what));
 }
 function blockedCard(list, what = "את התחזית") {
   return `<div class="card" role="alert"><h2 style="color:var(--warn)">לא ניתן לחשב ${what} עד לתיקון</h2><p class="small muted">הנתונים נשמרו כטיוטה. אחרי התיקון התוצאה תופיע כאן.</p>
@@ -2209,7 +2225,7 @@ function cashConclusion(c) {
   const html = `<div class="card hero"><span class="small muted">המסקנה · ${!T().contractor ? "לפי מועדי התשלום למוכר שהזנתם" : c.bankEarly ? "הנחתם שהבנק מממן גם ב-60 הימים הראשונים" : "לפי הנחת המוצר: הבנק יכול להתחיל לממן 60 יום אחרי החתימה"}</span>
     ${(() => { const A = moneyAnswer(c), fn = c.rows.find(r => r.close < 0); return `<h2 style="color:${col}">${A.head}. ${A.val}.</h2>${A.sub ? `<p class="small" style="margin:2px 0 0">${A.sub}</p>` : ""}`; })()}
     <div class="grid2" style="margin:6px 0"><div class="stat"><span class="v" style="color:${col}">${ils(low.close)}</span><span class="l">יתרה בחודש הצפוף</span></div>
-      ${reserve && !bad ? `<div class="stat"><span class="v" style="color:${low.close >= reserve ? "var(--ok)" : "var(--warn)"}">${low.close >= reserve ? "✓" : ils(reserve - low.close)}</span><span class="l">${low.close >= reserve ? `יותר מכרית הביטחון המומלצת (${f.reserve} חודשי הוצאות, ${ils(reserve)})` : `פער מכרית הביטחון שהגדרתם (${f.reserve} חודשי הוצאות, ${ils(reserve)}). אין מחסור בתשלומים עצמם`}</span></div>` : ""}</div>
+      ${reserve && !bad ? `<div class="stat"><span class="v" style="color:${low.close >= reserve ? "var(--ok)" : "var(--warn)"}">${low.close >= reserve ? "✓" : ils(reserve - low.close)}</span><span class="l">${low.close >= reserve ? `לא פחות מכרית הביטחון המומלצת (${f.reserve} חודשי הוצאות, ${ils(reserve)})` : `פער מכרית הביטחון שהגדרתם (${f.reserve} חודשי הוצאות, ${ils(reserve)}). אין מחסור בתשלומים עצמם`}</span></div>` : ""}</div>
     <p class="small" style="margin:4px 0"><b>למה:</b> ${why.join(" ")}</p>
     ${act.length ? `<p class="small" style="margin:4px 0"><b>מה לבדוק:</b> ${act.slice(0, 2).join(" ")}</p>` : ""}
     <p class="small muted" style="margin:4px 0 0">${c.endIsDelivery ? `יתרת חשבון צפויה ${T().contractor ? "במסירה" : "בקבלת המפתח"} (${ymLabel(c.end.m)})` : `יתרת חשבון צפויה בסוף התחזית (${ymLabel(c.end.m)})`}: ${ils(c.end.close)}. אלה כיווני בדיקה, לא אישור בנקאי.</p>
@@ -2792,6 +2808,7 @@ function wizCalcHtml() {
     <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><input type="checkbox" data-wzdisc ${wiz.d.disc === false ? "" : "checked"} style="width:auto;flex:none;margin-top:3px"><span>להוריד את הנחת המשתכן: <bdi>20%</bdi> מהמחיר, עד 300 אלף ₪. בטלו את הסימון רק אם המחיר למ"ר בחוזה שלכם כבר אחרי הנחה.</span></label>`;
 }
 function liveComma(t) {
+  if (!/^\s*[-−]?[\d,.\s₪]*$/.test(t.value)) return;   /* letters or other characters: left as typed, so the check shows a message */
   const raw = t.value, pos = t.selectionStart == null ? raw.length : t.selectionStart, int = raw.split(".")[0], digitsBefore = raw.slice(0, Math.min(pos, int.length)).replace(/\D/g, "").length, digits = int.replace(/\D/g, "");   /* whole shekels: anything after a decimal point is dropped */
   const neg = /^\s*[-−]/.test(raw), out = digits ? (neg ? "-" : "") + nf2.format(+digits) : neg ? "-" : ""; if (out === raw) return;
   t.value = out; let i = 0, seen = 0; while (i < out.length && seen < digitsBefore) { if (/\d/.test(out[i])) seen++; i++; }
@@ -2800,9 +2817,9 @@ function liveComma(t) {
 function wizValidate(k) {
   const d = wiz.d, num = v => Number(String(v).replace(/[^\d.]/g, "")) || 0;
   if (k === "city" && !d.city.trim()) return "כתבו את שם העיר.";
-  for (const [f, l] of [["savings", "חסכונות"], ["income", "הכנסה"], ["expenses", "הוצאות"], ["rent", "שכר דירה"], ["age", "גיל"], ["appraisal", "שמאות"]]) {
+  if (k === "money") for (const [f, l] of [["savings", "חסכונות"], ["income", "הכנסה"], ["expenses", "הוצאות"], ["rent", "שכר דירה"], ["age", "גיל"], ["appraisal", "שמאות"]]) {
     if (d[f] == null || String(d[f]).trim() === "") continue; const r = checkNum(d[f], "fin." + f, l); if (r.err) return r.err; }
-  if (k === "price") { if (/^\s*[-−]/.test(String(d.price))) return "מחיר הדירה לא יכול להיות שלילי."; const p = num(d.price); if (!p) return "כתבו את מחיר הדירה."; if (p < 200000 || p > 50000000) return "המחיר נראה לא סביר. בדקו את המספר."; }
+  if (k === "price") { const pc = checkNum(d.price == null ? "" : d.price, "money", "מחיר הדירה"); if (pc.err) return pc.err; const p = num(d.price); if (!p) return "כתבו את מחיר הדירה."; if (p < 200000 || p > 50000000) return "המחיר נראה לא סביר. בדקו את המספר."; }
   if (k === "dates") { if (!d.sign) return "צריך תאריך חתימה, גם משוער."; if (d.delivery && d.delivery <= d.sign) return "המסירה צריכה להיות אחרי החתימה."; if (d.lottery && d.lottery > d.sign) return "ההגרלה צריכה להיות לפני החתימה."; }
   return "";
 }
@@ -3039,7 +3056,7 @@ document.getElementById("restorefile").addEventListener("change", e => {
       if (!confirm(store.shared ? "הרכישה משותפת. השחזור יחליף את הנתונים גם בטלפון של מי שמשתף איתכם. להמשיך?" : "השחזור יחליף את כל הנתונים בטלפון הזה בנתונים מהגיבוי. להמשיך?")) return;
       const prev = S; S = migrate(j.state); S.example = false; setupOpen = false; tab = "home";
       try { render(); } catch (er) { S = prev; render(); throw er; }
-      persist(); toast("הנתונים שוחזרו מהגיבוי");
+      persist(); toast(stateIssues().length ? "הגיבוי שוחזר, אבל יש בו ערכים לא תקינים. התוצאות חסומות עד שתתקנו אותם." : "הנתונים שוחזרו מהגיבוי");
     } catch (err) { toast("הקובץ הזה הוא לא גיבוי של דירה בשליטה"); }
   };
   rd.readAsText(f);
@@ -3109,7 +3126,7 @@ document.addEventListener("click", e => {
     case "wznext": { const steps = wizSteps(), k = steps[wiz.i]; wiz.err = wizValidate(k); if (wiz.err) { render(); break; } if (wiz.i >= steps.length - 1) wizFinish(); else { wiz.i++; render(); window.scrollTo(0, 0); } break; }
     case "wzback": wiz.i = Math.max(0, wiz.i - 1); wiz.err = ""; render(); break;
     case "wzcancel": wiz = null; render(); break;
-    case "wzfinish": wizFinish(); break;
+    case "wzfinish": { const steps = wizSteps(); for (let i = 0; i < steps.length; i++) { const er = wizValidate(steps[i]); if (er) { wiz.i = i; wiz.err = er; render(); return; } } wizFinish(); break; }
     case "calcnext": { const list = calcList(), i = list.findIndex(x => x[0] === sub.calc), keyOf = { costs: "costs", equity: "eq", mortgage: "mortgage", cash: "cash", offers: "offers", linkage: "linkage" };
       flow()[keyOf[sub.calc]] = true; persist(); const nx = list[i + 1]; if (nx) go("calc", nx[0]); else { go("home"); toast("מעולה. הנה הצעד הבא"); } break; }
     case "paysok": flow().pay = true; persist(); render(); toast("סומן שהלוח תואם לחוזה ✓"); break;
@@ -3203,8 +3220,8 @@ document.addEventListener("input", e => {
   if (d.wzf) { wiz.d[d.wzf] = t.value; if (wiz.err) { wiz.err = ""; const er = document.querySelector(".wzerr"); if (er) er.remove(); } if (d.wzf === "city") { wizSuggest(t.value); const mc = matchCity(t.value); if (wiz.d.type === "ml" && mc && normCity(mc) === normCity(t.value) && mc !== render.wzCity) { render.wzCity = mc; wiz.d.proj = ""; wiz.d.ppsqm = 0; render(); } } if (["size", "balc", "stor", "park"].includes(d.wzf)) { const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); } return; }
   if (t.id === "areasearch") { applyAreaFilter(t.value); areaSuggest(t.value); return; }
   if (d.src) { const [id, f] = d.src.split(":"), x = srcList().find(k => k.id === id); if (x) { if (f === "amount" || f === "monthly" || f === "now") { const r = checkNum(String(t.value).split(".")[0], "money", "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value; persist(); refreshOut(); } return; }
-  if (d.c === "fin.equity") { const v = String(t.value).trim(), cap = Math.max(0, S.profile.price - grantOf()); const n = v ? Number(v.split(".")[0].replace(/[^\d-]/g, "")) : null;
-    if (n != null && (isNaN(n) || n < 0)) { fieldErr(t, "הון עצמי לא יכול להיות שלילי. הערך לא נשמר."); return; }
+  if (d.c === "fin.equity") { const v = String(t.value).trim(), cap = Math.max(0, S.profile.price - grantOf()); const r = v ? checkNum(v.split(".")[0], "money", "הון עצמי") : { v: null }, n = r.err ? NaN : r.v;
+    if (r.err) { fieldErr(t, r.err); return; }
     if (n != null && n > cap) { fieldErr(t, `הון עצמי לא יכול להיות גבוה מ-${ils(cap)} (מחיר הדירה${grantOf() ? " פחות המענק" : ""}). הערך לא נשמר.`); return; }
     fieldErr(t, ""); S.fin.equity = n; S.fin.eqCustom = !!v; persist(); refreshOut(); return; }
   if (d.c) { const lab = (t.closest("label") || {}).textContent || "", label = t.getAttribute("aria-label") || lab.trim().split(/\n/)[0].replace(/\s*\(.*$/, "").slice(0, 40);

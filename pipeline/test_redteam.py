@@ -123,6 +123,59 @@ with sync_playwright() as p:
     st = E("({city:S.profile.city,ex:S.example,n:dealsReg().list.length})")
     check("RT10b מעבר לעסקה השמורה בלי ליצור חדשה; העסקה שאופסה לא נשארת כדוגמה", "חיפה · 1 שמורה", st, st["city"] == "חיפה" and not st["ex"] and st["n"] == 1)
 
+    # ===== round 2 (version 20) =====
+    import json as _json, tempfile as _tf, os as _os
+    # V20-01: a backup with a value the screens never accept restores as a blocked draft, never as a result
+    E("localStorage.clear();"); pg.reload(); pg.wait_for_timeout(700)
+    DELIV = add_m(SIGN, 26)
+    E(RESALE + f"S.profile.delivery='{DELIV}'; S.fin.savings=1100000; S.fin.income=200000; S.fin.expenses=200000; Object.assign(S.mix,{{years:1,pPrime:0,pFixed:100,pLinked:0,pVar:0,rFixed:0,infl:0}}); persist();")
+    good = E("JSON.stringify({app:'maftech',v:1,state:S})")
+    def restore(mut):
+        j = _json.loads(good); mut(j["state"]); fd, path = _tf.mkstemp(suffix=".json"); _os.write(fd, _json.dumps(j, ensure_ascii=False).encode()); _os.close(fd)
+        pg.set_input_files("#restorefile", path); pg.wait_for_timeout(500); _os.unlink(path)
+        E("go('home')"); pg.wait_for_timeout(150); return pg.inner_text("#view")
+    cases = [("שיפוץ ‎−100,000", lambda s: s["costs"].__setitem__("renovation", -100000)),
+             ("ריבית קבועה ‎−5%", lambda s: s["mix"].__setitem__("rFixed", -5)),
+             ("אחוז תשלום שלילי", lambda s: s["payments"][0].__setitem__("pct", -15)),
+             ("כרית ‎−10", lambda s: s["fin"].__setitem__("reserve", -10)),
+             ("הכנסה 'abc'", lambda s: s["fin"].__setitem__("income", "abc"))]
+    for name, mut in cases:
+        t = restore(mut); bl = E("['cash','costs','mortgage','equity'].map(s=>dealBlockers(s).length)")
+        check(f"V20-01 גיבוי עם {name}: הבית וכל המסכים התלויים חסומים", "חסום, בלי 'מספיק'", f"{bl} · {[l for l in t.splitlines() if 'מספיק' in l][:3]}", "מספיק," not in t and "מספיק." not in t and "לא ניתן לחשב" in t and bl[0] > 0 and bl[1] > 0 and (bl[2] > 0 or name in ("שיפוץ ‎−100,000", "אחוז תשלום שלילי", "כרית ‎−10")))
+    t = restore(lambda s: None)
+    check("V20-01b גיבוי תקין אחריהם: תוצאה תקינה, בלי שאריות", "26,000 במסירה", E("dealBlockers('cash').length") == 0 and round(E("cashflow().end.close")), E("dealBlockers('cash').length") == 0 and abs(E("cashflow().end.close") - 26000) <= 12)
+
+    # V20-02: what is typed in the wizard is never turned into another number
+    E("localStorage.clear();"); pg.reload(); pg.wait_for_timeout(700)
+    E("startWizard(); Object.assign(wiz.d,{type:'resale',buyer:'first',city:'חיפה',price:'1000000',sign:'" + str(SIGN) + "'}); wiz.i=wizSteps().indexOf('money'); render();"); pg.wait_for_timeout(200)
+    for field, typed in (("expenses", "abc10000"), ("savings", "1e6"), ("income", "10k")):
+        pg.fill(f"[data-wzf={field}]", ""); pg.type(f"[data-wzf={field}]", typed); pg.wait_for_timeout(100)
+        kept = pg.input_value(f"[data-wzf={field}]"); pg.click("[data-act=wznext]"); pg.wait_for_timeout(200)
+        err = pg.inner_text(".wzerr") if pg.query_selector(".wzerr") else ""
+        check(f"V20-02 אשף: '{typed}' נשאר כמו שהוקלד ונחסם עם הודעה", f"{typed} + הודעה, בלי עסקה", f"{kept} · {err[:40]}", kept == typed and bool(err) and E("!!wiz"))
+        pg.fill(f"[data-wzf={field}]", "")
+    pg.fill("[data-wzf=expenses]", "abc10000"); pg.click("[data-act=wzfinish]"); pg.wait_for_timeout(200)
+    check("V20-02b 'דלג וסיים' לא עוקף את הבדיקה", "הודעה, האשף פתוח", E("!!wiz"), E("!!wiz") and pg.query_selector(".wzerr") is not None)
+    pg.fill("[data-wzf=expenses]", ""); pg.type("[data-wzf=expenses]", "12345"); pg.fill("[data-wzf=savings]", ""); pg.type("[data-wzf=savings]", "1234567")
+    check("V20-02c מספרים תקינים מקבלים פסיקים", "12,345 · 1,234,567", f"{pg.input_value('[data-wzf=expenses]')} · {pg.input_value('[data-wzf=savings]')}", pg.input_value("[data-wzf=expenses]") == "12,345" and pg.input_value("[data-wzf=savings]") == "1,234,567")
+    pg.fill("[data-wzf=income]", "20000"); pg.click("[data-act=wznext]"); pg.wait_for_timeout(400)
+    st = E("({w:!!wiz,e:S.fin.expenses,s:S.fin.savings})")
+    check("V20-02d עם ערכים תקינים העסקה נוצרת עם המספרים שהוקלדו", "12,345 · 1,234,567", st, not st["w"] and st["e"] == 12345 and st["s"] == 1234567)
+
+    # the other money fields keep what was typed too (equity)
+    E(RESALE + "advOpen=true; go('calc','equity');"); pg.wait_for_timeout(200)
+    if pg.query_selector_all("[data-c='fin.equity']"):
+        pg.fill("[data-c='fin.equity']", ""); pg.type("[data-c='fin.equity']", "abc260000"); pg.wait_for_timeout(300)
+        check("V20-02e הון עצמי 'abc260000' לא נשמר כמספר אחר", "נשאר 250,000", E("S.fin.equity"), E("S.fin.equity") == 250000 and pg.input_value("[data-c='fin.equity']") == "abc260000")
+    else: check("V20-02e שדה ההון העצמי נמצא", "נמצא", "חסר", False)
+    # V20-03: the schedule has to add up to the price to the shekel
+    for diff in (1, 99, 100, 101, -1, -100):
+        E(RESALE + f"S.payments.forEach((x,i)=>{{x.pct=i===2?50-({diff})/10000:x.pct}}); persist();")
+        bl = E("dealBlockers('cash').map(b=>b.msg)")
+        check(f"V20-03 לוח שסוטה ב-{diff} ₪ חסום", "חסום", bl[:1], any("לוח התשלומים" in m for m in bl))
+    E(RESALE); bl = E("dealBlockers('cash').map(b=>b.msg)")
+    check("V20-03b לוח שמסתכם בדיוק במחיר לא חסום", "לא חסום", bl, not any("לוח התשלומים" in m for m in bl))
+
     check("שגיאות JavaScript", "אין", errs or "אין", not errs)
     b.close()
 for r in R: print(f"{r[3]} | {r[0]} | צפוי: {r[1]} | בפועל: {r[2]}")
