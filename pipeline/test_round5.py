@@ -22,7 +22,7 @@ with sync_playwright() as p:
     E(B0); GOOD = E("JSON.parse(JSON.stringify(S))")
 
     # RT23-01: one same-day payment without a time, another with a known time; the answer changes only the unknown one
-    ts_sav = int(datetime.datetime.combine(T0, datetime.time(9)).timestamp() * 1000); ts_pay2 = ts_sav - 3600_000
+    ts_sav = int(datetime.datetime.now().timestamp() * 1000) - 120_000; ts_pay2 = ts_sav - 60_000   # real times earlier today, never in the future
     def mixed(s):
         s["fin"].update({"savings": 600000, "savingsAt": str(T0), "savingsTs": ts_sav})
         ps = sorted(s["payments"], key=lambda x: x["date"])
