@@ -1117,7 +1117,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 26";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "23.10.2026 · 27";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1789,7 +1789,7 @@ function screenBuy() {
     body = `<div class="card"><div class="spread"><h2>מסמכים</h2>${can ? `<button data-attach="new">+ העלאת מסמך</button>` : ""}</div>
       <p class="small muted">${can ? `כל המסמכים של הרכישה במקום אחד. בחרו קובץ PDF, או צלמו דף מהחוזה.${store.shared ? " המסמכים משותפים גם לבן או בת הזוג." : ""}` : "סמנו מה כבר אצלכם."}${nFiles ? ` <b>${nFiles === 1 ? "קובץ אחד שמור" : nFiles + " קבצים שמורים"}.</b>` : ""}</p>
       <div class="list">${[...S.docs].sort((a, b) => (b.url ? 1 : 0) - (a.url ? 1 : 0)).map(x => `<div class="item"><input type="checkbox" data-doc="${x.id}" ${x.have ? "checked" : ""} aria-label="${esc(x.name)}">
-        <div class="grow"><div class="t">${x.url ? `<button class="link" data-opendoc="${x.id}" style="padding:0;min-height:0;text-align:start">${esc(x.name)}</button>` : esc(x.name)}</div>${x.url ? `<div class="small muted">${x.fname ? `<bdi>${esc(x.fname)}</bdi>` : x.ftype && x.ftype.startsWith("image/") ? "תמונה" : "קובץ"}${x.size ? " · " + fmtSize(x.size) : ""}</div>` : ""}</div>
+        <div class="grow"><div class="t">${x.url ? `<button class="link" data-opendoc="${x.id}" style="padding:0;min-height:0;text-align:start">${esc(x.name)}</button>` : esc(x.name)}</div>${x.url ? `<div class="small muted" style="overflow-wrap:anywhere;word-break:break-word">${x.fname ? `<bdi>${esc(x.fname)}</bdi>` : x.ftype && x.ftype.startsWith("image/") ? "תמונה" : "קובץ"}${x.size ? " · " + fmtSize(x.size) : ""}</div>` : ""}</div>
         ${x.url ? `<button class="ghost small" data-opendoc="${x.id}">פתיחה</button>` : can ? `<button class="link small" data-attach="${x.id}">צירוף</button>` : ""}
         <button class="x ed" data-deldoc="${x.id}" aria-label="מחיקת המסמך">×</button></div>`).join("")}</div>
       <div class="row"><input id="ndoc" data-key="ndoc" placeholder="שם של מסמך נוסף לרשימה" aria-label="שם המסמך" style="flex:1"><button class="ghost" data-act="adddoc">הוספה</button></div>
@@ -2427,7 +2427,11 @@ function backtestChart() {
     <text x="${W - 4}" y="${H - 6}" text-anchor="end" font-size="10.5">עמודות: עסקאות לחצי שנה · קו: מחיר חציוני למ"ר</text></svg>`;
 }
 let areaShowAll = false, areaQ = "", areaQraw = "", pxPer = 0, pxAge = 0, pxRooms = 0;
-const PX_AGES = [["כל הבניינים", ""], ["בניין חדש", "עד שנתיים מסיום הבנייה, כולל קנייה מקבלן"], ["יד שנייה", "בניין בן 3 שנים ומעלה"], ["נבנה מ-1993 ואילך", "לרוב יש ממ\"ד"], ["נבנה לפני 1993", "לרוב אין ממ\"ד"]];
+/* two separate ways to split the same deals: by the building's age on the day of the sale, or by the year it was built.
+   Each deal is in one option of each split, so the options are shown in two groups, not as one list of alternatives. */
+const PX_AGES = [["כל הבניינים", ""], ["חדש: עד שנתיים מסיום הבנייה", "כולל קנייה מקבלן"], ["ותיק: 3 שנים ומעלה", "בניין שעברו 3 שנים ומעלה מסיום הבנייה"], ["נבנה מ-1993 ואילך", "לרוב יש ממ\"ד"], ["נבנה לפני 1993", "לרוב אין ממ\"ד"]];
+const pxAgeOptions = sel => { const o = i => `<option value="${i}" ${sel === i ? "selected" : ""}>${PX_AGES[i][0]}</option>`;
+  return `${o(0)}<optgroup label="לפי גיל הבניין ביום העסקה">${o(1)}${o(2)}</optgroup><optgroup label="לפי שנת הבנייה">${o(3)}${o(4)}</optgroup>`; };
 const PX_ROOMS = [["כל הגדלים", ""], ["עד 3 חדרים", ""], ["4 חדרים", ""], ["5 חדרים ומעלה", ""], ["צמוד קרקע", "קוטג' ובית פרטי"]];
 const areaHidden = (nm, i) => areaQ ? !nm.includes(areaQ) : (!areaShowAll && i >= 12);
 const kils = k => k >= 1000 ? (k / 1000).toFixed(2) + " מ׳ ₪" : nf.format(k) + " אלף ₪";
@@ -2503,7 +2507,7 @@ function drawDeals() {
   const pss = v.list.filter(d => d.ar > 20).map(d => d.pr / d.ar).sort((a, b) => a - b), mps = pss.length ? pss[Math.floor(pss.length / 2)] : 0;
   v.list.forEach(d => { d.out = !!(mps && d.ar > 20 && (d.pr / d.ar < mps * .45 || d.pr / d.ar > mps * 2.2)); });
   const nOut = v.list.filter(d => d.out).length;
-  const filt = `<div class="grid2" style="margin-bottom:6px"><label class="f small">גיל הבניין<select data-dage>${PX_AGES.map(([l], i) => `<option value="${i}" ${v.age === i ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+  const filt = `<div class="grid2" style="margin-bottom:6px"><label class="f small">גיל הבניין<select data-dage>${pxAgeOptions(v.age)}</select></label>
     <label class="f small">גודל<select data-drooms>${PX_ROOMS.map(([l], i) => `<option value="${i}" ${v.rooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>`;
   const L = v.list.filter(d => v.showOut || !d.out).sort(v.sort === "date" ? (a, c) => c.iso.localeCompare(a.iso) : v.sort === "high" ? (a, c) => c.pr - a.pr : (a, c) => a.pr - c.pr);
   if (!L.length) { b.innerHTML = `${filt}<p class="muted">אין עסקאות כאלה בתקופה הזו. נסו "כל הבניינים" או "כל הגדלים".</p>`; return; }
@@ -2651,7 +2655,7 @@ function pxCard(city) {
   const rows = list.map(r => [r[0], cell(r[1]), !!r[2]]).filter(r => r[1]);
   const desc = [PX_AGES[pxAge][0] + (PX_AGES[pxAge][1] ? ` (${PX_AGES[pxAge][1]})` : ""), PX_ROOMS[pxRooms][0] + (PX_ROOMS[pxRooms][1] ? ` (${PX_ROOMS[pxRooms][1]})` : ""), per].join(" · ");
   return `<div class="card"><h2>מחיר דירה לפי שכונה</h2>
-    <div class="grid2"><label class="f">גיל הבניין<select id="pxage" data-key="pxage">${PX_AGES.map(([l], i) => `<option value="${i}" ${pxAge === i ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <div class="grid2"><label class="f">גיל הבניין<select id="pxage" data-key="pxage">${pxAgeOptions(pxAge)}</select></label>
     <label class="f">גודל הדירה<select id="pxrooms" data-key="pxrooms">${PX_ROOMS.map(([l], i) => `<option value="${i}" ${pxRooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <div class="segs" role="group" aria-label="תקופה">${["שנה אחרונה", "שנתיים", "5 שנים"].map((l, i) => `<button data-pxper="${i}" aria-pressed="${pxPer === i}">${l}</button>`).join("")}</div>
     <p class="small muted">${desc}. נתונים עד ${NAT.through}.</p>
