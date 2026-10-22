@@ -793,17 +793,21 @@ function persist() { saveLocal(); pushSoon(); if (store.shared || (!store.remote
 async function flush() {
   if (saving || !dirty) return; saving = true; dirty = false;
   const body = JSON.stringify(S); lastSent = body;
+  /* what this save started from, and for which deal: edits made while it is in flight are put on top of what was saved, never lost */
+  const start = clone(S), dealAt = (dealsReg() || {}).active;
   try {
     if (store.shared) {
       const snap = await store.shared.get();
-      let merged = S;
+      let merged = start;
       if (snap.exists && snap.data().state && snap.data().state !== lastSent) {
-        try { const remote = migrate(JSON.parse(snap.data().state)); merged = mergeState(base, S, remote); } catch (e) {}
+        try { const remote = migrate(JSON.parse(snap.data().state)); merged = mergeState(base, start, remote); } catch (e) {}
       }
       const out = JSON.stringify(merged); lastSent = out;
       await store.shared.set({ state: out, updatedAt: new Date().toISOString() });
-      setBase(clone(merged)); if (!dirty) setPending(false); retryMs = 0;
-      if (!same(merged, S) && !dirty) { S = merged; saveLocal(); render(); toast("שולבו שינויים מהמכשיר השני"); }
+      if ((dealsReg() || {}).active !== dealAt) { saving = false; return; }   // the deal was switched meanwhile: this result is not applied to another deal
+      setBase(clone(merged)); retryMs = 0;
+      if (same(S, start)) { if (!same(merged, S)) { S = merged; saveLocal(); render(); toast("שולבו שינויים מהמכשיר השני"); } if (!dirty) setPending(false); }
+      else { S = mergeState(start, S, merged); saveLocal(); dirty = true; if (!document.querySelector("input:focus,textarea:focus,select:focus")) render(); }   // edits made during the save, on top of the merged result; saved next
       conflictNote();
     }
     else await store.priv.set({ state: body, savedAt: new Date().toISOString() });
@@ -1108,7 +1112,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 23";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 24";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1393,7 +1397,10 @@ function payAlloc(bankEarly = !!S.fin.bankEarly) {
 /* savings as entered are "what you have on the day you typed them". Payments marked paid after that day are still inside that number,
    so the plan starts from the savings before any contractor payment: entered savings + what was already paid out of them before. */
 /* older data has only the day: a payment marked paid on the day the savings were updated cannot be ordered. Ask, never guess. */
-function savOrderOpen() { const f = S.fin; if (!f.savingsAt) return []; return S.payments.filter(x => x.paid && x.paidOn && x.paidOn === f.savingsAt && !(x.paidTs && f.savingsTs)); }
+/* the answer belongs to one savings snapshot (day, time if known, amount): a new savings update is judged on its own */
+const savKey = () => `${S.fin.savingsAt || ""}|${S.fin.savingsTs || 0}|${S.fin.savings}`;
+const savOrderFor = x => x.savOrder && typeof x.savOrder === "object" && x.savOrder.at === savKey() && typeof x.savOrder.after === "boolean" ? x.savOrder : null;
+function savOrderOpen() { const f = S.fin; if (!f.savingsAt) return []; return S.payments.filter(x => x.paid && x.paidOn && x.paidOn === f.savingsAt && !(x.paidTs && f.savingsTs) && !savOrderFor(x)); }
 function savOrderCard() {
   const amb = savOrderOpen(); if (!amb.length) return ""; const tot = amb.reduce((a, x) => a + payAmount(x), 0);
   return `<div class="card" id="savorder" style="border-color:var(--gold)"><h2>שאלה אחת לפני החישוב</h2>
@@ -1405,7 +1412,7 @@ function savOrderCard() {
 function savingsBase() {
   const f = S.fin, at = f.savingsAt || "";
   /* paid before the savings were last updated = already out of that number. Same day: the time decides (older data has only the day) */
-  const before = x => x.paidTs && f.savingsTs ? x.paidTs < f.savingsTs : !!(x.paidOn && at && x.paidOn < at);
+  const before = x => { const o = savOrderFor(x); if (o) return o.after; return x.paidTs && f.savingsTs ? x.paidTs < f.savingsTs : !!(x.paidOn && at && x.paidOn < at); };
   return (f.savings || 0) + payAlloc().filter(a => a.x.paid && before(a.x)).reduce((s, a) => s + a.own + a.link, 0);
 }
 function cashEarly() {
@@ -3276,7 +3283,7 @@ document.addEventListener("click", e => {
     case "newdeal": newDeal(); break;
     case "dealsopen": dealsOpen = !dealsOpen; render(); break;
     case "dealrename": { const r = dealsReg(), e = r && r.list.find(x => x.id === r.active); if (!e) break; const v = prompt("שם לעסקה (ריק = שם אוטומטי)", e.name || dealName(e)); if (v == null) break; e.name = v.trim().slice(0, 40); saveReg(r); render(); break; }
-    case "savorder": { const after = d.v === "after", amb = savOrderOpen(); for (const x of amb) x.paidTs = after ? 1 : 2; S.fin.savingsTs = after ? 2 : 1; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
+    case "savorder": { const after = d.v === "after", amb = savOrderOpen(); for (const x of amb) x.savOrder = { at: savKey(), after }; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
     case "resetyes": { if (store.shared) { if (!confirm("הרכישה משותפת. התחלה מחדש תנתק את הטלפון הזה מהשיתוף, ואצל מי שמשתף איתכם הנתונים יישארו. להמשיך?")) break; leaveShare(); }
       S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("נתוני העסקה הזו נמחקו. מתחילים אותה מחדש"); break; }
   }
@@ -3301,7 +3308,9 @@ document.addEventListener("input", e => {
     if (!r.err && r.v == null && /^(mix\.|idxRate|profile\.linkedShare|fin\.reserve|fin\.ret|fin\.horizon)/.test(d.c)) r.err = `${label || "השדה"}: שדה חובה. כתבו מספר (גם 0).`;
     if (r.err) { fieldErr(t, r.err); refreshOut(); return; }
     fieldErr(t, ""); if (r.warn) { const lb = t.closest("label"); if (lb) { let w = lb.querySelector(".fwarn"); if (!w) { w = document.createElement("span"); w.className = "fwarn small"; w.style.color = "var(--gold)"; lb.appendChild(w); } w.textContent = r.warn; } } else { const w = (t.closest("label") || document).querySelector(".fwarn"); if (w) w.remove(); }
-    const v = r.v == null ? 0 : r.v; setPath(d.c, v); if (d.c === "fin.savings") { S.fin.savingsAt = ymd(today()); S.fin.savingsTs = Date.now(); S.fin.savTouched = true; } if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
+    const v = r.v == null ? 0 : r.v; setPath(d.c, v); if (d.c === "fin.savings") { S.fin.savingsAt = ymd(today()); S.fin.savingsTs = Date.now(); S.fin.savTouched = true;
+      /* payments already marked paid (older ones have no time) were marked before this amount was typed: a fact, not a guessed time */
+      for (const x of S.payments) if (x.paid && !x.paidTs) x.savOrder = { at: savKey(), after: true }; } if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
   if (d.of) { const [id, f] = d.of.split(":"), x = S.offers.find(k => k.id === id); if (f === "amount" || f === "first" || f === "total") liveComma(t);
     if (x) { if (f === "bank") x.bank = t.value; else { const r = checkNum(t.value, f === "years" ? "years" : "money", f === "years" ? "תקופה" : "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } persist(); refreshOut(); } return; }
   if (d.pf) { const [id, f] = d.pf.split(":"), x = S.payments.find(k => k.id === id); if (x) { if (f === "voucher") x.name = "שובר " + t.value; if (f === "pct" || f === "amount") { const r = checkNum(f === "amount" ? t.value : t.value, f === "pct" ? "pct" : "money", f === "pct" ? "אחוז התשלום" : "סכום השובר"); if (r.err) { fieldErr(t, r.err); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value;
