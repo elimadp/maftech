@@ -320,7 +320,7 @@ with sync_playwright() as p:
     check("I2 הורדה: כיוון וסכום ההשפעה", f"הוריד · יורד בכ-₪{dlt:,}", "תקין" if ("הוריד את הריבית ל-3.25% (מ-3.5%)" in t and "יורד" in t and f"{dlt:,}" in t) else t[:260], "הוריד את הריבית ל-3.25% (מ-3.5%)" in t and "יורד" in t and f"{dlt:,}" in t)
     E("MARKET.boi.dateISO=ymd(new Date(Date.now()-10*864e5)); render()"); t = pg.inner_text("#view")
     check("I3 אחרי שבוע השורה נעלמת", "לא מוצגת", "לא מוצגת" if "את הריבית" not in t else "מוצגת", "את הריבית" not in t)
-    E("CHECK={checkedAt:new Date(Date.now()-3600e3).toISOString(),ok:true,marketUpdatedISO:MARKET.updatedISO}; render()"); t = pg.inner_text("#view")
+    E("CHECK={checkedAt:new Date(Date.now()-60e3).toISOString(),ok:true,marketUpdatedISO:MARKET.updatedISO}; render()"); t = pg.inner_text("#view")
     check("I4 בדיקת נתונים מהיום: שורה במסך הבית", "נבדקו היום ומעודכנים", "תקין" if "נתוני השוק נבדקו היום" in t and "ומעודכנים" in t else t[:200], "נתוני השוק נבדקו היום" in t and "ומעודכנים" in t)
     E("CHECK.marketUpdatedISO='2999-01-01'; render()"); t = pg.inner_text("#view")
     check("I5 יש נתונים חדשים מהגרסה: אומרים לפתוח מחדש", "יש נתוני שוק חדשים", "תקין" if "יש נתוני שוק חדשים" in t else "חסר", "יש נתוני שוק חדשים" in t)
