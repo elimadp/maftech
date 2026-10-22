@@ -343,7 +343,9 @@ const MARKET = {
  "nextBoiISO": "2026-11-23",
  "boi": {
   "rate": 3.25,
+  "prev": 3.25,
   "date": "21.10.2026",
+  "dateISO": "2026-10-21",
   "next": "23.11.2026",
   "src": "https://www.boi.org.il/"
  },
@@ -386,6 +388,46 @@ function marketStale() {
   if (t >= new Date(MARKET.nextBoiISO + "T18:00:00")) msgs.push("בנק ישראל פרסם החלטת ריבית ב-" + MARKET.boi.next + ", והריבית כאן עלולה להיות לא עדכנית.");
   if ((t - new Date(MARKET.updatedISO + "T00:00:00")) / 864e5 > 35) msgs.push("נתוני השוק עודכנו לפני יותר מחודש.");
   return msgs;
+}
+/* the daily data check: the bot records every run (morning, and evening for same-day rate decisions) in a small file
+   outside the published site, so the app can say when the numbers were last checked even on days nothing changed */
+const CHECK_URL = "https://raw.githubusercontent.com/elimadp/maftech/status/check.json";
+let CHECK = null; try { CHECK = JSON.parse(localStorage.getItem("maftech.check") || "null"); } catch (e) {}
+async function loadCheck() {
+  if (!/^https?:$/.test(location.protocol) || window.claude) return;
+  try {
+    const r = await fetch(CHECK_URL + "?t=" + Math.floor(Date.now() / 3e5), { cache: "no-store" }); if (!r.ok) return;
+    const j = await r.json(); if (!j || !j.checkedAt || isNaN(new Date(j.checkedAt))) return;
+    const was = CHECK && CHECK.checkedAt; CHECK = j; try { localStorage.setItem("maftech.check", JSON.stringify(j)); } catch (e) {}
+    if (was !== j.checkedAt && (tab === "home" || tab === "market") && !document.querySelector("input:focus,textarea:focus,select:focus")) render();
+  } catch (e) {}
+}
+const ilDay = d => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(d);
+const ilTime = d => new Intl.DateTimeFormat("he-IL", { timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+function checkInfo() {
+  if (!CHECK || !CHECK.checkedAt) return null;
+  const d = new Date(CHECK.checkedAt); if (isNaN(d)) return null;
+  const day = ilDay(d), td = ilDay(new Date()), yd = ilDay(new Date(Date.now() - 864e5));
+  const when = (day === td ? "היום" : day === yd ? "אתמול" : fmtDate(day)) + " ב-" + ilTime(d);
+  return { when, age: (Date.now() - d) / 864e5, ok: CHECK.ok !== false, newer: !!(CHECK.marketUpdatedISO && CHECK.marketUpdatedISO > MARKET.updatedISO) };
+}
+function checkLine() {
+  const c = checkInfo(); if (!c) return "";
+  if (c.age > 3) return `<p class="small" style="color:var(--warn);margin:4px 0">נתוני השוק לא נבדקו מאז ${c.when}. ייתכן שהם לא עדכניים.</p>`;
+  if (c.newer) return `<p class="small" style="color:var(--warn);margin:4px 0">יש נתוני שוק חדשים. הם יופיעו כשתסגרו ותפתחו את האפליקציה (לפעמים זה לוקח כמה דקות).</p>`;
+  if (!c.ok) return `<p class="small muted" style="margin:4px 0">בבדיקה ${c.when} חלק מהמקורות לא ענו. מוצגים הנתונים האחרונים שהתקבלו.</p>`;
+  return `<p class="small muted" style="margin:4px 0">✓ נתוני השוק נבדקו ${c.when} ומעודכנים</p>`;
+}
+/* the latest rate decision, shown for a week after it was published */
+function boiLine() {
+  const b = MARKET.boi; if (b.prev == null || !b.dateISO) return "";
+  const age = -daysTo(b.dateISO); if (age < 0 || age > 7) return "";
+  const d = Math.round((b.rate - b.prev) * 100) / 100, dd = b.date.split(".").slice(0, 2).join(".");
+  const primeP = S.example ? 0 : dealFin().bankFunds * S.mix.pPrime / 100, has = primeP > 0 && !dealBlockers("mortgage").length, n = S.mix.years * 12;
+  const head = d === 0 ? `בנק ישראל השאיר את הריבית ${b.rate}%` : `בנק ישראל ${d < 0 ? "הוריד" : "העלה"} את הריבית ל-${b.rate}% (מ-${b.prev}%)`;
+  const tail = d === 0 ? (has ? " ההחזר שלכם לא משתנה." : "")
+    : has ? ` ההחזר במסלול הפריים ${d < 0 ? "יורד" : "עולה"} בכ-<b>${ils(Math.abs(annuity(primeP, S.mix.rPrime + d, n) - annuity(primeP, S.mix.rPrime, n)))}</b> בחודש. ודאו שבתמהיל מופיעה ריבית הפריים המעודכנת (כרגע ${S.mix.rPrime}%). <button class="link small" data-go="calc" data-sub="mortgage">לתמהיל</button>` : "";
+  return `<p class="boiline" style="margin:6px 0"><b>${dd}: ${head}.</b>${tail}</p>`;
 }
 const IDX_RATE = +(MARKET.construction.ytd / Math.max(1, MARKET.construction.monthly.length) * 12).toFixed(1);
 /* purchase tax 2026 (frozen until 15.1.2028) */
@@ -594,6 +636,10 @@ function pushEvents() {
     add("p0:" + x.id, x.date, T().contractor ? "היום: תשלום לקבלן" : "היום: תשלום למוכר", `${x.name}: ${amt}. אחרי התשלום סמנו ✓ באפליקציה.`);
   }
   if (MARKET.nextBoiISO) add("boi:" + MARKET.nextBoiISO, addDays(MARKET.nextBoiISO, -1), "מחר: החלטת ריבית", "בנק ישראל מחליט מחר על הריבית. היא משפיעה על ההחזר במסלול הפריים.");
+  if (MARKET.nextBoiISO) {   // sent in the evening by the server, with the decision itself put in front of this text
+    const pP = dealFin().bankFunds * S.mix.pPrime / 100, n = S.mix.years * 12, c = pP > 0 && !dealBlockers("mortgage").length ? annuity(pP, S.mix.rPrime, n) - annuity(pP, S.mix.rPrime - 0.25, n) : 0;
+    add("boires:" + MARKET.nextBoiISO, MARKET.nextBoiISO, "החלטת הריבית", c > 0 ? `בתמהיל שלכם, כל 0.25% משנים את ההחזר החודשי בכ-${nf.format(Math.round(c))} ₪.` : "");
+  }
   if (p.sign) add("sign", addDays(p.sign, -1), "מחר חותמים על החוזה", "בדקו ברשימת המשימות שהכול מוכן לחתימה.");
   if (p.delivery) add("deliv", addDays(p.delivery, -14), "בעוד שבועיים: מסירת הדירה", "זה הזמן לתאם בדק בית ולהכין את רשימת הליקויים.");
   const sale = saleAllowed(); if (sale) add("sale", sale, "מהיום מותר למכור את הדירה", "עבר פרק הזמן שבו אסור למכור דירת מחיר למשתכן.");
@@ -1028,7 +1074,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "21.10.2026 · 18";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 19";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1527,6 +1573,7 @@ function screenHome() {
   return `<div class="screen">
     ${S.example ? `<div class="spread"><h1>קניתם דירה. מתי תצטרכו כל שקל?</h1></div>` : dealPicker()}
     ${S.example ? "" : statusLine() + sinceLine() + dealLine()}
+    ${boiLine()}${checkLine()}
     ${S.example ? `<p class="lead">"דירה בשליטה" מחברת את לוח התשלומים לקבלן, את החסכונות ואת המשכנתא, ומראה לכם מה צפוי בכל חודש ומה לעשות עכשיו.</p>` : stageStrip()}
     ${S.example ? heroCard() : dashboardCard() + heroCard()}
     ${S.example ? "" : timelineCard()}
@@ -2199,7 +2246,9 @@ function screenMarket() {
   const per1 = S.payments.reduce((s, p) => s + linkageCost(p, S.idxRate + 1), 0) - S.payments.reduce((s, p) => s + linkageCost(p), 0);
   const linkedLoan = loan * S.mix.pLinked / 100;
   const stale = marketStale();
-  return `<div class="screen"><h1>שוק</h1><p class="small muted">עודכן ב-${MARKET.updated}</p>
+  const ci = checkInfo();
+  return `<div class="screen"><h1>שוק</h1><p class="small muted">הנתונים נבדקים אוטומטית כל בוקר${ci ? `. בדיקה אחרונה: ${ci.when}` : ""}. השתנו לאחרונה ב-${MARKET.updated}.</p>
+    ${ci && (ci.age > 3 || ci.newer || !ci.ok) ? checkLine() : ""}
     ${stale.length ? `<div class="card" style="border-color:var(--warn)">${stale.map(x => `<p class="small" style="color:var(--warn)">${x}</p>`).join("")}<p class="small muted">בגרסה שתרוץ ב-Netlify הנתונים יתעדכנו אוטומטית.</p></div>` : ""}
     <div class="banner"><h2>מה זה אומר עליכם</h2>
       ${primeP > 0 ? `<p>ריבית: כל שינוי של 0.25% בריבית בנק ישראל משנה את ההחזר החודשי שלכם בכ-<b>${ils(d25)}</b>, דרך מסלול הפריים (${ils(primeP)}${flow().mortgage ? "" : ", בתמהיל לדוגמה של שליש פריים"}). <button class="link small" data-go="calc" data-sub="mortgage">לתמהיל</button></p>` : ""}
@@ -3166,6 +3215,7 @@ document.addEventListener("keydown", e => {
 });
 render();
 initStore();
+loadCheck(); document.addEventListener("visibilitychange", () => { if (!document.hidden) loadCheck(); });
 </script>
 
 </body></html>

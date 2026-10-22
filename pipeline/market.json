@@ -4,7 +4,9 @@
  "nextBoiISO": "2026-11-23",
  "boi": {
   "rate": 3.25,
+  "prev": 3.25,
   "date": "21.10.2026",
+  "dateISO": "2026-10-21",
   "next": "23.11.2026",
   "src": "https://www.boi.org.il/"
  },

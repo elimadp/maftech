@@ -5,7 +5,8 @@
   CBS indices (consumer prices, housing prices, residential construction inputs):
       https://api.cbs.gov.il/index/data/price?id=<code>&format=json&download=false&last=<n>
 
-Usage: python3 market_update.py market.json
+Usage: python3 market_update.py market.json [check.json]
+  check.json (optional) records when this check ran and whether every source answered.
 Anything that cannot be fetched or fails a sanity check is left as it was (and reported).
 Average mortgage rates are not touched here (they stay as entered).
 """
@@ -36,7 +37,9 @@ def boi(mk, log):
     nxt = datetime.datetime.fromisoformat(j["nextInterestDate"].replace("Z", "+00:00")).date()
     changed = False
     if mk["boi"].get("rate") != rate or mk["boi"].get("date") != dmy(pub):
-        mk["boi"].update({"rate": rate, "date": dmy(pub), "src": "https://www.boi.org.il/"})
+        if mk["boi"].get("date") != dmy(pub):   # a new decision: keep the rate before it, so the app can say what changed
+            mk["boi"]["prev"] = mk["boi"].get("rate")
+        mk["boi"].update({"rate": rate, "date": dmy(pub), "dateISO": pub.isoformat(), "src": "https://www.boi.org.il/"})
         mk["prime"] = round(rate + 1.5, 2)
         changed = True
         log.append(f"ריבית בנק ישראל: {rate}% (מ-{dmy(pub)})")
@@ -86,7 +89,7 @@ def month_label(p):
     return f"{HEB_MONTHS[int(p['month']) - 1]} {int(p['year'])}"
 
 
-def update(path):
+def update(path, check=None):
     mk = json.load(open(path, encoding="utf-8"))
     log, problems, changed = [], [], False
     try:
@@ -129,8 +132,11 @@ def update(path):
         mk["updated"], mk["updatedISO"] = dmy(today), today.isoformat()
         json.dump(mk, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print(json.dumps({"changed": changed, "log": log, "problems": problems}, ensure_ascii=False, indent=1))
+    if check:
+        json.dump({"checkedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "ok": not problems,
+                   "problems": problems, "changed": changed}, open(check, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(update(sys.argv[1]))
+    sys.exit(update(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None))

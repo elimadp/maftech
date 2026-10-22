@@ -9,7 +9,7 @@ export default async () => {
   let sent = 0, gone = 0;
   for (const { key } of blobs) {
     const r = await subs.get(key, { type: "json" }); if (!r || !r.sub) continue;
-    const due = (r.events || []).filter(e => e.at <= today && e.at >= from && !(r.sent || []).includes(e.id + "@" + e.at));
+    const due = (r.events || []).filter(e => e.at <= today && e.at >= from && !e.id.startsWith("boires:") && !(r.sent || []).includes(e.id + "@" + e.at));   // rate results go out in the evening (push-boi)
     if (!due.length) continue;
     const st = await tickle(r.sub, keys);
     if (st === 404 || st === 410) { await subs.delete(key); gone++; continue; }

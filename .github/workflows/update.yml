@@ -1,9 +1,13 @@
-# Daily data refresh for the installable app. Runs every morning, updates the data inside index.html,
-# tests it, and commits. Netlify publishes automatically after each commit.
+# Daily data refresh for the installable app. Runs every morning (and again in the evening, so a Bank of Israel
+# rate decision reaches the app the same day), updates the data inside index.html, tests it, and commits.
+# Netlify publishes automatically after each commit to main.
+# Every run also records when it checked (check.json) on the separate "status" branch, which Netlify does not publish,
+# so the app can show "checked this morning" without spending a publish.
 name: daily-data-update
 on:
   schedule:
     - cron: "52 2 * * *"      # 02:52 UTC = 04:52 בחורף / 05:52 בקיץ, שעון ישראל
+    - cron: "40 14 * * *"     # 14:40 UTC = 16:40 בחורף / 17:40 בקיץ: אחרי פרסום החלטת ריבית (16:00)
   workflow_dispatch: {}        # "Run workflow" button for a manual run
   push:                        # also run when the update scripts themselves change
     branches: [main]
@@ -24,14 +28,15 @@ jobs:
           pip install requests playwright
           python -m playwright install --with-deps chromium
       - name: Update market numbers (Bank of Israel, CBS)
-        run: python pipeline/market_update.py pipeline/market.json
+        run: python pipeline/market_update.py pipeline/market.json check.json
         continue-on-error: true
       - name: Decide whether to publish today
         id: gate
         run: |
           # Netlify's free plan counts every publish, so the app is republished only when it matters:
           # once a week (Sunday) with fresh deals, or any day the market numbers changed, or on a manual/script-change run.
-          if [ "$(date -u +%u)" = "7" ] || [ "${{ github.event_name }}" != "schedule" ] || ! git diff --quiet pipeline/market.json; then
+          # (the weekly Sunday publish is for the morning run only)
+          if { [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" -lt 12 ]; } || [ "${{ github.event_name }}" != "schedule" ] || ! git diff --quiet pipeline/market.json; then
             echo "go=1" >> "$GITHUB_OUTPUT"
           else
             echo "go=0" >> "$GITHUB_OUTPUT"; echo "nothing to publish today"
@@ -58,3 +63,21 @@ jobs:
             sleep 10
           done
           exit 1
+      - name: Record this check for the app (status branch, not published)
+        if: always()
+        run: |
+          git fetch -q origin main
+          mkdir -p /tmp/status
+          python - <<'PY'
+          import json, os, subprocess, datetime
+          chk = json.load(open("check.json")) if os.path.exists("check.json") else {
+              "checkedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "ok": False, "problems": ["market check did not run"]}
+          mk = json.loads(subprocess.check_output(["git", "show", "origin/main:pipeline/market.json"]))   # what the site has
+          chk.update(marketUpdatedISO=mk.get("updatedISO"), boi=mk.get("boi"), prime=mk.get("prime"))
+          json.dump(chk, open("/tmp/status/check.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+          PY
+          cd /tmp/status
+          git init -q -b status
+          git add check.json
+          git -c user.name=maftech-bot -c user.email=maftech-bot@users.noreply.github.com commit -q -m "בדיקת נתונים $(date -u '+%d.%m.%Y %H:%M') UTC"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" status
