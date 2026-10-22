@@ -48,8 +48,27 @@ with sync_playwright() as p:
         for x, a in zip(sorted(s["payments"], key=lambda x: x["date"])[:2], (150000, 350000)): x.update({"paid": True, "paidOn": str(T0), "paidAmt": a, "paidLink": 0}); x.pop("paidTs", None)
     st = json.loads(json.dumps(GOOD)); two(st); restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
     check("RT23-01g שני תשלומים בלי שעה: שאלה אחת על שניהם", "[150000, 350000]", E("savOrderOpen().map(x=>x.paidAmt)"), E("savOrderOpen().map(x=>x.paidAmt)") == [150000, 350000])
-    pg.click("[data-act=savorder][data-v=after]"); pg.wait_for_timeout(300)
+    import unicodedata; t = "".join(c for c in pg.inner_text("#savorder") if unicodedata.category(c) != "Cf").replace("\u00a0", " ")
+    check("RT24-02a שאלה נפרדת לכל תשלום, עם החלק שיוצא מהחסכונות", "350,000 · מהם 100,000 מהחסכונות", "תקין" if "מהם ₪100,000 מהחסכונות" in t and len(pg.query_selector_all("#savorder [data-v=after]")) == 2 else repr(t[-300:]), "מהם ₪100,000 מהחסכונות" in t and len(pg.query_selector_all("#savorder [data-v=after]")) == 2 and "₪500,000" not in t)
+    while pg.query_selector("[data-act=savorder][data-v=after]"): pg.click("[data-act=savorder][data-v=after]"); pg.wait_for_timeout(250)
     check("RT23-01h 'אחרי' על שניהם: 600,000 היום, ‎−224,000", "[600000, -224000]", rows(), rows() == [600000, -224000])
+    st = json.loads(json.dumps(GOOD)); two(st); restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
+    ids = E("savOrderOpen().map(x=>x.id)"); pg.click(f"[data-act=savorder][data-id='{ids[0]}'][data-v=before]"); pg.wait_for_timeout(250); pg.click(f"[data-act=savorder][data-id='{ids[1]}'][data-v=after]"); pg.wait_for_timeout(250)
+    check("RT24-02b היתרה בין שני התשלומים (הראשון עוד לא ירד, השני כבר ירד): 450,000 / ‎−374,000", "[450000, -374000]", rows(), rows() == [450000, -374000])
+    st = json.loads(json.dumps(GOOD)); two(st); restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
+    while pg.query_selector("[data-act=savorder][data-v=before]"): pg.click("[data-act=savorder][data-v=before]"); pg.wait_for_timeout(250)
+    check("RT24-02c 'עוד לא' על שניהם: 350,000 / ‎−474,000 (הפרש 250,000 מהחסכונות)", "[350000, -474000]", rows(), rows() == [350000, -474000])
+    # RT24-01: data saved by version 23's answer (times 1 and 2) is not trusted: the order is asked again
+    for ans, exp in (("after", [600000, -224000]), ("before", [350000, -474000])):
+        st = json.loads(json.dumps(GOOD)); mixed(st); st["fin"]["savingsTs"] = 2 if ans == "after" else 1
+        [x for x in st["payments"] if x.get("paidAmt") == 150000][0]["paidTs"] = 1 if ans == "after" else 2
+        restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
+        q = E("savOrderOpen().map(x=>x.paidAmt)"); t = pg.inner_text("#view")
+        check(f"RT24-01a נתון מגרסה 23 ({ans}): החותמות 1/2 הוסרו, שואלים על שני התשלומים, התזרים חסום", "[150000, 350000] · חסום", f"{q} · sTs={E('S.fin.savingsTs')}", sorted(q) == [150000, 350000] and E("S.fin.savingsTs") is None and "לא ניתן לחשב" in t)
+        while pg.query_selector(f"[data-act=savorder][data-v={ans}]"): pg.click(f"[data-act=savorder][data-v={ans}]"); pg.wait_for_timeout(250)
+        check(f"RT24-01b אחרי התשובה '{ans}' על שניהם", str(exp), rows(), rows() == exp)
+        pg.reload(); pg.wait_for_timeout(800)
+        check(f"RT24-01c אחרי רענון: אותה תוצאה, בלי שאלה ({ans})", str(exp), rows(), rows() == exp and E("savOrderOpen().length") == 0)
     E("editOpen.eqmoney=true; go('calc','equity');"); pg.wait_for_timeout(200); pg.fill("[data-c='fin.savings']", "590000"); pg.wait_for_timeout(700)
     check("RT23-01i עדכון חסכונות אחרי שהתשלומים כבר סומנו: בלי שאלה, 590,000 היום", 590000, rows()[0], rows()[0] == 590000 and E("savOrderOpen().length") == 0)
 

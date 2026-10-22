@@ -587,6 +587,11 @@ function sanitize(x) {
   for (const i of x.payments) flag(i, ["paid", "linked"]);
   if (x.fin && typeof x.fin === "object") { flag(x.fin, ["savTouched", "expTouched", "eqCustom", "bankEarly"]); if (Array.isArray(x.fin.sources)) for (const i of x.fin.sources) flag(i, ["inc", "bank", "sale"]); }
   if (x.fin && Array.isArray(x.fin.sources)) for (const i of x.fin.sources) num(i, ["amount", "monthly", "now"]);
+  /* a time before 2020 cannot be when something happened in this app (version 23 wrote 1 and 2 as order markers): it is removed,
+     never turned into another time; the payments it touched are asked about again */
+  const realTs = v => typeof v === "number" && v >= 1577836800000;
+  if (x.fin && typeof x.fin === "object" && x.fin.savingsTs != null && !realTs(x.fin.savingsTs)) delete x.fin.savingsTs;
+  for (const i of x.payments) if (i.paidTs != null && !realTs(i.paidTs)) delete i.paidTs;
   if (x.profile) { if (!TYPES[x.profile.type]) x.profile.type = "ml"; if (!["first", "upgrade", "additional"].includes(x.profile.buyer)) x.profile.buyer = "first";
     if (!STAGES[x.profile.type].some(st => st[0] === x.profile.stage)) x.profile.stage = STAGES[x.profile.type][0][0]; }
   return x;
@@ -1112,7 +1117,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 24";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 25";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1402,12 +1407,19 @@ const savKey = () => `${S.fin.savingsAt || ""}|${S.fin.savingsTs || 0}|${S.fin.s
 const savOrderFor = x => x.savOrder && typeof x.savOrder === "object" && x.savOrder.at === savKey() && typeof x.savOrder.after === "boolean" ? x.savOrder : null;
 function savOrderOpen() { const f = S.fin; if (!f.savingsAt) return []; return S.payments.filter(x => x.paid && x.paidOn && x.paidOn === f.savingsAt && !(x.paidTs && f.savingsTs) && !savOrderFor(x)); }
 function savOrderCard() {
-  const amb = savOrderOpen(); if (!amb.length) return ""; const tot = amb.reduce((a, x) => a + payAmount(x), 0);
-  return `<div class="card" id="savorder" style="border-color:var(--gold)"><h2>שאלה אחת לפני החישוב</h2>
-    <p class="small">ב-${fmtDate(S.fin.savingsAt)} סימנתם ${amb.length === 1 ? `את "${esc(amb[0].name)}"` : `${amb.length} תשלומים`} (${ils(tot)}) כשולם, ובאותו יום עדכנתם את החסכונות ל-${ils(S.fin.savings || 0)}. אין לנו את השעה, אז לא ידוע מה קרה קודם.</p>
-    <p class="small"><b>האם ${ils(S.fin.savings || 0)} זו היתרה אחרי שהתשלום יצא?</b></p>
-    <div class="row"><button data-act="savorder" data-v="after">כן, אחרי התשלום</button><button class="ghost" data-act="savorder" data-v="before">לא, לפני התשלום</button></div>
-    <p class="small muted">אם לא בטוחים, בדקו את היתרה בבנק היום ועדכנו את החסכונות. ההבדל בחישוב הוא ${ils(tot)}.</p></div>`;
+  const amb = savOrderOpen(); if (!amb.length) return "";
+  /* what each payment changes in the account: only the part paid from savings (own + linkage), not the bank's part */
+  const al = payAlloc(), fromSav = x => { const a = al.find(z => z.x === x); return a ? a.own + a.link : payAmount(x); };
+  const sav = ils(S.fin.savings || 0), one = amb.length === 1;
+  const row = x => `<div class="item"><div class="grow small"><b>${esc(x.name)}</b> · ${ils(payAmount(x))}${fromSav(x) < payAmount(x) - 1 ? `, מהם ${ils(fromSav(x))} מהחסכונות` : ""}</div>
+      <div class="row" style="gap:6px"><button class="small" data-act="savorder" data-id="${x.id}" data-v="after">כבר ירד</button><button class="ghost small" data-act="savorder" data-id="${x.id}" data-v="before">עוד לא</button></div></div>`;
+  return `<div class="card" id="savorder" style="border-color:var(--gold)"><h2>${one ? "שאלה אחת לפני החישוב" : "כמה שאלות לפני החישוב"}</h2>
+    <p class="small">ב-${fmtDate(S.fin.savingsAt)} עדכנתם את החסכונות ל-${sav}, ובאותו יום סימנתם ${one ? "תשלום" : `${amb.length} תשלומים`} כשולם. אין לנו את השעה, אז לא ידוע מה קרה קודם.</p>
+    ${one ? `<p class="small"><b>האם ${sav} זו היתרה אחרי ש"${esc(amb[0].name)}" יצא?</b></p>
+    <div class="row"><button data-act="savorder" data-id="${amb[0].id}" data-v="after">כן, אחרי התשלום</button><button class="ghost" data-act="savorder" data-id="${amb[0].id}" data-v="before">לא, לפני התשלום</button></div>
+    <p class="small muted">ההבדל בחשבון הוא ${ils(fromSav(amb[0]))}${fromSav(amb[0]) < payAmount(amb[0]) - 1 ? " (החלק מהחסכונות; את השאר מעביר הבנק)" : ""}. אם לא בטוחים, בדקו את היתרה בבנק היום ועדכנו את החסכונות.</p>`
+    : `<p class="small"><b>על כל תשלום: האם הוא כבר ירד מהיתרה ${sav}?</b></p><div class="list">${amb.map(row).join("")}</div>
+    <p class="small muted">כל תשלום משנה את החשבון רק בחלק שיוצא מהחסכונות. אם לא בטוחים, בדקו את היתרה בבנק היום ועדכנו את החסכונות.</p>`}</div>`;
 }
 function savingsBase() {
   const f = S.fin, at = f.savingsAt || "";
@@ -3283,7 +3295,7 @@ document.addEventListener("click", e => {
     case "newdeal": newDeal(); break;
     case "dealsopen": dealsOpen = !dealsOpen; render(); break;
     case "dealrename": { const r = dealsReg(), e = r && r.list.find(x => x.id === r.active); if (!e) break; const v = prompt("שם לעסקה (ריק = שם אוטומטי)", e.name || dealName(e)); if (v == null) break; e.name = v.trim().slice(0, 40); saveReg(r); render(); break; }
-    case "savorder": { const after = d.v === "after", amb = savOrderOpen(); for (const x of amb) x.savOrder = { at: savKey(), after }; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
+    case "savorder": { const after = d.v === "after", amb = savOrderOpen().filter(x => !d.id || x.id === d.id); for (const x of amb) x.savOrder = { at: savKey(), after }; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
     case "resetyes": { if (store.shared) { if (!confirm("הרכישה משותפת. התחלה מחדש תנתק את הטלפון הזה מהשיתוף, ואצל מי שמשתף איתכם הנתונים יישארו. להמשיך?")) break; leaveShare(); }
       S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("נתוני העסקה הזו נמחקו. מתחילים אותה מחדש"); break; }
   }
