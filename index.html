@@ -583,6 +583,9 @@ function sanitize(x) {
   num(x.fin, ["savings", "income", "expenses", "rent", "otherLoans", "grant", "appraisal", "age", "reserve", "ret", "horizon", "equity"]); num(x.costs); num(x.mix);
   num(x.profile, ["price", "linkedShare"]); if (typeof x.idxRate === "string") num(x, ["idxRate"]);
   for (const i of x.payments) num(i, ["pct", "amount", "paidAmt", "paidLink"]);
+  const flag = (o, keys) => { if (!o || typeof o !== "object") return; for (const k of keys) { const v = o[k]; if (v === "true" || v === 1 || v === "1") o[k] = true; else if (v === "false" || v === 0 || v === "0") o[k] = false; } };
+  for (const i of x.payments) flag(i, ["paid", "linked"]);
+  if (x.fin && typeof x.fin === "object") { flag(x.fin, ["savTouched", "expTouched", "eqCustom", "bankEarly"]); if (Array.isArray(x.fin.sources)) for (const i of x.fin.sources) flag(i, ["inc", "bank", "sale"]); }
   if (x.fin && Array.isArray(x.fin.sources)) for (const i of x.fin.sources) num(i, ["amount", "monthly", "now"]);
   if (x.profile) { if (!TYPES[x.profile.type]) x.profile.type = "ml"; if (!["first", "upgrade", "additional"].includes(x.profile.buyer)) x.profile.buyer = "first";
     if (!STAGES[x.profile.type].some(st => st[0] === x.profile.stage)) x.profile.stage = STAGES[x.profile.type][0][0]; }
@@ -604,7 +607,16 @@ function migrate0(x) {
   }
   if (x && x.v === 2 && x.profile && TYPES[x.profile.type]) { const d = newState(x.profile, x.example);   /* fill anything missing (e.g. a partial backup) */
     for (const k of ["payments", "tasks", "docs", "defects", "offers"]) if (!Array.isArray(x[k])) x[k] = d[k];
-    for (const k of ["costs", "mix", "fin"]) x[k] = Object.assign({}, d[k], x[k] && typeof x[k] === "object" ? x[k] : {});
+    /* values the forecast depends on are never invented: if the deal says they were entered (or they are core to the mortgage)
+       and they are missing, they stay missing and every dependent result asks for them. Optional settings get their defaults. */
+    const had = k => x[k] && typeof x[k] === "object" && !Array.isArray(x[k]) ? x[k] : null, keep = {};
+    const hf = had("fin"), hm = had("mix"), hc = had("costs");
+    if (hf) { if (hf.expTouched && !("expenses" in hf)) keep.expenses = 1; if (hf.savTouched && !("savings" in hf)) keep.savings = 1; }
+    const mixReq = ["pPrime", "pFixed", "pLinked", "rPrime", "rFixed", "rLinked", "years", "infl"], costReq = ["lawyer", "advisor", "broker", "appraiser", "bankfees", "moving", "renovation"];
+    for (const k of ["costs", "mix", "fin"]) x[k] = Object.assign({}, d[k], had(k) || {});
+    if (hf) for (const k of Object.keys(keep)) x.fin[k] = null;
+    if (hm) for (const k of mixReq) if (!(k in hm)) x.mix[k] = null;
+    if (hc) for (const k of costReq) if (!(k in hc)) x.costs[k] = null;
     if (x.idxRate == null) x.idxRate = d.idxRate;
     if (!x.example && !x.fin.expTouched && x.fin.expenses === 14000 && !x.expV2) x.fin.expenses = 0;   /* the old silent default: the user never entered it */
     x.expV2 = true; }
@@ -745,24 +757,34 @@ const knownHousehold = () => { try { const v = JSON.parse(localStorage.getItem("
 const clone = o => JSON.parse(JSON.stringify(o));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 /* three-way merge: base = last state both sides agreed on; keep each side's own edits */
-function mergeState(b, l, r) {
+/* the same value changed on both phones since they last agreed: this phone's value is kept, and the conflict is recorded
+   so the person is told what the other phone had (never a silent choice) */
+let mergeConflicts = [];
+const CONFLICT_LABEL = { savings: "חסכונות", income: "הכנסה", expenses: "הוצאות", rent: "שכר דירה", equity: "הון עצמי", price: "מחיר הדירה", sign: "תאריך החתימה", delivery: "מועד המסירה", years: "תקופת המשכנתא", pct: "אחוז תשלום", amount: "סכום", date: "תאריך", paid: "סימון 'שולם'", monthly: "החזר חודשי" };
+function mergeState(b, l, r, path = []) {
   if (!b) return l;
   const out = {};
   for (const k of new Set([...Object.keys(l), ...Object.keys(r)])) {
     const bv = b[k], lv = l[k], rv = r[k];
-    if (Array.isArray(lv) && Array.isArray(rv) && lv.every(x => x && x.id) && rv.every(x => x && x.id)) out[k] = mergeList(Array.isArray(bv) ? bv : [], lv, rv);
-    else if (lv && rv && typeof lv === "object" && typeof rv === "object" && !Array.isArray(lv)) out[k] = mergeState(bv && typeof bv === "object" ? bv : {}, lv, rv);
-    else out[k] = same(lv, bv) ? rv : lv;
+    if (Array.isArray(lv) && Array.isArray(rv) && lv.every(x => x && x.id) && rv.every(x => x && x.id)) out[k] = mergeList(Array.isArray(bv) ? bv : [], lv, rv, [...path, k]);
+    else if (lv && rv && typeof lv === "object" && typeof rv === "object" && !Array.isArray(lv)) out[k] = mergeState(bv && typeof bv === "object" ? bv : {}, lv, rv, [...path, k]);
+    else { out[k] = same(lv, bv) ? rv : lv; if (!same(lv, bv) && !same(rv, bv) && !same(lv, rv) && !/Ts$|At$|^updated|touched$|Touched$/.test(k)) mergeConflicts.push({ path: [...path, k], mine: lv, other: rv }); }
   }
   return out;
 }
-function mergeList(b, l, r) {
+function conflictNote() {
+  if (!mergeConflicts.length) return; const c = mergeConflicts[0], key = c.path[c.path.length - 1], lab = CONFLICT_LABEL[key] || "שדה";
+  const v = x => typeof x === "number" ? nf.format(x) : x === true ? "כן" : x === false ? "לא" : x == null || x === "" ? "ריק" : String(x).slice(0, 30);
+  toast(`שניכם שיניתם את "${lab}" באותו זמן. נשמר הערך מהטלפון הזה (${v(c.mine)}). בטלפון השני היה ${v(c.other)}.${mergeConflicts.length > 1 ? ` ועוד ${mergeConflicts.length - 1} שדות.` : ""}`);
+  mergeConflicts = [];
+}
+function mergeList(b, l, r, path = []) {
   const bm = new Map(b.map(x => [x.id, x])), lm = new Map(l.map(x => [x.id, x])), rm = new Map(r.map(x => [x.id, x]));
   const res = [];
   for (const x of l) {
     const bx = bm.get(x.id), rx = rm.get(x.id);
     if (!rx) { if (bx && same(bx, x)) continue; res.push(x); continue; }            // removed remotely, unchanged here -> drop
-    res.push(bx && same(bx, x) ? rx : (bx && !same(bx, rx) ? mergeState(bx, x, rx) : x));
+    res.push(bx && same(bx, x) ? rx : (bx && !same(bx, rx) ? mergeState(bx, x, rx, [...path, x.id]) : x));
   }
   for (const x of r) if (!lm.has(x.id) && (!bm.has(x.id) || !same(bm.get(x.id), x))) res.push(x);   // added remotely, or edited there while removed here (the edit wins)
   return res;
@@ -782,6 +804,7 @@ async function flush() {
       await store.shared.set({ state: out, updatedAt: new Date().toISOString() });
       setBase(clone(merged)); if (!dirty) setPending(false); retryMs = 0;
       if (!same(merged, S) && !dirty) { S = merged; saveLocal(); render(); toast("שולבו שינויים מהמכשיר השני"); }
+      conflictNote();
     }
     else await store.priv.set({ state: body, savedAt: new Date().toISOString() });
     setSync(store.shared ? "משותף ונשמר" : store.remote ? "נשמר בטלפון" : "נשמר בחשבון");
@@ -866,7 +889,7 @@ async function initRemote() {
   if (p && p.household) {
     try { const h = await store.db.doc("households/" + p.household).get();
       if (h.exists) { const remote = migrate(JSON.parse(h.data().state)), local = loadLocal(), b0 = savedBase();
-        if (isPending() && local && !local.example) { S = migrate(mergeState(b0, local, remote)); setBase(clone(remote)); saveLocal(); attachShared(p.household); dirty = true; flush(); render(); toast("שינויים שנעשו בלי חיבור נשמרו ונשלחו"); return; }
+        if (isPending() && local && !local.example) { S = migrate(mergeState(b0, local, remote)); setBase(clone(remote)); saveLocal(); attachShared(p.household); dirty = true; flush(); render(); toast("שינויים שנעשו בלי חיבור נשמרו ונשלחו"); if (mergeConflicts.length) setTimeout(conflictNote, 2400); return; }
         S = remote; setBase(clone(S)); saveLocal(); attachShared(p.household); render(); return; } } catch (e) { store.remote = false; setSync("אין חיבור. יסונכרן כשיחזור"); retryRemote(); return; }
   }
   setSync("נשמר בטלפון");
@@ -1085,7 +1108,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 22";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 23";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1212,7 +1235,7 @@ const mlAppraisal = () => S.fin.appraisal > 0 ? S.fin.appraisal : Math.round(Mat
 const mlApprWhy = () => S.profile.price / 0.8 > S.profile.price + ML_DISC_CAP ? "המחיר ועוד ההנחה המקסימלית, 300 אלף ₪" : "המחיר ועוד ההנחה של 20% משווי השוק";
 /* extra funding sources (study fund, special loans, family help): S.fin.sources = [{id,name,kind:"asset"|"loan",amount,date,monthly,bank,inc}] */
 const srcList = () => (S.fin.sources || []);
-const srcUsable = x => { if (!(x.inc && (x.amount > 0 || x.now > 0))) return false; if (!x.date || x.now > 0 || !S.profile.sign) return true; const end = cashEndDate(); return !end || x.date <= end; };
+const srcUsable = x => { if (!(x.inc === true && (x.amount > 0 || x.now > 0))) return false; if (!x.date || x.now > 0 || !S.profile.sign) return true; const end = cashEndDate(); return !end || x.date <= end; };
 const srcValueBy = (x, by) => !by || !x.date || x.date <= by ? (Number(x.amount) || 0) : x.kind === "asset" ? (Number(x.now) || 0) : 0;
 const extraFunds = (by) => srcList().filter(srcUsable).reduce((a, x) => a + srcValueBy(x, by), 0);
 const srcBankMonthly = () => srcList().filter(x => x.inc && x.kind === "loan" && x.bank).reduce((a, x) => a + (Number(x.monthly) || 0), 0);
@@ -1277,6 +1300,7 @@ function dealBlockers(scope) {
   if (f.equity != null && !(f.equity >= 0 && f.equity <= (p.price || 0))) add("ההון העצמי שנשמר לא תקין (שלילי או גבוה מהמחיר). הזינו אותו מחדש.", "calc", "equity");
   if (scope !== "mortgage" && p.sign && p.delivery && p.delivery <= p.sign) add("מועד המסירה לא יכול להיות לפני החתימה או באותו יום.", "settings");
   if (scope === "cash" && p.sign && ymCount(ymd(today()), cashEndDate()) > CASH_MAX_MONTHS) add(`התזרים מחושב עד ${CASH_MAX_MONTHS / 12} שנה קדימה, והעסקה נמשכת אחרי זה (עד ${fmtDate(cashEndDate())}). בדקו את מועד המסירה ואת תאריכי התשלומים.`, "settings");
+  if ((scope === "cash" || scope === "equity" || scope === "costs") && savOrderOpen().length) add("סימנתם תשלום כשולם ועדכנתם חסכונות באותו יום, ולא ידוע מה קרה קודם. ענו על השאלה במסך התזרים.", "calc", "cash");
   if (scope === "cash") {
     if (!savKnown()) add("כדי לחשב תזרים צריך לדעת כמה חסכונות יש לכם (גם 0 זו תשובה).", "calc", "costs");
     if (!(S.fin.income > 0)) add("כדי לחשב תזרים צריך הכנסה חודשית נטו.", "calc", "cash");
@@ -1313,7 +1337,12 @@ function stateIssues() {
     chk(x.paidAmt, RANGES.money, "סכום ששולם", "buy", "payments"); chk(x.paidLink, RANGES.money, "הצמדה ששולמה", "buy", "payments");
     chkD(x.date, "תאריך תשלום", "buy", "payments", false); chkD(x.paidOn, "תאריך תשלום ששולם", "buy", "payments", false);
   }
-  for (const x of srcList()) { chk(x.amount, RANGES.money, "סכום מקור נוסף", "calc", "equity", !!x.inc); chk(x.monthly, RANGES.money, "החזר חודשי של מקור נוסף", "calc", "equity"); chk(x.now, RANGES.money, "שווי מקור נוסף היום", "calc", "equity"); chkD(x.date, "מועד מקור נוסף", "calc", "equity", false); }
+  const isFlag = v => v == null || typeof v === "boolean";
+  for (const x of S.payments) if (!isFlag(x.paid) || !isFlag(x.linked)) out.push({ what: "סימון 'שולם' או 'צמוד' בתשלום", tab: "buy", sb: "payments" });
+  for (const k of ["savTouched", "expTouched", "eqCustom", "bankEarly"]) if (!isFlag(f[k])) out.push({ what: "סימון בנתוני הכסף", tab: "calc", sb: "equity" });
+  for (const x of srcList()) if (!isFlag(x.inc) || !isFlag(x.bank)) out.push({ what: "סימון 'לכלול' במקור נוסף", tab: "calc", sb: "equity" });
+  /* a loan that is counted needs its repayment: missing is not "no repayment" (0 means none, and has to be entered) */
+  for (const x of srcList()) { chk(x.amount, RANGES.money, "סכום מקור נוסף", "calc", "equity", x.inc === true); chk(x.monthly, RANGES.money, "החזר חודשי של הלוואה", "calc", "equity", x.inc === true && x.kind === "loan"); chk(x.now, RANGES.money, "שווי מקור נוסף היום", "calc", "equity"); chkD(x.date, "מועד מקור נוסף", "calc", "equity", false); }
   const seen = new Set(); return out.filter(o => !seen.has(o.what) && seen.add(o.what));
 }
 function blockedCard(list, what = "את התחזית") {
@@ -1363,6 +1392,16 @@ function payAlloc(bankEarly = !!S.fin.bankEarly) {
 }
 /* savings as entered are "what you have on the day you typed them". Payments marked paid after that day are still inside that number,
    so the plan starts from the savings before any contractor payment: entered savings + what was already paid out of them before. */
+/* older data has only the day: a payment marked paid on the day the savings were updated cannot be ordered. Ask, never guess. */
+function savOrderOpen() { const f = S.fin; if (!f.savingsAt) return []; return S.payments.filter(x => x.paid && x.paidOn && x.paidOn === f.savingsAt && !(x.paidTs && f.savingsTs)); }
+function savOrderCard() {
+  const amb = savOrderOpen(); if (!amb.length) return ""; const tot = amb.reduce((a, x) => a + payAmount(x), 0);
+  return `<div class="card" id="savorder" style="border-color:var(--gold)"><h2>שאלה אחת לפני החישוב</h2>
+    <p class="small">ב-${fmtDate(S.fin.savingsAt)} סימנתם ${amb.length === 1 ? `את "${esc(amb[0].name)}"` : `${amb.length} תשלומים`} (${ils(tot)}) כשולם, ובאותו יום עדכנתם את החסכונות ל-${ils(S.fin.savings || 0)}. אין לנו את השעה, אז לא ידוע מה קרה קודם.</p>
+    <p class="small"><b>האם ${ils(S.fin.savings || 0)} זו היתרה אחרי שהתשלום יצא?</b></p>
+    <div class="row"><button data-act="savorder" data-v="after">כן, אחרי התשלום</button><button class="ghost" data-act="savorder" data-v="before">לא, לפני התשלום</button></div>
+    <p class="small muted">אם לא בטוחים, בדקו את היתרה בבנק היום ועדכנו את החסכונות. ההבדל בחישוב הוא ${ils(tot)}.</p></div>`;
+}
 function savingsBase() {
   const f = S.fin, at = f.savingsAt || "";
   /* paid before the savings were last updated = already out of that number. Same day: the time decides (older data has only the day) */
@@ -1568,8 +1607,8 @@ function dashboardCard() {
   /* 1. the next thing you pay */
   const open = [...S.payments].filter(x => x.date && !x.paid).sort((a, b) => a.date.localeCompare(b.date)), np = open[0], after = open[1];
   const amt = x => ils(payAmount(x) + (dealBlockers("linkage").length ? 0 : linkageCost(x)));
-  const badPay = stateIssues().filter(s => s.sb === "payments");
-  if (badPay.length) sec("pay", "לוח התשלומים צריך תיקון", "לתיקון", `יש בלוח ערך לא תקין (${esc(badPay[0].what)}), אז אין כאן תשלום להציג. תקנו אותו בלוח התשלומים.`, ["buy", "payments"], "warn");
+  const badPay = stateIssues().filter(s => s.sb === "payments"), schedBl = dealBlockers("sched").filter(b => b.sb === "payments");
+  if (badPay.length || schedBl.length) sec("pay", "לוח התשלומים צריך תיקון", "לתיקון", badPay.length ? `יש בלוח ערך לא תקין (${esc(badPay[0].what)}), אז אין כאן תשלום להציג. תקנו אותו בלוח התשלומים.` : `${esc(schedBl[0].msg)} עד שהלוח יתוקן, אין תשלום מאומת להציג.`, ["buy", "payments"], "warn");
   else if (np) { const dn = daysTo(np.date), when = dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים";
     const src = t.contractor && !dealBlockers("sched").length ? paySource(np) : null, bf = bankFirstPay();
     const srcTxt = !src ? "" : src.bank > 1 ? ` מאיפה: ${ils(src.own)} מהכסף שלכם, ${ils(src.bank)} מהמשכנתא.` : ` התשלום הזה צפוי לצאת מהכסף שלכם.${bf ? " " + bankStartWhy() : ""}`;
@@ -1975,7 +2014,7 @@ function advEquity() {
 function inEquity() {
   const p = S.profile, ml = p.type === "ml";
   const srcRow = x => {
-    const loan = x.kind === "loan", late = x.inc && x.date && p.delivery && x.date > p.delivery && !(x.now > 0);
+    const loan = x.kind === "loan", late = x.inc === true && x.date && !srcUsable(x) && (x.amount > 0);
     return `<div class="fsrc ${x.inc ? "on" : ""}">
       <div class="spread"><label class="row" style="gap:8px;flex:1"><input type="checkbox" data-srcchk="${x.id}:inc" ${x.inc ? "checked" : ""} aria-label="לכלול בחישוב"><input value="${esc(x.name)}" data-src="${x.id}:name" aria-label="שם המקור" style="flex:1"></label><button class="x" data-delsrc="${x.id}" aria-label="מחיקת המקור">×</button></div>
       <div class="grid2" style="margin-top:6px">
@@ -1985,7 +2024,7 @@ function inEquity() {
         ${loan ? `<label class="f">החזר חודשי (₪)<input inputmode="numeric" value="${fmtIn(x.monthly)}" data-src="${x.id}:monthly"></label>` : ""}
       </div>
       ${loan ? `<label class="row small" style="gap:6px;margin-top:6px"><input type="checkbox" data-srcchk="${x.id}:bank" ${x.bank ? "checked" : ""}>ההחזר יורד מהמשכורת או מהחשבון, אז הבנק סופר אותו</label>` : ""}
-      ${late ? `<p class="small" style="color:var(--warn)">זמין רק אחרי המסירה, אז לא נספר.</p>` : ""}
+      ${late ? `<p class="small" style="color:var(--warn)">זמין רק אחרי סוף התחזית (${fmtDate(cashEndDate())}), אז לא נספר.</p>` : ""}
       ${!x.inc ? `<p class="small muted">לא נכלל בחישוב. סמנו את התיבה כדי לראות מה קורה אם תשתמשו בו.</p>` : ""}
     </div>`;
   };
@@ -2269,7 +2308,7 @@ function inCash() {
     ${bankTimingCtl()}</div>`;
 }
 function outCash() {
-  const bl = dealBlockers("cash"); if (bl.length) return blockedCard(bl);
+  const bl = dealBlockers("cash"); if (bl.length) return savOrderCard() + blockedCard(bl);
   const f = S.fin, c = cashflow(); if (!c) return `<div class="card"><p class="muted">צריך תאריך חתימה ומועד מסירה עתידי כדי לחשב תזרים.</p></div>`;
   const reserve = (f.expenses || 0) * (f.reserve || 0), lowBad = c.low.close < 0, lowTight = !lowBad && reserve && c.low.close < reserve;
   const col = lowBad ? "var(--warn)" : lowTight ? "var(--gold)" : "var(--ok)";
@@ -3237,6 +3276,7 @@ document.addEventListener("click", e => {
     case "newdeal": newDeal(); break;
     case "dealsopen": dealsOpen = !dealsOpen; render(); break;
     case "dealrename": { const r = dealsReg(), e = r && r.list.find(x => x.id === r.active); if (!e) break; const v = prompt("שם לעסקה (ריק = שם אוטומטי)", e.name || dealName(e)); if (v == null) break; e.name = v.trim().slice(0, 40); saveReg(r); render(); break; }
+    case "savorder": { const after = d.v === "after", amb = savOrderOpen(); for (const x of amb) x.paidTs = after ? 1 : 2; S.fin.savingsTs = after ? 2 : 1; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
     case "resetyes": { if (store.shared) { if (!confirm("הרכישה משותפת. התחלה מחדש תנתק את הטלפון הזה מהשיתוף, ואצל מי שמשתף איתכם הנתונים יישארו. להמשיך?")) break; leaveShare(); }
       S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("נתוני העסקה הזו נמחקו. מתחילים אותה מחדש"); break; }
   }
