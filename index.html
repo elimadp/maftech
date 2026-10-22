@@ -1117,7 +1117,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "23.10.2026 · 27";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "23.10.2026 · 28";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1475,7 +1475,7 @@ const IC = {
   market: '<path d="M4 19h16"/><path d="M6 15l4-5 3 3 5-7"/>',
   waves: '<path d="M4 19h16"/><path d="M6 15l4-5 3 3 5-7"/>'
 };
-const TABS = [["home", "בית"], ["buy", "תשלומים ומשימות"], ["calc", "כסף ומשכנתא"], ["waves", "שוק ואזורים"]];
+const TABS = [["home", "בית"], ["buy", "תשלומים ומשימות"], ["calc", "כסף ומשכנתא"], ["waves", "שוק הדירות"]];
 function renderNav() {
   document.getElementById("nav").style.display = wiz ? "none" : "";
   const dots = navDots();
@@ -2429,9 +2429,16 @@ function backtestChart() {
 let areaShowAll = false, areaQ = "", areaQraw = "", pxPer = 0, pxAge = 0, pxRooms = 0;
 /* two separate ways to split the same deals: by the building's age on the day of the sale, or by the year it was built.
    Each deal is in one option of each split, so the options are shown in two groups, not as one list of alternatives. */
-const PX_AGES = [["כל הבניינים", ""], ["חדש: עד שנתיים מסיום הבנייה", "כולל קנייה מקבלן"], ["ותיק: 3 שנים ומעלה", "בניין שעברו 3 שנים ומעלה מסיום הבנייה"], ["נבנה מ-1993 ואילך", "לרוב יש ממ\"ד"], ["נבנה לפני 1993", "לרוב אין ממ\"ד"]];
+const PX_AGES = [["כל הבניינים", ""], ["בניין חדש", "עד שנתיים מסיום הבנייה, ביום העסקה"], ["בניין ותיק", "3 שנים ומעלה מסיום הבנייה, ביום העסקה"], ["נבנה מ-1993 ואילך", "לרוב יש ממ\"ד"], ["נבנה לפני 1993", "לרוב אין ממ\"ד"]];
+/* one sentence for the chosen filters: the building's age is measured on the day of each deal, the period is when the deals happened,
+   so "new" with "5 years" = deals of the last 5 years in buildings that were new at the time (not buildings that are new today) */
+function pxDesc(ageI = pxAge, roomsI = pxRooms) {
+  const per = ["בשנה האחרונה", "בשנתיים האחרונות", "ב-5 השנים האחרונות"][pxPer];
+  const age = ["בכל הבניינים", "בבניינים שהיו חדשים ביום העסקה (עד שנתיים מסיום הבנייה, כולל קנייה מקבלן)", "בבניינים שהיו בני 3 שנים ומעלה ביום העסקה", "בבניינים שנבנו מ-1993 ואילך (לרוב יש ממ\"ד)", "בבניינים שנבנו לפני 1993 (לרוב אין ממ\"ד)"][ageI];
+  return `עסקאות ${per}, ${age} · ${PX_ROOMS[roomsI][0]}${PX_ROOMS[roomsI][1] ? ` (${PX_ROOMS[roomsI][1]})` : ""}`;
+}
 const pxAgeOptions = sel => { const o = i => `<option value="${i}" ${sel === i ? "selected" : ""}>${PX_AGES[i][0]}</option>`;
-  return `${o(0)}<optgroup label="לפי גיל הבניין ביום העסקה">${o(1)}${o(2)}</optgroup><optgroup label="לפי שנת הבנייה">${o(3)}${o(4)}</optgroup>`; };
+  return `${o(0)}<optgroup label="לפי גיל הבניין ביום העסקה (חדש = עד שנתיים, ותיק = 3 שנים ומעלה)">${o(1)}${o(2)}</optgroup><optgroup label="לפי שנת הבנייה">${o(3)}${o(4)}</optgroup>`; };
 const PX_ROOMS = [["כל הגדלים", ""], ["עד 3 חדרים", ""], ["4 חדרים", ""], ["5 חדרים ומעלה", ""], ["צמוד קרקע", "קוטג' ובית פרטי"]];
 const areaHidden = (nm, i) => areaQ ? !nm.includes(areaQ) : (!areaShowAll && i >= 12);
 const kils = k => k >= 1000 ? (k / 1000).toFixed(2) + " מ׳ ₪" : nf.format(k) + " אלף ₪";
@@ -2477,10 +2484,9 @@ async function openDeals(city, label, extra) {
   const row = label ? (PX.a[key] || []).find(r => r[0] === label) : null;
   const gushes = row && row[2] ? row[2].split(",").filter(g => /^\d+$/.test(g)) : null;
   if (label && !(gushes && gushes.length)) { toast("לשכונה הזו עוד אין רשימת עסקאות"); return; }
-  const per = ["בשנה האחרונה", "בשנתיים האחרונות", "ב-5 השנים האחרונות"][pxPer];
-  const desc = [PX_AGES[pxAge][0], PX_ROOMS[pxRooms][0], per].join(" · ");
+  const desc = pxDesc();
   el.innerHTML = `<div class="sheet-in" role="dialog" aria-modal="true" aria-label="עסקאות"><div class="spread"><h2>${esc(extra ? extra.title : label || key)}</h2><button class="x" data-act="sheetclose" aria-label="סגירה">×</button></div>
-    <p class="small muted" style="margin:0">${esc(desc)}</p><div id="dealsbox"><p class="muted">טוען את העסקאות מרשות המסים...</p></div></div>`;
+<div id="dealsbox"><p class="muted">טוען את העסקאות מרשות המסים...</p></div></div>`;
   sheetShow(el);
   const ym = thruYM(); if (!ym) return;
   const start = new Date(ym[0], ym[1] - 1 - [11, 23, 59][pxPer], 1), end = new Date(ym[0], ym[1], 1);
@@ -2508,7 +2514,7 @@ function drawDeals() {
   v.list.forEach(d => { d.out = !!(mps && d.ar > 20 && (d.pr / d.ar < mps * .45 || d.pr / d.ar > mps * 2.2)); });
   const nOut = v.list.filter(d => d.out).length;
   const filt = `<div class="grid2" style="margin-bottom:6px"><label class="f small">גיל הבניין<select data-dage>${pxAgeOptions(v.age)}</select></label>
-    <label class="f small">גודל<select data-drooms>${PX_ROOMS.map(([l], i) => `<option value="${i}" ${v.rooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>`;
+    <label class="f small">סוג וגודל<select data-drooms>${PX_ROOMS.map(([l], i) => `<option value="${i}" ${v.rooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div><p class="small muted" style="margin:0 0 6px">${esc(pxDesc(v.age, v.rooms))}</p>`;
   const L = v.list.filter(d => v.showOut || !d.out).sort(v.sort === "date" ? (a, c) => c.iso.localeCompare(a.iso) : v.sort === "high" ? (a, c) => c.pr - a.pr : (a, c) => a.pr - c.pr);
   if (!L.length) { b.innerHTML = `${filt}<p class="muted">אין עסקאות כאלה בתקופה הזו. נסו "כל הבניינים" או "כל הגדלים".</p>`; return; }
   const ps = L.map(d => d.pr).sort((a, c) => a - c), medv = ps.length % 2 ? ps[(ps.length - 1) / 2] : (ps[ps.length / 2 - 1] + ps[ps.length / 2]) / 2;
@@ -2653,11 +2659,11 @@ function pxCard(city) {
   const c = pxCity(city), list = pxAreas(city); if (!c) return "";
   const key = pxAge * 5 + pxRooms, cell = d => { const v = d && d[key] && d[key][pxPer]; return v && v[0] != null ? v : null; }, cc = cell(c), per = ["בשנה האחרונה", "בשנתיים האחרונות", "ב-5 השנים האחרונות"][pxPer];
   const rows = list.map(r => [r[0], cell(r[1]), !!r[2]]).filter(r => r[1]);
-  const desc = [PX_AGES[pxAge][0] + (PX_AGES[pxAge][1] ? ` (${PX_AGES[pxAge][1]})` : ""), PX_ROOMS[pxRooms][0] + (PX_ROOMS[pxRooms][1] ? ` (${PX_ROOMS[pxRooms][1]})` : ""), per].join(" · ");
+  const desc = pxDesc();
   return `<div class="card"><h2>מחיר דירה לפי שכונה</h2>
     <div class="grid2"><label class="f">גיל הבניין<select id="pxage" data-key="pxage">${pxAgeOptions(pxAge)}</select></label>
-    <label class="f">גודל הדירה<select id="pxrooms" data-key="pxrooms">${PX_ROOMS.map(([l], i) => `<option value="${i}" ${pxRooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
-    <div class="segs" role="group" aria-label="תקופה">${["שנה אחרונה", "שנתיים", "5 שנים"].map((l, i) => `<button data-pxper="${i}" aria-pressed="${pxPer === i}">${l}</button>`).join("")}</div>
+    <label class="f">סוג וגודל<select id="pxrooms" data-key="pxrooms">${PX_ROOMS.map(([l], i) => `<option value="${i}" ${pxRooms === i ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
+    <span class="small muted" style="display:block;margin:8px 0 2px">מתי היו העסקאות</span><div class="segs" role="group" aria-label="מתי היו העסקאות">${["שנה אחרונה", "שנתיים", "5 שנים"].map((l, i) => `<button data-pxper="${i}" aria-pressed="${pxPer === i}">${l}</button>`).join("")}</div>
     <p class="small muted">${desc}. נתונים עד ${NAT.through}.</p>
     ${!S.example && S.profile.price > 0 && sameCity(S.profile.city, city) && cc ? `<p class="small" style="margin:0 0 6px">הדירה שלכם: <b>${ils(S.profile.price)}</b> · חציון בעיר לפי הסינון: <b>${kils(cc[0])}</b>${Math.abs(S.profile.price / 1000 / cc[0] - 1) >= .03 ? ` (${S.profile.price / 1000 < cc[0] ? "נמוך" : "גבוה"} ב-${Math.round(Math.abs(S.profile.price / 1000 / cc[0] - 1) * 100)}%)` : ""}. השוו לשכונה ולגודל הדומים לדירה שלכם.</p>` : ""}
     ${cc ? `<div class="kpis"><div><span class="small muted">חציון בעיר</span><b class="num">${kils(cc[0])}</b></div><div><span class="small muted">ממוצע בעיר</span><b class="num">${kils(cc[1])}</b></div><div><span class="small muted">עסקאות</span><b class="num">${nf.format(cc[2])}</b></div></div>
@@ -2699,13 +2705,13 @@ function freeSupplyCard(city) {
     ${top.length ? `<div class="list">${top.map(x => { const hot = x.n12 >= Math.max(20, 2 * typical), up = x.prev >= 5 && x.n12 >= 2 * x.prev;
       return `<div class="item" style="align-items:flex-start"><div class="grow"><div class="spread"><b>${esc(x.name)}</b>${hot ? '<span class="chip warn">ריכוז גבוה</span>' : x.n12 < 5 ? '<span class="chip mute">מעט עסקאות</span>' : ""}</div>
         <div class="small">${nf.format(x.n12)} דירות חדשות נמכרו בשנה האחרונה${x.all12 ? ` (${Math.round(x.n12 / x.all12 * 100)}% מהעסקאות בשכונה)` : ""}${up ? ` · <b>פי ${(x.n12 / x.prev).toFixed(1)}</b> מהשנה שלפני` : x.prev ? ` · בשנה שלפני: ${nf.format(x.prev)}` : ""}</div>
-        <div class="small muted">${x.medNew || x.medOld ? `חציון דירה חדשה ${x.medNew ? kils(x.medNew) : "—"} · יד שנייה ${x.medOld ? kils(x.medOld) : "—"}` : "מעט מדי עסקאות לחישוב מחיר"}</div></div></div>`; }).join("")}</div>`
+        <div class="small muted">${x.medNew || x.medOld ? `חציון דירה חדשה ${x.medNew ? kils(x.medNew) : "—"} · ותיקה ${x.medOld ? kils(x.medOld) : "—"}` : "מעט מדי עסקאות לחישוב מחיר"}</div></div></div>`; }).join("")}</div>`
       : `<p class="muted">${cityNew ? `העסקאות בדירות חדשות בעיר (${nf.format(cityNew)}) לא שויכו לשכונה מסוימת, או שהן בשכונות עם מעט מאוד עסקאות.` : "לא נמכרו בעיר הזו דירות חדשות בשנה האחרונה."}</p>`}
-    <p class="src">"חדשה" = בניין בן שנתיים לכל היותר בזמן העסקה (כולל דירות מחיר למשתכן, ולכן החציון של דירה חדשה יכול לצאת נמוך מיד שנייה), לפי עסקאות שדווחו לרשות המסים עד ${NAT.through}. אלה עסקאות שכבר נסגרו, לא דירות שמוצעות כרגע למכירה, ולכן זה סימן לכמה פעיל השוק החדש באזור, לא הוכחה שהמחירים יירדו. בבדיקה שלנו על גלי מכירה קודמים לא נמצאה ירידת מחירים עקבית. דירות שמוצעות עכשיו אפשר לראות במדלן וביד2.</p></div>`;
+    <p class="src">"חדשה" = בניין בן שנתיים לכל היותר בזמן העסקה (כולל דירות מחיר למשתכן, ולכן החציון של דירה חדשה יכול לצאת נמוך מדירה ותיקה). "ותיקה" = בניין בן 3 שנים ומעלה בזמן העסקה, לפי עסקאות שדווחו לרשות המסים עד ${NAT.through}. אלה עסקאות שכבר נסגרו, לא דירות שמוצעות כרגע למכירה, ולכן זה סימן לכמה פעיל השוק החדש באזור, לא הוכחה שהמחירים יירדו. בבדיקה שלנו על גלי מכירה קודמים לא נמצאה ירידת מחירים עקבית. דירות שמוצעות עכשיו אפשר לראות במדלן וביד2.</p></div>`;
 }
 function screenWaves() {
   const wsegs = segs("waves", [["prices", "מחירים"], ["projects", "פרויקטים"], ["waves", "גלי מכירה"], ["market", "ריבית"]]);
-  if (sub.waves === "market") return `<div class="screen"><h1>שוק ואזורים</h1>${wsegs}` + screenMarket().replace('<div class="screen"><h1>שוק</h1>', "");
+  if (sub.waves === "market") return `<div class="screen"><h1>שוק הדירות</h1>${wsegs}` + screenMarket().replace('<div class="screen"><h1>שוק</h1>', "");
   const p = S.profile, mine = matchCity(p.city), city = wavesCity || mine || "ראש העין", yr = new Date().getFullYear();
   const cKey = citiesKey(city), cc = cKey ? NAT.cities[cKey] : null, sale = saleAllowed();
   const ar = areasIn(city), cov = areaCov(city);
@@ -2722,7 +2728,7 @@ function screenWaves() {
   const intro = p.type === "ml"
     ? "כשנגמר האיסור על מכירת דירות בפרויקט מחיר למשתכן, הרבה דירות באותה שכונה יכולות לעלות למכירה בבת אחת. זה יקרה גם בפרויקט שלכם: כשתוכלו למכור, יוכלו גם השכנים."
     : "כשנגמר האיסור על מכירת דירות בפרויקט מחיר למשתכן, הרבה דירות באותה שכונה יכולות לעלות למכירה בבת אחת. אם אתם קונים באזור כזה, כדאי לדעת מתי זה צפוי.";
-  return `<div class="screen"><h1>שוק ואזורים</h1>
+  return `<div class="screen"><h1>שוק הדירות</h1>
     <label class="f">עיר<select id="wcity" data-key="wcity">${CITY_LIST.map(c => `<option ${sameCity(c, city) ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
     ${p.city && !mine && !wavesCity ? `<p class="small muted">לא נמצאו נתונים ל"${esc(p.city)}". בחרו עיר מהרשימה.</p>` : ""}
     ${wsegs}
@@ -2730,8 +2736,8 @@ function screenWaves() {
       ${ar.length > 8 || pxAreas(city).length > 8 ? `<label class="f">חיפוש שכונה<input id="areasearch" type="search" placeholder="התחילו להקליד, למשל: עין" autocomplete="off" value="${esc(areaQraw)}"></label><div id="areasug" class="sugs"></div>` : ""}
     ${pxCard(city)}
     <div class="card"><div class="spread"><h2>מחיר למ"ר לפי שכונה</h2>${cc ? `<span class="small">העיר: <b class="num">${pct(cc[0])}</b></span>` : ""}</div>
-      ${ar.length ? `<p class="small muted">${ar.length} שכונות ואזורים${cov != null ? `, שמכסים <b>${cov}%</b> מהעסקאות בעיר` : ""}. חציון ב-12 החודשים האחרונים, עד ספטמבר 2026. "יד שנייה" הם בניינים בני 3 שנים ומעלה. השינוי הוא ביד שנייה, מול 12 החודשים שלפני.</p>
-      <div class="tbl"><table><thead><tr><th>שכונה</th><th>כל העסקאות</th><th>יד שנייה</th><th>חדש</th><th>שינוי</th><th>עסקאות</th></tr></thead><tbody id="areatb">
+      ${ar.length ? `<p class="small muted">${ar.length} שכונות ואזורים${cov != null ? `, שמכסים <b>${cov}%</b> מהעסקאות בעיר` : ""}. חציון ב-12 החודשים האחרונים, עד ${NAT.through}. "ותיק" = בניין שהיה בן 3 שנים ומעלה ביום העסקה, "חדש" = עד שנתיים מסיום הבנייה, כמו בסינון למעלה. השינוי מחושב על הבניינים הוותיקים, מול 12 החודשים שלפני.</p>
+      <div class="tbl"><table><thead><tr><th>שכונה</th><th>כל העסקאות</th><th>ותיק</th><th>חדש</th><th>שינוי</th><th>עסקאות</th></tr></thead><tbody id="areatb">
       ${ar.map((a, i) => `<tr data-nm="${esc(normNb(a[0]))}" data-i="${i}" ${areaHidden(normNb(a[0]), i) ? "hidden" : ""}><td style="white-space:normal;min-width:9rem">${esc(a[0])}${a[2] < 10 ? ' <span class="chip mute">מעט עסקאות</span>' : ""}</td><td>${nf.format(a[1])}</td><td>${a[3] ? nf.format(a[3]) : "—"}</td><td>${a[4] ? nf.format(a[4]) : "—"}</td><td style="color:${a[5] != null && a[5] <= -5 ? "var(--warn)" : "inherit"}">${a[5] == null ? "—" : pct(a[5])}</td><td>${a[2]}</td></tr>`).join("")}
       </tbody></table></div>
       <p class="small muted" id="areanone" hidden>לא נמצאה שכונה בשם הזה. ייתכן שהיא רשומה בשם אחר או שהיו בה פחות מ-3 עסקאות בשנה האחרונה.</p>
