@@ -1117,7 +1117,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 25";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 26";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1404,7 +1404,8 @@ function payAlloc(bankEarly = !!S.fin.bankEarly) {
 /* older data has only the day: a payment marked paid on the day the savings were updated cannot be ordered. Ask, never guess. */
 /* the answer belongs to one savings snapshot (day, time if known, amount): a new savings update is judged on its own */
 const savKey = () => `${S.fin.savingsAt || ""}|${S.fin.savingsTs || 0}|${S.fin.savings}`;
-const savOrderFor = x => x.savOrder && typeof x.savOrder === "object" && x.savOrder.at === savKey() && typeof x.savOrder.after === "boolean" ? x.savOrder : null;
+const payKey = x => `${x.paidOn || ""}|${x.paidTs || 0}|${x.paidAmt == null ? "" : x.paidAmt}`;
+const savOrderFor = x => x.savOrder && typeof x.savOrder === "object" && x.savOrder.at === savKey() && x.savOrder.ev === payKey(x) && typeof x.savOrder.after === "boolean" ? x.savOrder : null;
 function savOrderOpen() { const f = S.fin; if (!f.savingsAt) return []; return S.payments.filter(x => x.paid && x.paidOn && x.paidOn === f.savingsAt && !(x.paidTs && f.savingsTs) && !savOrderFor(x)); }
 function savOrderCard() {
   const amb = savOrderOpen(); if (!amb.length) return "";
@@ -1424,7 +1425,7 @@ function savOrderCard() {
 function savingsBase() {
   const f = S.fin, at = f.savingsAt || "";
   /* paid before the savings were last updated = already out of that number. Same day: the time decides (older data has only the day) */
-  const before = x => { const o = savOrderFor(x); if (o) return o.after; return x.paidTs && f.savingsTs ? x.paidTs < f.savingsTs : !!(x.paidOn && at && x.paidOn < at); };
+  const before = x => { if (x.paidTs && f.savingsTs) return x.paidTs < f.savingsTs; const o = savOrderFor(x); if (o) return o.after; return !!(x.paidOn && at && x.paidOn < at); };
   return (f.savings || 0) + payAlloc().filter(a => a.x.paid && before(a.x)).reduce((s, a) => s + a.own + a.link, 0);
 }
 function cashEarly() {
@@ -3295,7 +3296,7 @@ document.addEventListener("click", e => {
     case "newdeal": newDeal(); break;
     case "dealsopen": dealsOpen = !dealsOpen; render(); break;
     case "dealrename": { const r = dealsReg(), e = r && r.list.find(x => x.id === r.active); if (!e) break; const v = prompt("שם לעסקה (ריק = שם אוטומטי)", e.name || dealName(e)); if (v == null) break; e.name = v.trim().slice(0, 40); saveReg(r); render(); break; }
-    case "savorder": { const after = d.v === "after", amb = savOrderOpen().filter(x => !d.id || x.id === d.id); for (const x of amb) x.savOrder = { at: savKey(), after }; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
+    case "savorder": { const after = d.v === "after", amb = savOrderOpen().filter(x => !d.id || x.id === d.id); for (const x of amb) x.savOrder = { at: savKey(), ev: payKey(x), after }; persist(); render(); toast(after ? "נשמר: החסכונות הם אחרי התשלום" : "נשמר: החסכונות הם לפני התשלום"); break; }
     case "resetyes": { if (store.shared) { if (!confirm("הרכישה משותפת. התחלה מחדש תנתק את הטלפון הזה מהשיתוף, ואצל מי שמשתף איתכם הנתונים יישארו. להמשיך?")) break; leaveShare(); }
       S = exampleState(); confirmReset = false; persist(); setupOpen = false; tab = "home"; startWizard(); toast("נתוני העסקה הזו נמחקו. מתחילים אותה מחדש"); break; }
   }
@@ -3322,7 +3323,7 @@ document.addEventListener("input", e => {
     fieldErr(t, ""); if (r.warn) { const lb = t.closest("label"); if (lb) { let w = lb.querySelector(".fwarn"); if (!w) { w = document.createElement("span"); w.className = "fwarn small"; w.style.color = "var(--gold)"; lb.appendChild(w); } w.textContent = r.warn; } } else { const w = (t.closest("label") || document).querySelector(".fwarn"); if (w) w.remove(); }
     const v = r.v == null ? 0 : r.v; setPath(d.c, v); if (d.c === "fin.savings") { S.fin.savingsAt = ymd(today()); S.fin.savingsTs = Date.now(); S.fin.savTouched = true;
       /* payments already marked paid (older ones have no time) were marked before this amount was typed: a fact, not a guessed time */
-      for (const x of S.payments) if (x.paid && !x.paidTs) x.savOrder = { at: savKey(), after: true }; } if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
+      for (const x of S.payments) if (x.paid && !x.paidTs) x.savOrder = { at: savKey(), ev: payKey(x), after: true }; } if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
   if (d.of) { const [id, f] = d.of.split(":"), x = S.offers.find(k => k.id === id); if (f === "amount" || f === "first" || f === "total") liveComma(t);
     if (x) { if (f === "bank") x.bank = t.value; else { const r = checkNum(t.value, f === "years" ? "years" : "money", f === "years" ? "תקופה" : "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } persist(); refreshOut(); } return; }
   if (d.pf) { const [id, f] = d.pf.split(":"), x = S.payments.find(k => k.id === id); if (x) { if (f === "voucher") x.name = "שובר " + t.value; if (f === "pct" || f === "amount") { const r = checkNum(f === "amount" ? t.value : t.value, f === "pct" ? "pct" : "money", f === "pct" ? "אחוז התשלום" : "סכום השובר"); if (r.err) { fieldErr(t, r.err); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value;
@@ -3334,7 +3335,7 @@ document.addEventListener("change", e => {
   if (d.srcchk) { const [id, f] = d.srcchk.split(":"), x = srcList().find(k => k.id === id); if (x) { x[f] = t.checked; persist(); render(); } return; }
   if (d.src) { if (d.src.endsWith(":date")) render(); else if (/:amount$|:monthly$|:now$/.test(d.src) && !badFields[d.src]) t.value = fmtIn(Number(String(t.value).replace(/[^\d.]/g, "")) || ""); return; }
   if (d.task) { const x = S.tasks.find(k => k.id === d.task); if (x) { x.done = t.checked; if (t.checked) maybeAdvance(); persist(); render(); } return; }
-  if (d.paid) { const x = S.payments.find(k => k.id === d.paid); if (x) { if (t.checked) { x.paidAmt = Math.round(payAmount(x)); x.paidLink = Math.round(linkageCost(x)); x.paidOn = ymd(today()); x.paidTs = Date.now(); x.paid = true; } else { x.paid = false; delete x.paidAmt; delete x.paidLink; delete x.paidOn; } persist(); render(); } return; }
+  if (d.paid) { const x = S.payments.find(k => k.id === d.paid); if (x) { if (t.checked) { x.paidAmt = Math.round(payAmount(x)); x.paidLink = Math.round(linkageCost(x)); x.paidOn = ymd(today()); x.paidTs = Date.now(); x.paid = true; } else { x.paid = false; delete x.paidAmt; delete x.paidLink; delete x.paidOn; delete x.paidTs; delete x.savOrder; } persist(); render(); } return; }
   if (d.plink) { const x = S.payments.find(k => k.id === d.plink); if (x) { x.linked = t.checked; persist(); render(); } return; }
   if (d.pguar) { const x = S.payments.find(k => k.id === d.pguar); if (x) { x.guarantee = t.checked; persist(); render(); } return; }
   if (d.pf) { updatePayChip(); if (d.pf.endsWith(":amount") && !badFields[d.pf]) t.value = fmtIn(Number(String(t.value).replace(/[^\d.]/g, "")) || ""); return; }

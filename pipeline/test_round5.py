@@ -88,6 +88,27 @@ with sync_playwright() as p:
       store.shared = prevShared; return out; }""")
     check("RT23-02 עריכה בזמן שמירה: מחיר 1,200,000, הכנסה 25,000 (מהטלפון השני), שכירות 6,000", "1200000 · 25000 · 6000", res, res["price"] == 1200000 and res["income"] == 25000 and res["rent"] == 6000 and res["sIncome"] == 25000 and res["sRent"] == 6000 and res["writes"] == 2)
 
+    # RT25: an answer belongs to one payment event; un-marking / re-marking "paid" or a changed paid date is not covered by an old answer
+    def v23(s):
+        mixed(s); s["fin"]["savingsTs"] = 2; [x for x in s["payments"] if x.get("paidAmt") == 150000][0]["paidTs"] = 1
+    st = json.loads(json.dumps(GOOD)); v23(st); restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
+    while pg.query_selector("[data-act=savorder][data-v=after]"): pg.click("[data-act=savorder][data-v=after]"); pg.wait_for_timeout(250)
+    E("editOpen.eqmoney=true; go('calc','equity');"); pg.wait_for_timeout(200); pg.fill("[data-c='fin.savings']", "900000"); pg.wait_for_timeout(700)
+    check("RT25-01a עדכון חסכונות ל-900,000 אחרי התשובות: 900,000 / 76,000", "[900000, 76000]", rows(), rows() == [900000, 76000])
+    pid = E("S.payments.find(x=>x.paidAmt===150000).id"); E("go('buy','payments')"); pg.wait_for_timeout(200)
+    pg.click(f"[data-paid='{pid}']"); pg.wait_for_timeout(250); pg.click(f"[data-paid='{pid}']"); pg.wait_for_timeout(300)
+    r = rows(); E("go('home')"); pg.wait_for_timeout(200); t = pg.inner_text("#view")
+    check("RT25-01b ביטול 'שולם' וסימון מחדש אחרי עדכון החסכונות: התשלום יורד, 750,000 / ‎−74,000, בלי 'מספיק'", "[750000, -74000]", r, r == [750000, -74000] and "מספיק," not in t and "מספיק." not in t)
+    backup = E("JSON.parse(JSON.stringify(S))"); restore(backup)
+    check("RT25-01c גיבוי ושחזור: אותה תוצאה", "[750000, -74000]", rows(), rows() == [750000, -74000])
+    # RT25-02: "not yet / not yet", then the actual paid date of the first payment corrected to the day before the savings
+    def nn(s):
+        two(s)
+    st = json.loads(json.dumps(GOOD)); two(st); restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
+    while pg.query_selector("[data-act=savorder][data-v=before]"): pg.click("[data-act=savorder][data-v=before]"); pg.wait_for_timeout(250)
+    st = E("JSON.parse(JSON.stringify(S))"); first = [x for x in st["payments"] if x.get("paidAmt") == 150000][0]; first["paidOn"] = str(T0 - datetime.timedelta(days=1))
+    restore(st); E("go('calc','cash')"); pg.wait_for_timeout(200)
+    check("RT25-02 תאריך תשלום שתוקן ליום שלפני החסכונות: התשובה הישנה לא חלה, 500,000 / ‎−324,000", "[500000, -324000]", f"{rows()} · שאלות {E('savOrderOpen().length')}", rows() == [500000, -324000] and E("savOrderOpen().length") == 0)
     check("שגיאות JavaScript", "אין", errs or "אין", not errs)
     b.close()
 for r in R: print(f"{r[3]} | {r[0]} | צפוי: {r[1]} | בפועל: {r[2]}")
