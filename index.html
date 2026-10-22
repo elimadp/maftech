@@ -579,6 +579,11 @@ function sanitize(x) {
     if (d.fkey != null && !(typeof d.fkey === "string" && /^[A-Za-z0-9+/=_-]{1,120}$/.test(d.fkey))) d.fkey = null;
     if (d.ftype != null && !(typeof d.ftype === "string" && /^[\w.+-]{1,40}\/[\w.+-]{1,60}$/.test(d.ftype))) d.ftype = "";
   }
+  const num = (o, keys) => { if (!o || typeof o !== "object") return; for (const k of keys || Object.keys(o)) if (typeof o[k] === "string" && /^\s*-?\d+(\.\d+)?\s*$/.test(o[k])) o[k] = Number(o[k]); };
+  num(x.fin, ["savings", "income", "expenses", "rent", "otherLoans", "grant", "appraisal", "age", "reserve", "ret", "horizon", "equity"]); num(x.costs); num(x.mix);
+  num(x.profile, ["price", "linkedShare"]); if (typeof x.idxRate === "string") num(x, ["idxRate"]);
+  for (const i of x.payments) num(i, ["pct", "amount", "paidAmt", "paidLink"]);
+  if (x.fin && Array.isArray(x.fin.sources)) for (const i of x.fin.sources) num(i, ["amount", "monthly", "now"]);
   if (x.profile) { if (!TYPES[x.profile.type]) x.profile.type = "ml"; if (!["first", "upgrade", "additional"].includes(x.profile.buyer)) x.profile.buyer = "first";
     if (!STAGES[x.profile.type].some(st => st[0] === x.profile.stage)) x.profile.stage = STAGES[x.profile.type][0][0]; }
   return x;
@@ -706,7 +711,12 @@ function ensureDeals() {
     if (st && !st.example) { const id = "d" + uid(); r.active = id; r.list.push({ id, name: "", auto: dealAutoName(st), updated: Date.now() }); } } catch (e) {}
   saveReg(r); return r;
 }
-function touchDeal() { const r = dealsReg(); if (!r || !r.active || S.example) return; const e = r.list.find(x => x.id === r.active); if (!e) return; e.updated = Date.now(); e.auto = dealAutoName(S); saveReg(r); }
+/* the deal on screen always has a registry entry before anything can park or replace it (restore, first save, a new deal) */
+function ensureActive() {
+  const r = ensureDeals(); if (r.active || S.example) return r;
+  const id = "d" + uid(); r.list.push({ id, name: "", auto: dealAutoName(S), updated: Date.now() }); r.active = id; saveReg(r); return r;
+}
+function touchDeal() { if (S.example) return; const r = ensureActive(); if (!r || !r.active) return; const e = r.list.find(x => x.id === r.active); if (!e) return; e.updated = Date.now(); e.auto = dealAutoName(S); saveReg(r); }
 const dealName = e => (e && (e.name || e.auto)) || "העסקה שלי";
 function switchDeal(id) {
   const r = dealsReg(); if (!r || id === r.active || !r.list.some(x => x.id === id)) return;
@@ -716,7 +726,7 @@ function switchDeal(id) {
   unparkDeal(id); r.active = id; saveReg(r); location.reload();
 }
 /* a new deal starts from the wizard; the current one is parked only when the wizard is finished (cancel changes nothing) */
-function newDeal() { dealsOpen = false; startWizard(); wiz.newDeal = !S.example; render(); }
+function newDeal() { if (!S.example) { clearTimeout(saveTimer); saveLocal(); ensureActive(); } dealsOpen = false; startWizard(); wiz.newDeal = !S.example; render(); }
 function deleteDeal(id) {
   const r = dealsReg(); if (!r) return; const e = r.list.find(x => x.id === id); if (!e) return;
   if (!confirm(`למחוק את "${dealName(e)}" מהטלפון הזה? אי אפשר לבטל.${id === r.active && store.shared ? " העסקה משותפת: אצל מי שמשתף איתכם היא תישאר." : ""}`)) return;
@@ -1075,7 +1085,7 @@ function textCard() {
 document.addEventListener("change", e => { if ("myname" in (e.target.dataset || {})) { try { localStorage.setItem("maftech.name", e.target.value.trim().slice(0, 30)); } catch (err) {} toast("נשמר"); } });
 document.addEventListener("change", e => { if (!("bigtext" in (e.target.dataset || {}))) return; bigText = e.target.checked; try { localStorage.setItem("maftech.big", bigText ? "1" : "0"); } catch (err) {} document.documentElement.classList.toggle("bigtext", bigText); syncBigBtn(); setTopH && setTopH(); });
 const ENGINE = { v: "2.1", date: "21.10.2026" };
-const BUILD = "22.10.2026 · 21";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
+const BUILD = "22.10.2026 · 22";   /* bump on every deploy: shown at the bottom of home, so you can tell the app is up to date */
 function aboutCard() {
   return `<details class="card"><summary><b>אודות החישובים</b> <span class="small muted">· מנוע חישוב ${ENGINE.v}, ${ENGINE.date}</span></summary>
     <p class="small">"דירה בשליטה" הוא כלי עזר לתכנון אישי. המספרים מחושבים מהנתונים שהזנתם ומהנחות גלויות. הם לא ייעוץ פיננסי או משפטי, ולא אישור משכנתא.</p>
@@ -1202,7 +1212,7 @@ const mlAppraisal = () => S.fin.appraisal > 0 ? S.fin.appraisal : Math.round(Mat
 const mlApprWhy = () => S.profile.price / 0.8 > S.profile.price + ML_DISC_CAP ? "המחיר ועוד ההנחה המקסימלית, 300 אלף ₪" : "המחיר ועוד ההנחה של 20% משווי השוק";
 /* extra funding sources (study fund, special loans, family help): S.fin.sources = [{id,name,kind:"asset"|"loan",amount,date,monthly,bank,inc}] */
 const srcList = () => (S.fin.sources || []);
-const srcUsable = x => x.inc && (x.amount > 0 || x.now > 0) && (!x.date || !S.profile.delivery || x.date <= S.profile.delivery || x.now > 0);
+const srcUsable = x => { if (!(x.inc && (x.amount > 0 || x.now > 0))) return false; if (!x.date || x.now > 0 || !S.profile.sign) return true; const end = cashEndDate(); return !end || x.date <= end; };
 const srcValueBy = (x, by) => !by || !x.date || x.date <= by ? (Number(x.amount) || 0) : x.kind === "asset" ? (Number(x.now) || 0) : 0;
 const extraFunds = (by) => srcList().filter(srcUsable).reduce((a, x) => a + srcValueBy(x, by), 0);
 const srcBankMonthly = () => srcList().filter(x => x.inc && x.kind === "loan" && x.bank).reduce((a, x) => a + (Number(x.monthly) || 0), 0);
@@ -1276,18 +1286,34 @@ function dealBlockers(scope) {
 }
 /* the same ranges the input fields use, applied to everything stored, so a value that could never be typed cannot produce a result */
 const COST_LABEL = { lawyer: "עורך דין", advisor: "יועץ משכנתאות", broker: "תיווך", appraiser: "שמאי", bankfees: "עמלות בנק", moving: "הובלה", renovation: "מיזוג, מטבח, ריהוט ושיפוץ", other: "אחר" };
+/* a real calendar date: "2027-99-99" or "2027-02-30" is not one */
+const isDate = s => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) && (() => { const d = new Date(s + "T00:00:00Z"); return !isNaN(d) && d.toISOString().slice(0, 10) === s; })();
 function stateIssues() {
-  const out = [], f = S.fin, m = S.mix, bad = (v, r) => v != null && v !== "" && !(typeof v === "number" || typeof v === "string") ? true : v != null && v !== "" && !(isFinite(Number(v)) && Number(v) >= r[0] && Number(v) <= r[1]);
-  const chk = (v, r, what, tab, sb) => { if (bad(v, r)) out.push({ what, tab, sb }); };
-  for (const [k, l] of [["savings", "חסכונות"], ["income", "הכנסה"], ["expenses", "הוצאות"], ["rent", "שכר דירה"], ["otherLoans", "החזרי הלוואות אחרות"], ["grant", "מענק"], ["appraisal", "שמאות"], ["age", "גיל"], ["reserve", "כרית ביטחון"], ["ret", "תשואה"], ["horizon", "אופק"]])
-    chk(f[k], RANGES["fin." + k], l, "calc", k === "reserve" || k === "ret" || k === "horizon" ? "equity" : k === "age" ? "mortgage" : "equity");
-  for (const [k, v] of Object.entries(S.costs || {})) chk(v, RANGES.money, "עלות: " + (COST_LABEL[k] || k), "calc", "costs");
-  for (const k of ["pPrime", "pFixed", "pLinked", "pVar"]) chk(m[k], RANGES.pct, "חלק מסלול בתמהיל", "calc", "mortgage");
-  for (const k of ["rPrime", "rFixed", "rLinked", "rVar"]) chk(m[k], RANGES.rate, "ריבית בתמהיל", "calc", "mortgage");
-  chk(m.infl, RANGES["mix.infl"], "אינפלציה", "calc", "mortgage"); chk(S.idxRate, RANGES.idxRate, "קצב מדד תשומות הבנייה", "calc", "linkage");
-  chk(S.profile.linkedShare, RANGES["profile.linkedShare"], "אחוז הצמדה", "settings");
-  for (const x of S.payments) { chk(x.pct, RANGES.pct, "אחוז תשלום", "buy", "payments"); chk(x.amount, RANGES.money, "סכום תשלום", "buy", "payments"); chk(x.paidAmt, RANGES.money, "סכום ששולם", "buy", "payments"); }
-  for (const x of srcList()) { chk(x.amount, RANGES.money, "סכום מקור נוסף", "calc", "equity"); chk(x.monthly, RANGES.money, "החזר חודשי של מקור נוסף", "calc", "equity"); chk(x.now, RANGES.money, "שווי מקור נוסף היום", "calc", "equity"); }
+  const out = [], f = S.fin, m = S.mix, p = S.profile, vouchers = S.payMode === "vouchers";
+  const missing = v => v == null || v === "" || (typeof v === "number" && isNaN(v));
+  /* a stored number must be a real number inside the same range the field accepts; "need" = it may not be missing either */
+  const chk = (v, r, what, tab, sb, need) => {
+    if (missing(v)) { if (need) out.push({ what: what + " חסר", tab, sb }); return; }
+    if (typeof v !== "number" || !isFinite(v) || v < r[0] || v > r[1] || (r[2] && Math.round(v) !== v)) out.push({ what, tab, sb });
+  };
+  const chkD = (v, what, tab, sb, need) => { if (missing(v)) { if (need) out.push({ what: what + " חסר", tab, sb }); return; } if (!isDate(v)) out.push({ what: what + " (תאריך לא קיים)", tab, sb }); };
+  chk(p.price, [1, 100e6], "מחיר הדירה", "settings", "", true); chk(p.linkedShare, RANGES["profile.linkedShare"], "אחוז הצמדה", "settings", "", T().contractor);
+  chkD(p.sign, "תאריך החתימה", "settings", "", false); chkD(p.delivery, "מועד המסירה", "settings", "", false); chkD(p.lottery, "תאריך ההגרלה", "settings", "", false);
+  for (const [k, l, need] of [["savings", "חסכונות", f.savTouched], ["income", "הכנסה"], ["expenses", "הוצאות", f.expTouched], ["rent", "שכר דירה"], ["otherLoans", "החזרי הלוואות אחרות"], ["grant", "מענק"], ["appraisal", "שמאות"], ["age", "גיל"], ["reserve", "כרית ביטחון"], ["ret", "תשואה"], ["horizon", "אופק"]])
+    chk(f[k], RANGES["fin." + k], l, "calc", k === "age" ? "mortgage" : k === "expenses" || k === "income" || k === "rent" ? "cash" : "equity", !!need);
+  if (f.equity != null) chk(f.equity, [0, 100e6], "הון עצמי", "calc", "equity");
+  for (const k of Object.keys(COST_LABEL)) chk((S.costs || {})[k], RANGES.money, "עלות: " + COST_LABEL[k], "calc", "costs", true);
+  for (const k of ["pPrime", "pFixed", "pLinked"]) chk(m[k], RANGES.pct, "חלק מסלול בתמהיל", "calc", "mortgage", true);
+  for (const k of ["rPrime", "rFixed", "rLinked"]) chk(m[k], RANGES.rate, "ריבית בתמהיל", "calc", "mortgage", true);
+  chk(m.pVar, RANGES.pct, "חלק מסלול בתמהיל", "calc", "mortgage"); chk(m.rVar, RANGES.rate, "ריבית בתמהיל", "calc", "mortgage", m.pVar > 0);
+  chk(m.years, RANGES["mix.years"], "תקופת המשכנתא (שנים שלמות, 1 עד 30)", "calc", "mortgage", true);
+  chk(m.infl, RANGES["mix.infl"], "אינפלציה", "calc", "mortgage", true); chk(S.idxRate, RANGES.idxRate, "קצב מדד תשומות הבנייה", "calc", "linkage", T().contractor);
+  for (const x of S.payments) {
+    chk(x.pct, RANGES.pct, "אחוז תשלום", "buy", "payments", !vouchers); chk(x.amount, RANGES.money, "סכום תשלום", "buy", "payments", vouchers);
+    chk(x.paidAmt, RANGES.money, "סכום ששולם", "buy", "payments"); chk(x.paidLink, RANGES.money, "הצמדה ששולמה", "buy", "payments");
+    chkD(x.date, "תאריך תשלום", "buy", "payments", false); chkD(x.paidOn, "תאריך תשלום ששולם", "buy", "payments", false);
+  }
+  for (const x of srcList()) { chk(x.amount, RANGES.money, "סכום מקור נוסף", "calc", "equity", !!x.inc); chk(x.monthly, RANGES.money, "החזר חודשי של מקור נוסף", "calc", "equity"); chk(x.now, RANGES.money, "שווי מקור נוסף היום", "calc", "equity"); chkD(x.date, "מועד מקור נוסף", "calc", "equity", false); }
   const seen = new Set(); return out.filter(o => !seen.has(o.what) && seen.add(o.what));
 }
 function blockedCard(list, what = "את התחזית") {
@@ -1310,7 +1336,7 @@ function limitsCard() {
       <tr><td><b>הון עצמי מינימלי</b></td><td><b>${ils(need)}</b></td></tr>
     </tbody></table></div>
     ${f.savings || ex ? (avail >= need ? `<p class="small" style="color:var(--ok)">${ex ? `כולל ${ils(ex)} ממקורות נוספים, ` : ""}אחרי העלויות הנלוות נשארים לכם ${ils(avail)}, מספיק להון העצמי המינימלי.</p>` : `<p class="small" style="color:var(--warn)">אחרי העלויות הנלוות נשארים ${ils(Math.max(0, avail))}. חסרים ${ils(need - avail)} להון העצמי המינימלי.</p>`) : ""}
-    ${(() => { if (!T().contractor || !p.sign) return ""; const lim = addDays(p.sign, 60), early = S.payments.filter(x => x.date && x.date <= lim).reduce((s, x) => s + payAmount(x), 0), availEarly = (f.savings || 0) + extraFunds(lim) - costsEarly(); return early > need + 1 ? `<p class="small muted">שימו לב לתזמון: בחתימה ובחודשיים הראשונים משלמים לקבלן ${ils(early)}. בדרך כלל הבנק מתחיל להעביר את המשכנתא רק אחרי התשלומים האלה, אז צריך את הסכום הזה זמין${savKnown() && availEarly < early && dealBlockers("cash").length ? `, ואצלכם חסרים ${ils(early - Math.max(0, availEarly))}. אפשר לשאול את הבנק על משיכה מוקדמת של המשכנתא או על הלוואת גישור` : ""}.</p>` : ""; })()}
+    ${(() => { if (!T().contractor || !p.sign) return ""; const lim = addDays(p.sign, 60), early = S.payments.filter(x => x.date && x.date < lim).reduce((s, x) => s + payAmount(x), 0), availEarly = (f.savings || 0) + extraFunds(lim) - costsEarly(); return early > need + 1 ? `<p class="small muted">שימו לב לתזמון: בחתימה ובחודשיים הראשונים משלמים לקבלן ${ils(early)}. בדרך כלל הבנק מתחיל להעביר את המשכנתא רק אחרי התשלומים האלה, אז צריך את הסכום הזה זמין${savKnown() && availEarly < early && dealBlockers("cash").length ? `, ואצלכם חסרים ${ils(early - Math.max(0, availEarly))}. אפשר לשאול את הבנק על משיכה מוקדמת של המשכנתא או על הלוואת גישור` : ""}.</p>` : ""; })()}
     ${p.type === "ml" && !(f.appraisal > 0) ? `<p class="small muted">במחיר למשתכן הבנק מממן לפי שווי השוק של הדירה, לא לפי המחיר שאתם משלמים. עוד לא הזנתם שמאות, אז השווי מוערך ב-${ils(mlAppraisal())}: ${mlApprWhy()}. זו הערכה, והשמאי של הבנק יכול לקבוע שווי נמוך יותר. כשתהיה שמאות, הזינו אותה למטה בשדה "שמאות הדירה".</p>` : ""}
     ${equityClamped() ? `<p class="small" style="color:var(--warn)">ההון העצמי שבחרתם (${ils(chosenEquity())}) נמוך מהמינימום (${ils(need)}). העסקה צריכה משכנתא של ${ils(loanAmount())}, אבל לפי הנתונים אפשר לקבל עד כ-${ils(maxLoan())}: <b>פער מימון של ${ils(finGap())}</b>, שנכלל גם בתזרים.</p>` : ""}
     <p class="src">החישוב לפי ${yrs()} שנה ותמהיל הריביות שלכם. בנק יכול לאשר פחות מזה. <a href="${RULES.src}" target="_blank" rel="noopener">הוראת בנק ישראל</a></p></div>`;
@@ -1329,7 +1355,7 @@ function payAlloc(bankEarly = !!S.fin.bankEarly) {
   let ownLeft = D.ownTotal, bankLeft = D.bankFunds; const out = [];
   for (const x of [...S.payments].filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date))) {
     const base = payAmount(x), link = linkageCost(x); let own = Math.min(base, ownLeft);
-    if (!bankEarly && lim && x.date <= lim) own = base;
+    if (!bankEarly && lim && x.date < lim) own = base;
     const bank = Math.min(base - own, bankLeft); own = base - bank; ownLeft = Math.max(0, ownLeft - own); bankLeft -= bank;
     out.push({ x, base, link, own, bank });
   }
@@ -1345,7 +1371,7 @@ function savingsBase() {
 }
 function cashEarly() {
   const p = S.profile, f = S.fin; if (!T().contractor || !p.sign) return { early: 0, avail: 0, gap: 0, lim: null };
-  const lim = addDays(p.sign, 60), early = payAlloc().filter(a => a.x.date <= lim).reduce((s, a) => s + a.own, 0);
+  const lim = addDays(p.sign, 60), early = payAlloc().filter(a => a.x.date < lim).reduce((s, a) => s + a.own, 0);
   const avail = savingsBase() + extraFunds(lim) - costsEarly();
   return { early, avail, gap: early > minEquity() + 1 ? Math.max(0, early - avail) : 0, left: avail - early, lim };
 }
@@ -1487,11 +1513,11 @@ function nextPayment() { return [...S.payments].filter(x => x.date).sort((a, b) 
 let tlAll = false;
 function timelineCard() {
   const p = S.profile, t = T(); if (S.example || !p.sign) return "";
-  const ev = [];
+  const ev = [], badPay = stateIssues().some(s => s.sb === "payments"), money = v => badPay ? "לתיקון" : ils(v);
   if (p.lottery && p.type === "ml") ev.push({ d: p.lottery, t: "זכייה בהגרלה" });
   const signPay = S.payments.find(x => x.date === p.sign);
-  ev.push({ d: p.sign, t: "חתימה על החוזה", s: signPay ? ils(payAmount(signPay) + linkageCost(signPay)) + (signPay.paid ? " · שולם ✓" : "") : "", pay: !!signPay, paid: signPay && signPay.paid });
-  for (const x of S.payments) if (x.date && x !== signPay) ev.push({ d: x.date, t: x.name, s: ils(payAmount(x) + linkageCost(x)) + (x.paid ? " · שולם ✓" : ""), pay: true, paid: x.paid });
+  ev.push({ d: p.sign, t: "חתימה על החוזה", s: signPay ? money(payAmount(signPay) + linkageCost(signPay)) + (signPay.paid ? " · שולם ✓" : "") : "", pay: !!signPay, paid: signPay && signPay.paid });
+  for (const x of S.payments) if (x.date && x !== signPay) ev.push({ d: x.date, t: x.name, s: money(payAmount(x) + linkageCost(x)) + (x.paid ? " · שולם ✓" : ""), pay: true, paid: x.paid });
   if (MARKET.nextBoiISO) ev.push({ d: MARKET.nextBoiISO, t: "החלטת ריבית של בנק ישראל", s: "משפיעה על ההחזר במסלול הפריים" });
   if (p.form4) ev.push({ d: p.form4, t: "טופס 4" });
   if (p.delivery) ev.push({ d: p.delivery, t: t.contractor ? "מסירת הדירה 🔑" : "קבלת המפתח 🔑" });
@@ -1542,7 +1568,9 @@ function dashboardCard() {
   /* 1. the next thing you pay */
   const open = [...S.payments].filter(x => x.date && !x.paid).sort((a, b) => a.date.localeCompare(b.date)), np = open[0], after = open[1];
   const amt = x => ils(payAmount(x) + (dealBlockers("linkage").length ? 0 : linkageCost(x)));
-  if (np) { const dn = daysTo(np.date), when = dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים";
+  const badPay = stateIssues().filter(s => s.sb === "payments");
+  if (badPay.length) sec("pay", "לוח התשלומים צריך תיקון", "לתיקון", `יש בלוח ערך לא תקין (${esc(badPay[0].what)}), אז אין כאן תשלום להציג. תקנו אותו בלוח התשלומים.`, ["buy", "payments"], "warn");
+  else if (np) { const dn = daysTo(np.date), when = dn < 0 ? "המועד עבר" : dn === 0 ? "היום" : "בעוד " + nf.format(dn) + " ימים";
     const src = t.contractor && !dealBlockers("sched").length ? paySource(np) : null, bf = bankFirstPay();
     const srcTxt = !src ? "" : src.bank > 1 ? ` מאיפה: ${ils(src.own)} מהכסף שלכם, ${ils(src.bank)} מהמשכנתא.` : ` התשלום הזה צפוי לצאת מהכסף שלכם.${bf ? " " + bankStartWhy() : ""}`;
     sec("pay", T().contractor ? "הדבר הבא: תשלום לקבלן" : "הדבר הבא: תשלום למוכר", amt(np), `${esc(np.name)}, ${fmtDate(np.date)} (${when}).${srcTxt}${after ? ` אחריו: ${esc(after.name)}, ${amt(after)} ב-${fmtDate(after.date)}.` : ""}`, ["buy", "payments", "pay_" + np.id], dn <= 21 ? "warn" : "", savKnown() ? ["כל הכסף מהכיס, בפירוט", "calc", "overview", "ov-own"] : ["כמה כסף יש לכם?", "calc", "equity", "fin.savings"]); }
@@ -1725,7 +1753,7 @@ function bankFirstPay() { const a = payAlloc().find(z => z.bank > 0); return a ?
 /* does the "bank funds early" switch change anything here? only if some payment in the first 60 days moves from you to the bank */
 function earlySwitchEffect() {
   const a = payAlloc(false), b = payAlloc(true); if (a.every((x, i) => Math.abs(x.bank - b[i].bank) < 1)) {
-    const lim = addDays(S.profile.sign, 60), win = S.payments.filter(x => x.date && x.date > S.profile.sign && x.date <= lim), sp = secondPay();
+    const lim = addDays(S.profile.sign, 60), win = S.payments.filter(x => x.date && x.date > S.profile.sign && x.date < lim), sp = secondPay();
     return { none: true, why: !win.length ? `אצלכם אין תשלום לקבלן ב-60 הימים שאחרי החתימה${sp ? ` (התשלום השני הוא ב-${fmtDate(sp.date)})` : ""}, אז זה לא משנה את התוצאה.` : `התשלומים עד ${fmtDate(lim)} ממילא יוצאים מההון העצמי שלכם, אז זה לא משנה את התוצאה.` };
   }
   return { none: false };
@@ -1760,7 +1788,7 @@ function mortCautions(full) {
 function bankStartWhy() {
   const p = S.profile, bf = bankFirstPay(); if (!T().contractor || !p.sign || !bf) return "";
   const lim = addDays(p.sign, 60), before = [...S.payments].filter(x => x.date && x.date < bf.date), eq = dealFin().ownTotal;
-  const why = !S.fin.bankEarly && before.length && before.every(x => x.date <= lim) ? "כי התשלומים שלפניו הם בתוך 60 הימים" : before.length ? `כי קודם משולם ההון העצמי שלכם (${ils(eq)})` : "";
+  const why = !S.fin.bankEarly && before.length && before.every(x => x.date < lim) ? "כי התשלומים שלפניו הם לפני היום ה-60" : before.length ? `כי קודם משולם ההון העצמי שלכם (${ils(eq)})` : "";
   return `${S.fin.bankEarly ? "לפי ההנחה שלכם הבנק יכול לממן כבר מההתחלה." : `לפי הנחת המוצר הבנק יכול להתחיל לממן 60 יום אחרי החתימה (מ-${fmtDate(lim)}).`} בפועל ההעברה הראשונה מהבנק צפויה ב${payLabel(bf)}${why ? ", " + why : ""}.`;
 }
 /* contractor payments paid from your money before the bank's first transfer (one definition, used everywhere it is named) */
@@ -1871,7 +1899,7 @@ function outEquity() {
   if (!f.savings && !extraFunds()) return `<div class="card"><p>הזינו כמה כסף יש לכם, ונראה כמה אפשר לשים בדירה.</p></div>`;
   const mx = maxLoan(), need = minEquity(), costs = costsTotal(), avail = funds - costs, g = grantOf(), ex = extraFunds();
   const line = (l, v, b) => `<div class="spread" style="padding:5px 0;border-bottom:1px solid var(--line)"><span>${l}</span><b class="num" ${b ? `style="${b}"` : ""}>${v}</b></div>`;
-  const lim = p.sign ? addDays(p.sign, 60) : null, early = T().contractor && lim ? S.payments.filter(x => x.date && x.date <= lim).reduce((s, x) => s + payAmount(x), 0) : 0;
+  const lim = p.sign ? addDays(p.sign, 60) : null, early = T().contractor && lim ? S.payments.filter(x => x.date && x.date < lim).reduce((s, x) => s + payAmount(x), 0) : 0;
   const availEarly = (f.savings || 0) + extraFunds(lim) - costsEarly();
   const summary = `<div class="card"><h2>התמונה בקצרה</h2>
     ${line("מחיר הדירה", ils(p.price))}
@@ -2808,9 +2836,13 @@ function wizCalcHtml() {
     <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-top:6px"><input type="checkbox" data-wzdisc ${wiz.d.disc === false ? "" : "checked"} style="width:auto;flex:none;margin-top:3px"><span>להוריד את הנחת המשתכן: <bdi>20%</bdi> מהמחיר, עד 300 אלף ₪. בטלו את הסימון רק אם המחיר למ"ר בחוזה שלכם כבר אחרי הנחה.</span></label>`;
 }
 function liveComma(t) {
-  if (!/^\s*[-−]?[\d,.\s₪]*$/.test(t.value)) return;   /* letters or other characters: left as typed, so the check shows a message */
-  const raw = t.value, pos = t.selectionStart == null ? raw.length : t.selectionStart, int = raw.split(".")[0], digitsBefore = raw.slice(0, Math.min(pos, int.length)).replace(/\D/g, "").length, digits = int.replace(/\D/g, "");   /* whole shekels: anything after a decimal point is dropped */
-  const neg = /^\s*[-−]/.test(raw), out = digits ? (neg ? "-" : "") + nf2.format(+digits) : neg ? "-" : ""; if (out === raw) return;
+  const raw = t.value;
+  if (!/^\s*[-−]?[\d,.\s₪]*$/.test(raw) || (raw.match(/\./g) || []).length > 1) return;   /* letters, other characters or two points: left as typed, so the check shows a message */
+  /* thousands separators only; a decimal point and the agorot after it are kept exactly as typed */
+  const pos = t.selectionStart == null ? raw.length : t.selectionStart, dot = raw.indexOf("."), int = dot < 0 ? raw : raw.slice(0, dot), frac = dot < 0 ? null : raw.slice(dot + 1).replace(/\D/g, "");
+  const digitsBefore = raw.slice(0, pos).replace(/\D/g, "").length, digits = int.replace(/\D/g, "");
+  const neg = /^\s*[-−]/.test(raw), out = (neg ? "-" : "") + (digits ? nf2.format(+digits) : frac != null ? "0" : "") + (frac != null ? "." + frac : "");
+  if (out === raw) return;
   t.value = out; let i = 0, seen = 0; while (i < out.length && seen < digitsBefore) { if (/\d/.test(out[i])) seen++; i++; }
   try { t.setSelectionRange(i, i); } catch (e) {}
 }
@@ -3056,7 +3088,7 @@ document.getElementById("restorefile").addEventListener("change", e => {
       if (!confirm(store.shared ? "הרכישה משותפת. השחזור יחליף את הנתונים גם בטלפון של מי שמשתף איתכם. להמשיך?" : "השחזור יחליף את כל הנתונים בטלפון הזה בנתונים מהגיבוי. להמשיך?")) return;
       const prev = S; S = migrate(j.state); S.example = false; setupOpen = false; tab = "home";
       try { render(); } catch (er) { S = prev; render(); throw er; }
-      persist(); toast(stateIssues().length ? "הגיבוי שוחזר, אבל יש בו ערכים לא תקינים. התוצאות חסומות עד שתתקנו אותם." : "הנתונים שוחזרו מהגיבוי");
+      persist(); ensureActive(); toast(stateIssues().length ? "הגיבוי שוחזר, אבל יש בו ערכים לא תקינים. התוצאות חסומות עד שתתקנו אותם." : "הנתונים שוחזרו מהגיבוי");
     } catch (err) { toast("הקובץ הזה הוא לא גיבוי של דירה בשליטה"); }
   };
   rd.readAsText(f);
@@ -3219,20 +3251,20 @@ document.addEventListener("input", e => {
   if (t.inputMode === "numeric" && !(d.pf || "").endsWith(":voucher")) liveComma(t);
   if (d.wzf) { wiz.d[d.wzf] = t.value; if (wiz.err) { wiz.err = ""; const er = document.querySelector(".wzerr"); if (er) er.remove(); } if (d.wzf === "city") { wizSuggest(t.value); const mc = matchCity(t.value); if (wiz.d.type === "ml" && mc && normCity(mc) === normCity(t.value) && mc !== render.wzCity) { render.wzCity = mc; wiz.d.proj = ""; wiz.d.ppsqm = 0; render(); } } if (["size", "balc", "stor", "park"].includes(d.wzf)) { const el = document.getElementById("wzcalc"); if (el) el.innerHTML = wizCalcHtml(); } return; }
   if (t.id === "areasearch") { applyAreaFilter(t.value); areaSuggest(t.value); return; }
-  if (d.src) { const [id, f] = d.src.split(":"), x = srcList().find(k => k.id === id); if (x) { if (f === "amount" || f === "monthly" || f === "now") { const r = checkNum(String(t.value).split(".")[0], "money", "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value; persist(); refreshOut(); } return; }
-  if (d.c === "fin.equity") { const v = String(t.value).trim(), cap = Math.max(0, S.profile.price - grantOf()); const r = v ? checkNum(v.split(".")[0], "money", "הון עצמי") : { v: null }, n = r.err ? NaN : r.v;
+  if (d.src) { const [id, f] = d.src.split(":"), x = srcList().find(k => k.id === id); if (x) { if (f === "amount" || f === "monthly" || f === "now") { const r = checkNum(t.value, "money", "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value; persist(); refreshOut(); } return; }
+  if (d.c === "fin.equity") { const v = String(t.value).trim(), cap = Math.max(0, S.profile.price - grantOf()); const r = v ? checkNum(v, "money", "הון עצמי") : { v: null }, n = r.err ? NaN : r.v;
     if (r.err) { fieldErr(t, r.err); return; }
     if (n != null && n > cap) { fieldErr(t, `הון עצמי לא יכול להיות גבוה מ-${ils(cap)} (מחיר הדירה${grantOf() ? " פחות המענק" : ""}). הערך לא נשמר.`); return; }
     fieldErr(t, ""); S.fin.equity = n; S.fin.eqCustom = !!v; persist(); refreshOut(); return; }
   if (d.c) { const lab = (t.closest("label") || {}).textContent || "", label = t.getAttribute("aria-label") || lab.trim().split(/\n/)[0].replace(/\s*\(.*$/, "").slice(0, 40);
-    const r = checkNum(t.inputMode === "decimal" || /^(mix\.|fin\.ret|idxRate|profile\.linked)/.test(d.c) ? t.value : String(t.value).split(".")[0], fieldKind(d.c), label);
+    const r = checkNum(t.value, fieldKind(d.c), label);
     if (!r.err && r.v == null && /^(mix\.|idxRate|profile\.linkedShare|fin\.reserve|fin\.ret|fin\.horizon)/.test(d.c)) r.err = `${label || "השדה"}: שדה חובה. כתבו מספר (גם 0).`;
     if (r.err) { fieldErr(t, r.err); refreshOut(); return; }
     fieldErr(t, ""); if (r.warn) { const lb = t.closest("label"); if (lb) { let w = lb.querySelector(".fwarn"); if (!w) { w = document.createElement("span"); w.className = "fwarn small"; w.style.color = "var(--gold)"; lb.appendChild(w); } w.textContent = r.warn; } } else { const w = (t.closest("label") || document).querySelector(".fwarn"); if (w) w.remove(); }
     const v = r.v == null ? 0 : r.v; setPath(d.c, v); if (d.c === "fin.savings") { S.fin.savingsAt = ymd(today()); S.fin.savingsTs = Date.now(); S.fin.savTouched = true; } if (d.c === "fin.expenses") S.fin.expTouched = true; if (d.c === "fin.savings" || d.c.startsWith("costs.") || d.c === "fin.appraisal") { /* equity may now be out of range */ } persist(); refreshOut(); return; }
   if (d.of) { const [id, f] = d.of.split(":"), x = S.offers.find(k => k.id === id); if (f === "amount" || f === "first" || f === "total") liveComma(t);
-    if (x) { if (f === "bank") x.bank = t.value; else { const r = checkNum(f === "years" ? t.value : String(t.value).split(".")[0], f === "years" ? "years" : "money", f === "years" ? "תקופה" : "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } persist(); refreshOut(); } return; }
-  if (d.pf) { const [id, f] = d.pf.split(":"), x = S.payments.find(k => k.id === id); if (x) { if (f === "voucher") x.name = "שובר " + t.value; if (f === "pct" || f === "amount") { const r = checkNum(f === "amount" ? String(t.value).split(".")[0] : t.value, f === "pct" ? "pct" : "money", f === "pct" ? "אחוז התשלום" : "סכום השובר"); if (r.err) { fieldErr(t, r.err); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value;
+    if (x) { if (f === "bank") x.bank = t.value; else { const r = checkNum(t.value, f === "years" ? "years" : "money", f === "years" ? "תקופה" : "סכום"); if (r.err) { fieldErr(t, r.err); refreshOut(); return; } fieldErr(t, ""); x[f] = r.v || 0; } persist(); refreshOut(); } return; }
+  if (d.pf) { const [id, f] = d.pf.split(":"), x = S.payments.find(k => k.id === id); if (x) { if (f === "voucher") x.name = "שובר " + t.value; if (f === "pct" || f === "amount") { const r = checkNum(f === "amount" ? t.value : t.value, f === "pct" ? "pct" : "money", f === "pct" ? "אחוז התשלום" : "סכום השובר"); if (r.err) { fieldErr(t, r.err); return; } fieldErr(t, ""); x[f] = r.v || 0; } else x[f] = t.value;
       if (S.payMode === "vouchers" && f === "pct") { x.amount = Math.round(S.profile.price * x.pct / 100); const m = document.querySelector(`[data-pf="${id}:amount"]`); if (m) m.value = x.amount ? fmtIn(x.amount) : ""; }
       if (S.payMode === "vouchers" && f === "amount") { const pp = document.querySelector(`[data-pf="${id}:pct"]`); if (pp) pp.value = x.amount ? +(x.amount / S.profile.price * 100).toFixed(2) : ""; } persist(); const a = document.getElementById("pa_" + id); if (a) a.textContent = ils(payAmount(x) + linkageCost(x)); updatePayChip(); } return; }
 });
