@@ -12,7 +12,8 @@ jobs:
       - run: pip install requests playwright && python -m playwright install --with-deps chromium
       - run: python pipeline/update.py --app index.html --data pipeline/data --out index.new.html --market pipeline/market.json --report report.json
       - run: python pipeline/test_app.py index.new.html
-      - run: python - <<'PY'
+      - run: |
+          python - <<'PY'
           import re, json
           for f in ("index.html","index.new.html"):
               h=open(f,encoding="utf-8").read(); o=json.loads(re.search(r'^const OFFICIAL = (.*);$',h,re.M).group(1))
