@@ -1,6 +1,6 @@
 {
- "updated": "1.11.2026",
- "updatedISO": "2026-11-01",
+ "updated": "16.11.2026",
+ "updatedISO": "2026-11-16",
  "nextBoiISO": "2026-11-23",
  "boi": {
   "rate": 3.25,
@@ -19,17 +19,17 @@
   "src": "https://simplecalc.co.il/guides/mortgage-rates/"
  },
  "cpi": {
-  "month": "ספטמבר 2026",
-  "mom": -0.5,
-  "yoy": 1.6,
-  "housingYoy": -1.8,
-  "published": "15.10.2026",
-  "src": "https://www.calcalist.co.il/local_news/article/hjuvbu0ozg"
+  "month": "אוקטובר 2026",
+  "mom": -0.1,
+  "yoy": 1.1,
+  "housingYoy": -1.5,
+  "published": "16.11.2026",
+  "src": "https://www.cbs.gov.il/he/Pages/default.aspx"
  },
  "construction": {
-  "month": "ספטמבר 2026",
-  "mom": 0.1,
-  "ytd": 2.8,
+  "month": "אוקטובר 2026",
+  "mom": 0.4,
+  "ytd": 3.2,
   "monthly": [
    0.1,
    0.2,
@@ -39,8 +39,9 @@
    0.2,
    -0.1,
    0.4,
-   0.1
+   0.1,
+   0.4
   ],
-  "src": "https://www.kantahome.com/forecasts-and-indexes/construction-index"
+  "src": "https://www.cbs.gov.il/he/Pages/default.aspx"
  }
 }
