@@ -13,7 +13,10 @@ import requests
 
 SQL_URL = "https://www.over.org.il/api/append/fd06f5ae-8a4f-4120-b275-8a514ad23499/sql"
 DEALS = "append_taxes_nadlan_full_f41fb496_fd06f5ae"
-LOTTERIES = "append_mechir_lamishtaken_68269ade_7c8255d0"
+# Housing Ministry lotteries, straight from the official open-data portal (over.org.il only mirrored this resource,
+# and its SQL endpoint started requiring a login on 15.11.2026)
+LOTTERIES_URL = "https://data.gov.il/api/3/action/datastore_search"
+LOTTERIES_RES = "7c8255d0-49ef-49db-8904-4cf917586031"
 LOOKUP = "https://www.over.org.il/api/nadlan/lookup"
 HEB_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
 NATURE = {"דירה בבית קומות": "A", "דירת גן": "G", "דירת גג": "R", "מגורים": "M",
@@ -33,6 +36,10 @@ def q(sql, tries=6):
             if r.status_code == 200 and "rows" in r.json():
                 return r.json()["rows"]
             log("  SQL ERR", r.status_code, r.text[:200])
+            if r.status_code in (401, 403):   # login required: retrying will not help
+                raise RuntimeError(f"SQL endpoint refused access ({r.status_code})")
+        except RuntimeError:
+            raise
         except Exception as e:
             log("  SQL EXC", e)
         time.sleep(8 * (a + 1))
@@ -44,22 +51,56 @@ def sq(s):
 
 
 # ---------------------------------------------------------------- lotteries -> OFFICIAL
-def build_official():
-    rows = []
-    off = 0
+def iso_date(v):
+    """'2025-01-27...' or '1/27/2025 10:38:07 AM' (data.gov.il) -> '2025-01-27'; None if unreadable"""
+    v = str(v or "").strip()
+    if re.match(r"\d{4}-\d{2}-\d{2}", v):
+        return v[:10]
+    m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{4})", v)
+    if m:
+        mo, d, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            return datetime.date(y, mo, d).isoformat()
+        except ValueError:
+            return None
+    return None
+
+
+def get_lotteries():
+    rows, off = [], 0
     while True:
-        r = q(f"SELECT * FROM {LOTTERIES} ORDER BY \"LotteryId\" LIMIT 1000 OFFSET {off}")
+        for a in range(6):
+            try:
+                j = requests.get(LOTTERIES_URL, params={"resource_id": LOTTERIES_RES, "limit": 1000, "offset": off,
+                                                        "sort": "LotteryId"}, timeout=120,
+                                 headers={"User-Agent": "maftech-daily-update"}).json()
+                if j.get("success"):
+                    break
+                log("  data.gov.il ERR", str(j)[:200])
+            except Exception as e:
+                log("  data.gov.il EXC", e)
+            time.sleep(8 * (a + 1))
+        else:
+            raise RuntimeError("data.gov.il lotteries failed")
+        r = j["result"]["records"]
         rows += r
         off += 1000
         if len(r) < 1000:
-            break
-    first = [x for x in rows if x.get("LotteryType") == "ראשונה" and x.get("LotteryExecutionDate")]
+            return rows
+
+
+def build_official():
+    rows = get_lotteries()
+    for x in rows:
+        x["LotteryExecutionDate"] = iso_date(x.get("LotteryExecutionDate"))
+        x["LamasName"] = str(x.get("LamasName") or "")
+    first = [x for x in rows if x.get("LotteryType") == "ראשונה" and x.get("LotteryExecutionDate") and x["LamasName"].strip()]
     provs = sorted({(x.get("ProviderName") or "-").strip()[:30] for x in first} | {"-"})
     pi = {p: i for i, p in enumerate(provs)}
     p = []
     for x in sorted(first, key=lambda x: (x["LamasName"], x["LotteryExecutionDate"])):
         try:
-            units = int(float(x.get("LotteryHousingUnits") or 0))
+            units = int(float(str(x.get("LotteryHousingUnits") or 0).replace(",", "")))
             pp = int(float(str(x.get("PriceForMeter") or "0").replace(",", "")))
         except ValueError:
             continue
@@ -297,41 +338,7 @@ def compute(deals, area_of, last_ym):
     return {"v": 2, "ages": AGES, "rooms": ROOMS, "c": px_c, "a": px_a, "cov": px_cov}, {"a": areas, "cov": cov}, cities, stats
 
 
-# ---------------------------------------------------------------- splice into the app
-def js(o):
-    return json.dumps(o, ensure_ascii=False, separators=(",", ":"))
-
-
-def replace_const(h, name, value_js):
-    i = h.index(f"const {name} = ")
-    if h[i:].startswith(f"const {name} = {{\n"):   # multi-line literal (MARKET)
-        j = h.index("\n};", i) + 3
-    else:
-        j = h.index("\n", i)
-    return h[:i] + f"const {name} = {value_js};" + h[j:]
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--app", required=True)
-    ap.add_argument("--data", required=True)
-    ap.add_argument("--out", required=True)
-    ap.add_argument("--market")
-    ap.add_argument("--report", default="update_report.json")
-    a = ap.parse_args()
-    h = open(a.app, encoding="utf-8").read()
-    old = {k: json.loads(re.search(rf"^const {k} = (.*);$", h, re.M).group(1)) for k in ["NAT", "OFFICIAL", "AREAS", "AREAS_COV", "PX"]}
-    D = json.load(open(os.path.join(a.data, "dict.json")))
-    ga = json.load(open(os.path.join(a.data, "gush_area.json")))
-    top = {r["gush"]: r for r in json.load(open(os.path.join(a.data, "gush_top_helka.json")))}
-    today = datetime.date.today()
-    rep = {"date": today.isoformat(), "problems": []}
-
-    log("1/5 lotteries")
-    official, n_lot = build_official()
-    rep["lotteries"] = {"rows": n_lot, "projects": len(official["p"]), "before": len(old["OFFICIAL"]["p"])}
-
-    log("2/5 deals")
+def refresh_deals(a, old, D, ga, top, today, rep):
     last = q(f"SELECT max(to_date(deal_date,'DD/MM/YYYY')) m FROM {DEALS}")[0]["m"]
     last_d = datetime.date.fromisoformat(str(last)[:10])
     last_ym = (last_d.year - 2000) * 100 + last_d.month
@@ -384,13 +391,65 @@ def main():
     chk(any("עין גנים" in r[0] for r in pt), "Petah Tikva area list lost Ein Ganim")
     rep["areas"] = {"n": nA, "before": nA0, "coverage12": round(cov * 100, 1), "cities_chg": len(cities), "px_cities": len(px["c"])}
     rep["through"] = nat["through"]
+    return nat, areas, px
+
+
+
+# ---------------------------------------------------------------- splice into the app
+def js(o):
+    return json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+
+
+def replace_const(h, name, value_js):
+    i = h.index(f"const {name} = ")
+    if h[i:].startswith(f"const {name} = {{\n"):   # multi-line literal (MARKET)
+        j = h.index("\n};", i) + 3
+    else:
+        j = h.index("\n", i)
+    return h[:i] + f"const {name} = {value_js};" + h[j:]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--app", required=True)
+    ap.add_argument("--data", required=True)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--market")
+    ap.add_argument("--report", default="update_report.json")
+    a = ap.parse_args()
+    h = open(a.app, encoding="utf-8").read()
+    old = {k: json.loads(re.search(rf"^const {k} = (.*);$", h, re.M).group(1)) for k in ["NAT", "OFFICIAL", "AREAS", "AREAS_COV", "PX"]}
+    D = json.load(open(os.path.join(a.data, "dict.json")))
+    ga = json.load(open(os.path.join(a.data, "gush_area.json")))
+    top = {r["gush"]: r for r in json.load(open(os.path.join(a.data, "gush_top_helka.json")))}
+    today = datetime.date.today()
+    rep = {"date": today.isoformat(), "problems": []}
+
+    log("1/5 lotteries")
+    official, n_lot = build_official()
+    rep["lotteries"] = {"rows": n_lot, "projects": len(official["p"]), "before": len(old["OFFICIAL"]["p"])}
+
+    log("2/5 deals")
+    try:
+        deals_part = refresh_deals(a, old, D, ga, top, today, rep)
+    except Exception as e:
+        # the deals source is down (e.g. over.org.il now asks for a login): keep the deals statistics already in
+        # the app and still publish the fresh lotteries and market numbers
+        log("  deals source unavailable, keeping previous deals data:", e)
+        rep["deals_skipped"] = str(e)[:300]
+        deals_part = None
 
     log("5/5 splice")
-    h = replace_const(h, "NAT", js(nat))
+    chk_lot = len(official["p"]) >= len(old["OFFICIAL"]["p"]) * 0.97
+    if not chk_lot:
+        rep["problems"].append(f"projects fell: {len(official['p'])}")
     h = replace_const(h, "OFFICIAL", js(official))
-    h = replace_const(h, "AREAS", js(areas["a"]))
-    h = replace_const(h, "AREAS_COV", js(areas["cov"]))
-    h = replace_const(h, "PX", js(px))
+    if deals_part:
+        nat, areas, px = deals_part
+        h = replace_const(h, "NAT", js(nat))
+        h = replace_const(h, "AREAS", js(areas["a"]))
+        h = replace_const(h, "AREAS_COV", js(areas["cov"]))
+        h = replace_const(h, "PX", js(px))
     if a.market:
         mk = json.load(open(a.market, encoding="utf-8"))
         h = replace_const(h, "MARKET", json.dumps(mk, ensure_ascii=False, indent=1))
