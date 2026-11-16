@@ -1,0 +1,26 @@
+name: test-fix
+on:
+  push:
+    branches: [fix-data-source]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install requests playwright && python -m playwright install --with-deps chromium
+      - run: python pipeline/update.py --app index.html --data pipeline/data --out index.new.html --market pipeline/market.json --report report.json
+      - run: python pipeline/test_app.py index.new.html
+      - run: python - <<'PY'
+          import re, json
+          for f in ("index.html","index.new.html"):
+              h=open(f,encoding="utf-8").read(); o=json.loads(re.search(r'^const OFFICIAL = (.*);$',h,re.M).group(1))
+              print(f, len(o["p"]), len(o["provs"]), sorted(o["p"], key=lambda r:r[4])[-3:])
+          a=json.loads(re.search(r'^const OFFICIAL = (.*);$',open("index.html",encoding="utf-8").read(),re.M).group(1))["p"]
+          b=json.loads(re.search(r'^const OFFICIAL = (.*);$',open("index.new.html",encoding="utf-8").read(),re.M).group(1))["p"]
+          k=lambda r:(r[0],r[2],r[4]); A={k(r):r for r in a}; B={k(r):r for r in b}
+          print("same keys",len(A.keys()&B.keys()),"only old",len(A.keys()-B.keys()),"only new",len(B.keys()-A.keys()))
+          print("only old sample",list(A.keys()-B.keys())[:5]); print("only new sample",list(B.keys()-A.keys())[:8])
+          diff=[(A[x],B[x]) for x in A.keys()&B.keys() if A[x][5:]!=B[x][5:]]; print("value diffs",len(diff),diff[:3])
+          PY
