@@ -21,7 +21,7 @@ jobs:
           a=json.loads(re.search(r'^const OFFICIAL = (.*);$',open("index.html",encoding="utf-8").read(),re.M).group(1))["p"]
           b=json.loads(re.search(r'^const OFFICIAL = (.*);$',open("index.new.html",encoding="utf-8").read(),re.M).group(1))["p"]
           k=lambda r:(r[0],r[2],r[4]); A={k(r):r for r in a}; B={k(r):r for r in b}
-          print("same keys",len(A.keys()&B.keys()),"only old",len(A.keys()-B.keys()),"only new",len(B.keys()-A.keys()))
+          print("IDENTICAL", sorted(map(json.dumps,a))==sorted(map(json.dumps,b))); print("same keys",len(A.keys()&B.keys()),"only old",len(A.keys()-B.keys()),"only new",len(B.keys()-A.keys()))
           print("only old sample",list(A.keys()-B.keys())[:5]); print("only new sample",list(B.keys()-A.keys())[:8])
           diff=[(A[x],B[x]) for x in A.keys()&B.keys() if A[x][5:]!=B[x][5:]]; print("value diffs",len(diff),diff[:3])
           PY
